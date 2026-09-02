@@ -5,7 +5,13 @@ import {
   listContactMessages,
   markMessageRead,
 } from "./queries/orders";
-import { assertAdmin, changeAdminPassword, loginAdmin } from "./queries/admin";
+import {
+  assertAdmin,
+  changeAdminEmail,
+  changeAdminPassword,
+  getAdminEmail,
+  loginAdmin,
+} from "./queries/admin";
 
 export const contactRouter = createRouter({
   /** Envoyer un message (public) */
@@ -43,13 +49,13 @@ export const contactRouter = createRouter({
 export const adminRouter = createRouter({
   /** Connexion admin — retourne un token de session */
   login: publicQuery
-    .input(z.object({ password: z.string().min(1) }))
+    .input(z.object({ email: z.string().min(1).max(255), password: z.string().min(1) }))
     .mutation(({ input, ctx }) => {
       const ip =
         ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
         ctx.req.headers.get("x-real-ip") ||
         "unknown";
-      return loginAdmin(input.password, ip);
+      return loginAdmin(input.email, input.password, ip);
     }),
 
   /** Vérifie qu'un token est encore valide */
@@ -58,6 +64,14 @@ export const adminRouter = createRouter({
     .query(async ({ input }) => {
       await assertAdmin(input.token);
       return { ok: true };
+    }),
+
+  /** Infos du compte admin connecté (affichage dans Paramètres) */
+  me: publicQuery
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await assertAdmin(input.token);
+      return { email: await getAdminEmail() };
     }),
 
   changePassword: publicQuery
@@ -71,6 +85,20 @@ export const adminRouter = createRouter({
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
       await changeAdminPassword(input.currentPassword, input.newPassword);
+      return { ok: true };
+    }),
+
+  changeEmail: publicQuery
+    .input(
+      z.object({
+        token: z.string(),
+        currentPassword: z.string().min(1),
+        newEmail: z.string().email().max(255),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+      await changeAdminEmail(input.currentPassword, input.newEmail);
       return { ok: true };
     }),
 });

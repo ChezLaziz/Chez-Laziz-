@@ -68,17 +68,24 @@ function checkLoginRateLimit(ip: string) {
   }
 }
 
-/** Vérifie le mot de passe, retourne un token de session admin. */
-export async function loginAdmin(password: string, ip = "unknown"): Promise<string> {
+/** Vérifie l'adresse + le mot de passe, retourne un token de session admin. */
+export async function loginAdmin(
+  email: string,
+  password: string,
+  ip = "unknown",
+): Promise<string> {
   checkLoginRateLimit(ip);
-  const [storedHash, secret] = await Promise.all([
+  const [storedEmail, storedHash, secret] = await Promise.all([
+    getSetting("admin_email"),
     getSetting("admin_password_hash"),
     getSetting("admin_token_secret"),
   ]);
-  if (!verifyPassword(password, storedHash)) {
+  const emailOk = safeEqual(email.trim().toLowerCase(), storedEmail.trim().toLowerCase());
+  const passwordOk = verifyPassword(password, storedHash);
+  if (!emailOk || !passwordOk) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "Mot de passe incorrect",
+      message: "Adresse ou mot de passe incorrect",
     });
   }
   const exp = String(Date.now() + TOKEN_TTL_MS);
@@ -117,4 +124,22 @@ export async function changeAdminPassword(
   // Rotation du secret de signature : invalide immédiatement toutes les
   // sessions actives (anciens tokens), y compris celles volées.
   await setSetting("admin_token_secret", randomBytes(32).toString("hex"));
+}
+
+export async function getAdminEmail(): Promise<string> {
+  return getSetting("admin_email");
+}
+
+export async function changeAdminEmail(
+  currentPassword: string,
+  newEmail: string,
+): Promise<void> {
+  const storedHash = await getSetting("admin_password_hash");
+  if (!verifyPassword(currentPassword, storedHash)) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Mot de passe actuel incorrect",
+    });
+  }
+  await setSetting("admin_email", newEmail.trim().toLowerCase());
 }
