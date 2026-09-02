@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+
 const STRIP = [
   '/images/hero.jpg',
   '/images/makroudh.jpg',
@@ -82,13 +84,17 @@ export default function Footer() {
           </div>
 
           <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-[0.2em] text-[#faf6f3]/70">
-            <a href="#maison" className="transition-colors hover:text-[#b8912e]">La Maison</a>
-            <a href="#collection" className="transition-colors hover:text-[#b8912e]">La Collection</a>
-            <a href="#galerie" className="transition-colors hover:text-[#b8912e]">Galerie</a>
-            <a href="#commande" className="transition-colors hover:text-[#b8912e]">Commander</a>
-            <a href="#visite" className="transition-colors hover:text-[#b8912e]">Nous trouver</a>
+            <Link to="/la-maison" className="transition-colors hover:text-[#b8912e]">La Maison</Link>
+            <Link to="/collection" className="transition-colors hover:text-[#b8912e]">La Collection</Link>
+            <Link to="/galerie" className="transition-colors hover:text-[#b8912e]">Galerie</Link>
+            <Link to="/commande" className="transition-colors hover:text-[#b8912e]">Commander</Link>
+            <Link to="/contact" className="transition-colors hover:text-[#b8912e]">Nous trouver</Link>
           </nav>
           <div className="h-px w-24 bg-[#b8912e]/60" />
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em] text-[#faf6f3]/45">
+            <Link to="/politique-de-confidentialite" className="transition-colors hover:text-[#b8912e]">Politique de confidentialité</Link>
+            <Link to="/conditions-generales" className="transition-colors hover:text-[#b8912e]">Conditions générales</Link>
+          </nav>
           <p className="text-xs font-light text-[#faf6f3]/45">
             © 2026 Chez Laziz — عند لعزيز · Kairouan. Tous droits réservés.
           </p>

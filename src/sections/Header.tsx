@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { useCart } from '@/providers/cart'
 
 const LINKS = [
-  { href: '#accueil', label: 'Accueil' },
-  { href: '#maison', label: 'La Maison' },
-  { href: '#collection', label: 'La Collection' },
-  { href: '#galerie', label: 'Galerie' },
+  { href: '/', label: 'Accueil' },
+  { href: '/la-maison', label: 'La Maison' },
+  { href: '/collection', label: 'La Collection' },
+  { href: '/galerie', label: 'Galerie' },
   { href: '/commande', label: 'Commander' },
-  { href: '#visite', label: 'Nous trouver' },
+  { href: '/contact', label: 'Nous trouver' },
 ]
 
 function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
@@ -27,12 +27,19 @@ function NavLink({ href, label, onClick }: { href: string; label: string; onClic
 }
 
 export default function Header() {
-  const [scrolled, setScrolled] = useState(false)
+  const { pathname } = useLocation()
+  const isHome = pathname === '/'
+  const [scrolledState, setScrolled] = useState(false)
+  // Sur les pages sans photo en fond (tout sauf l'accueil), le header doit
+  // toujours être dans son style "clair" (texte foncé, fond visible) —
+  // sinon le texte blanc devient invisible sur fond crème.
+  const scrolled = isHome ? scrolledState : true
   const [hidden, setHidden] = useState(false)
   const [open, setOpen] = useState(false)
   const { count } = useCart()
 
   useEffect(() => {
+    if (!isHome) return
     let lastY = window.scrollY
     const onScroll = () => {
       const y = window.scrollY
@@ -43,7 +50,7 @@ export default function Header() {
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [isHome])
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -62,14 +69,14 @@ export default function Header() {
         }`}
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
-          <a
-            href="#accueil"
+          <Link
+            to="/"
             className={`font-display text-xl tracking-[0.14em] md:text-2xl ${
               scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
             }`}
           >
             CHEZ&nbsp;LAZIZ
-          </a>
+          </Link>
 
           <nav
             className={`hidden items-center gap-9 md:flex ${

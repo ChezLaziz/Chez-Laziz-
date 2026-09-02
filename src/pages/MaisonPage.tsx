@@ -1,22 +1,17 @@
 import { useReveal } from '../hooks/useReveal'
 import Cursor from '../components/Cursor'
 import Header from '../sections/Header'
-import Hero from '../sections/Hero'
-import Marquee from '../sections/Marquee'
-import Order from '../sections/Order'
+import Story from '../sections/Story'
 import Footer from '../sections/Footer'
 
-export default function Home() {
+export default function MaisonPage() {
   useReveal()
-
   return (
     <>
       <Cursor />
       <Header />
-      <main>
-        <Hero />
-        <Marquee />
-        <Order />
+      <main className="pt-16 md:pt-20">
+        <Story />
       </main>
       <Footer />
     </>

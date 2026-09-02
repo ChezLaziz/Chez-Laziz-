@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 
 function StaggerWord({ word, base }: { word: string; base: number }) {
   return (
@@ -128,18 +129,18 @@ export default function Hero() {
             transition: 'opacity 0.9s ease 1.15s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 1.15s',
           }}
         >
-          <a
-            href="#collection"
+          <Link
+            to="/collection"
             className="gold-cta rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
           >
             Découvrir la collection
-          </a>
-          <a href="#visite" className="arrow-link !text-[#faf6f3]">
+          </Link>
+          <Link to="/contact" className="arrow-link !text-[#faf6f3]">
             Nous trouver
             <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
             </svg>
-          </a>
+          </Link>
         </div>
       </div>
 
