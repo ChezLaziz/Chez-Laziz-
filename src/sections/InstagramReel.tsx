@@ -7,6 +7,7 @@ export default function InstagramReel() {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [inView, setInView] = useState(false)
   const [playing, setPlaying] = useState(false)
+  const [muted, setMuted] = useState(true)
 
   // Only attach the real video source once the section is actually visible —
   // keeps this heavy asset out of the initial page load entirely.
@@ -47,7 +48,7 @@ export default function InstagramReel() {
                   ref={videoRef}
                   className="h-full w-full object-cover"
                   poster="/images/reel-poster.jpg"
-                  muted
+                  muted={muted}
                   loop
                   playsInline
                   preload="none"
@@ -82,6 +83,30 @@ export default function InstagramReel() {
                   </svg>
                 </div>
               </div>
+            )}
+            {/* Mute / unmute toggle */}
+            {inView && (
+              <button
+                type="button"
+                aria-label={muted ? 'Activer le son' : 'Couper le son'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setMuted((m) => !m)
+                }}
+                className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+              >
+                {muted ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M11 5 6 9H2v6h4l5 4V5Z" strokeLinejoin="round" />
+                    <path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M11 5 6 9H2v6h4l5 4V5Z" strokeLinejoin="round" />
+                    <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" strokeLinecap="round" />
+                  </svg>
+                )}
+              </button>
             )}
           </div>
           {/* Instagram badge */}
@@ -130,3 +155,4 @@ export default function InstagramReel() {
     </section>
   )
 }
+
