@@ -9,6 +9,17 @@ import { rateLimit } from "./lib/rateLimit";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
+// admin.chezlaziz.com pointe vers ce même service (voir custom domains
+// Railway) ; la racine du sous-domaine doit ouvrir directement le tableau
+// de bord au lieu de la page d'accueil du site vitrine.
+app.get("/", async (c, next) => {
+  const host = c.req.header("host") ?? "";
+  if (host.startsWith("admin.")) {
+    return c.redirect("/admin", 302);
+  }
+  await next();
+});
+
 // 1 Mo suffit largement pour ce type de requêtes (commandes, messages,
 // gestion produits) ; empêche les payloads abusifs sur des endpoints publics.
 app.use(bodyLimit({ maxSize: 1 * 1024 * 1024 }));
