@@ -1,0 +1,267 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- Chez Laziz design tokens ---------- */
+:root {
+  --ink: #3c3835;          /* charcoal brown — primary text */
+  --bg: #faf6f3;           /* warm off-white */
+  --accent: #bc773f;       /* terracotta / bronze */
+  --cream: #f5ece5;        /* peach-tinted cream surfaces */
+  --sand: #dec9b8;         /* pale sand — decorative lines */
+  --muted: #aeaaa7;        /* warm gray */
+  --ink-deep: #2e2a27;     /* dark section ground, same family as ink */
+}
+
+@layer base {
+  :root {
+    --background: 20 33% 97%;
+    --foreground: 30 6% 22%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 6% 22%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 6% 22%;
+    --primary: 27 49% 49%;
+    --primary-foreground: 20 33% 97%;
+    --secondary: 25 38% 93%;
+    --secondary-foreground: 30 6% 22%;
+    --muted: 25 38% 93%;
+    --muted-foreground: 30 4% 67%;
+    --accent: 25 38% 93%;
+    --accent-foreground: 27 49% 49%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 28 30% 86%;
+    --input: 28 30% 86%;
+    --ring: 27 49% 49%;
+    --radius: 0.25rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Jost', -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: #fff;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Marcellus', 'Times New Roman', serif;
+    font-weight: 400;
+  }
+  .text-ink { color: var(--ink); }
+  .text-accent { color: var(--accent); }
+  .text-muted-warm { color: var(--muted); }
+  .bg-cream { background-color: var(--cream); }
+  .bg-ink { background-color: var(--ink); }
+  .bg-ink-deep { background-color: var(--ink-deep); }
+  .bg-sand { background-color: var(--sand); }
+  .border-sand { border-color: var(--sand); }
+}
+
+/* ---------- Scroll reveal (data-reveal) ---------- */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- Image mask reveal ---------- */
+.mask-reveal {
+  overflow: hidden;
+  clip-path: inset(10% 7% 10% 7%);
+  transition: clip-path 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mask-reveal img {
+  transform: scale(1.15);
+  transition: transform 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.mask-reveal.is-visible {
+  clip-path: inset(0 0 0 0);
+}
+.mask-reveal.is-visible img {
+  transform: scale(1);
+}
+
+/* ---------- Hero per-character stagger ---------- */
+.hero-char {
+  display: inline-block;
+  transform: translateY(115%);
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.hero-title-on .hero-char {
+  transform: translateY(0);
+}
+.hero-line {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.08em;
+}
+
+/* ---------- Nav link hover: duplicate slide-up ---------- */
+.nav-link {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1.3;
+}
+.nav-link .nl-first,
+.nav-link .nl-second {
+  display: block;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav-link .nl-second {
+  position: absolute;
+  inset: 0;
+  transform: translateY(100%);
+}
+.nav-link:hover .nl-first {
+  transform: translateY(-100%);
+}
+.nav-link:hover .nl-second {
+  transform: translateY(0);
+}
+
+/* ---------- Header show / hide ---------- */
+.site-header {
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+.site-header.header-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+/* ---------- Marquee ---------- */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-x 36s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+.marquee-slow {
+  animation-duration: 55s;
+}
+
+/* ---------- Menu dotted leader ---------- */
+.leader {
+  flex: 1 1 auto;
+  margin: 0 0.75rem;
+  border-bottom: 1px dotted color-mix(in srgb, var(--ink) 35%, transparent);
+  transform: translateY(-0.3em);
+  min-width: 2rem;
+}
+
+/* ---------- Custom cursor ---------- */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 9999px;
+  mix-blend-mode: difference;
+}
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  transform: translate3d(-100px, -100px, 0) translate(-50%, -50%);
+}
+.cursor-ring {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #fff;
+  transform: translate3d(-100px, -100px, 0) translate(-50%, -50%);
+  transition: width 0.25s ease, height 0.25s ease, opacity 0.25s ease;
+}
+.cursor-ring.cursor-active {
+  width: 64px;
+  height: 64px;
+}
+@media (pointer: coarse) {
+  .cursor-dot, .cursor-ring { display: none; }
+}
+
+/* ---------- Link with arrow (reference-style button) ---------- */
+.arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  color: var(--accent);
+  position: relative;
+  padding-bottom: 4px;
+}
+.arrow-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.arrow-link:hover::after {
+  transform: scaleX(1);
+}
+.arrow-link svg {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.arrow-link:hover svg {
+  transform: translateX(5px);
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal], .mask-reveal, .mask-reveal img, .hero-char {
+    transition: none !important;
+    transform: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+  }
+  .marquee-track { animation: none; }
+  html { scroll-behavior: auto; }
+}
