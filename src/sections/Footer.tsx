@@ -57,8 +57,7 @@ export default function Footer() {
 
       <div className="border-t border-[#faf6f3]/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-8 px-5 py-14 text-center md:px-10">
-          <div className="font-display text-4xl tracking-[0.1em] md:text-5xl">CHEZ LAZIZ</div>
-          <p dir="rtl" className="font-display text-xl text-[#dec9b8]">عند لعزيز</p>
+          <img src="/images/logo.png" alt="Chez Laziz — عند لعزيز" className="h-24 w-24 md:h-28 md:w-28" />
           <p className="max-w-md text-sm font-light leading-relaxed text-[#faf6f3]/60">
             Pâtisserie artisanale — Kairouan, Tunisie. Le makroudh kairouanais
             authentique, fait main chaque jour.

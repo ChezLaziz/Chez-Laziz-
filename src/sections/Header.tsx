@@ -71,11 +71,16 @@ export default function Header() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
           <Link
             to="/"
-            className={`font-display text-xl tracking-[0.14em] md:text-2xl ${
-              scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
-            }`}
+            className="flex items-center gap-2.5"
           >
-            CHEZ&nbsp;LAZIZ
+            <img src="/images/logo.png" alt="Chez Laziz" className="h-10 w-10 md:h-12 md:w-12" />
+            <span
+              className={`font-display text-xl tracking-[0.14em] md:text-2xl ${
+                scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
+              }`}
+            >
+              CHEZ&nbsp;LAZIZ
+            </span>
           </Link>
 
           <nav
