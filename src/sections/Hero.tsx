@@ -56,6 +56,15 @@ export default function Hero() {
         }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-[#2e2a27]/70 via-[#2e2a27]/25 to-[#2e2a27]/80" />
+      {/* Vignette centrée : assombrit surtout la zone du texte, sans écraser
+          la photo sur les bords — la lisibilité vient de là où on regarde. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(20,17,14,0.55) 0%, rgba(20,17,14,0.15) 60%, transparent 100%)',
+        }}
+      />
 
       {/* Content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-5 text-center">
@@ -75,7 +84,11 @@ export default function Hero() {
         <h1
           className={`font-display leading-[0.95] text-[#faf6f3] ${on ? 'hero-title-on' : ''}`}
           aria-label="Chez Laziz"
-          style={{ fontSize: 'clamp(3.4rem, 13vw, 11rem)', letterSpacing: '0.02em' }}
+          style={{
+            fontSize: 'clamp(3.4rem, 13vw, 11rem)',
+            letterSpacing: '0.02em',
+            textShadow: '0 2px 24px rgba(0,0,0,0.35)',
+          }}
         >
           <StaggerWord word="CHEZ" base={250} />
           <span className="inline-block w-[0.35em]" />
