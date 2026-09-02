@@ -4,7 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Chez Laziz — عند لعزيز · Pâtisserie à Kairouan spécialisée dans le makroudh kairouanais authentique, fait main chaque jour. Dattes, fruits secs, pistache, fraise." />
+    <link rel="canonical" href="https://chezlaziz.com/" />
     <title>Chez Laziz — عند لعزيز · Makroudh de Kairouan</title>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#2e2a27" />
+
+    <!-- Open Graph / réseaux sociaux -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Chez Laziz" />
+    <meta property="og:title" content="Chez Laziz — عند لعزيز · Makroudh de Kairouan" />
+    <meta property="og:description" content="Pâtisserie artisanale à Kairouan — makroudh kairouanais authentique, fait main chaque jour. Dattes, fruits secs, pistache, fraise." />
+    <meta property="og:image" content="https://chezlaziz.com/images/hero.jpg" />
+    <meta property="og:url" content="https://chezlaziz.com/" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Chez Laziz — عند لعزيز · Makroudh de Kairouan" />
+    <meta name="twitter:description" content="Pâtisserie artisanale à Kairouan — makroudh kairouanais authentique, fait main chaque jour." />
+    <meta name="twitter:image" content="https://chezlaziz.com/images/hero.jpg" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -12,6 +34,35 @@
       rel="stylesheet"
     />
     <link rel="preload" as="image" href="/images/hero.jpg" />
+
+    <!-- Données structurées : identité réelle du commerce uniquement -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Bakery",
+        "name": "Chez Laziz",
+        "alternateName": "عند لعزيز",
+        "image": "https://chezlaziz.com/images/hero.jpg",
+        "url": "https://chezlaziz.com/",
+        "telephone": "+21623691039",
+        "email": "contact@chezlaziz.com",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Kairouan",
+          "addressCountry": "TN"
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+          ],
+          "opens": "07:00",
+          "closes": "00:00"
+        },
+        "servesCuisine": "Pâtisserie tunisienne",
+        "priceRange": "8-40 TND"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

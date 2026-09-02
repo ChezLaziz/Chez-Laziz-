@@ -1,0 +1,14 @@
+{
+  "name": "Chez Laziz — عند لعزيز",
+  "short_name": "Chez Laziz",
+  "description": "Pâtisserie artisanale à Kairouan — makroudh kairouanais authentique.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf6f3",
+  "theme_color": "#2e2a27",
+  "icons": [
+    { "src": "/favicon-64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
