@@ -5,6 +5,7 @@ import Hero from '../sections/Hero'
 import Marquee from '../sections/Marquee'
 import Story from '../sections/Story'
 import Collection from '../sections/Collection'
+import InstagramReel from '../sections/InstagramReel'
 import Order from '../sections/Order'
 import Gallery from '../sections/Gallery'
 import Reviews from '../sections/Reviews'
@@ -23,6 +24,7 @@ export default function Home() {
         <Marquee />
         <Story />
         <Collection />
+        <InstagramReel />
         <Order />
         <Gallery />
         <Reviews />

@@ -55,6 +55,11 @@ export default function Visit() {
                 +216 23 691 039
               </a>
             </p>
+            <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
+              <a href="mailto:contact@chezlaziz.com" className="transition-colors hover:text-[#bc773f]">
+                contact@chezlaziz.com
+              </a>
+            </p>
             <div className="mt-5 flex flex-col gap-3 text-sm">
               <a
                 href="https://www.instagram.com/chezlaziz"
