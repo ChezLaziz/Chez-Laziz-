@@ -256,7 +256,9 @@
 
 /* ---------- Gold shimmer (boutons premium) ---------- */
 .gold-cta {
-  background: linear-gradient(120deg, #a67a1f 0%, #d4ac4a 45%, #b8912e 75%, #c9a03a 100%);
+  /* Dégradé qui reste toujours assez sombre pour un texte blanc lisible
+     (évite la zone claire qui posait un problème de contraste) */
+  background: linear-gradient(120deg, #8f6f22 0%, #b8912e 50%, #8f6f22 100%);
   background-size: 220% 100%;
   background-position: 0% 0%;
   transition: background-position 0.6s ease, transform 0.3s ease;
