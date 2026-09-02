@@ -5,12 +5,23 @@ export default function Visit() {
   return (
     <section id="visite" className="bg-ink-deep py-24 text-[#faf6f3] md:py-36">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
-        <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
-          Nous trouver
-        </p>
-        <h2 data-reveal className="font-display max-w-3xl text-4xl leading-[1.08] md:text-6xl">
-          La boutique vous attend à Kairouan
-        </h2>
+        <div className="grid gap-12 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-7">
+            <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
+              Nous trouver
+            </p>
+            <h2 data-reveal className="font-display max-w-3xl text-4xl leading-[1.08] md:text-6xl">
+              La boutique vous attend à Kairouan
+            </h2>
+          </div>
+          <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">
+            <img
+              src="/images/box.jpg"
+              alt="Coffret de makroudh Chez Laziz, prêt à offrir"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </div>
 
         <div className="mt-16 grid gap-12 border-t border-[#faf6f3]/15 pt-12 md:grid-cols-3">
           <div data-reveal>
