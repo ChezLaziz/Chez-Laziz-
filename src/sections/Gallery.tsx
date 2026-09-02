@@ -1,5 +1,12 @@
 import Ornament from '../components/Ornament'
 
+const PHOTOS = [
+  { src: '/images/display.jpg', alt: 'Pyramides de makroudh dorés dans la vitrine de la boutique' },
+  { src: '/images/makroudh.jpg', alt: 'Makroudh aux dattes saupoudré de sucre, servi avec du thé à la menthe' },
+  { src: '/images/hands.jpg', alt: 'Façonnage à la main du makroudh dans l’atelier' },
+  { src: '/images/tea.jpg', alt: 'Thé à la menthe versé de haut, le compagnon du makroudh' },
+]
+
 export default function Gallery() {
   return (
     <section id="galerie" className="py-24 md:py-36">
@@ -11,49 +18,23 @@ export default function Gallery() {
           La semoule, les dattes, le miel
         </h2>
 
-        {/* Asymmetric editorial grid with offset rhythm */}
-        <div className="mt-16 grid gap-6 md:grid-cols-12 md:gap-8">
-          <div className="mask-reveal aspect-[2/3] md:col-span-5">
-            <img
-              src="/images/display.jpg"
-              alt="Pyramides de makroudh dorés dans la vitrine de la boutique"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="md:col-span-7 md:pt-24">
-            <div className="mask-reveal aspect-[3/2]">
-              <img
-                src="/images/makroudh.jpg"
-                alt="Makroudh aux dattes saupoudré de sucre, servi avec du thé à la menthe"
-                className="h-full w-full object-cover"
-              />
+        {/* Grille uniforme — même ratio, même alignement pour chaque photo */}
+        <div className="mt-16 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+          {PHOTOS.map((p) => (
+            <div key={p.src} data-reveal className="mask-reveal aspect-[4/5]">
+              <img src={p.src} alt={p.alt} loading="lazy" className="h-full w-full object-cover" />
             </div>
-            <blockquote data-reveal className="mt-10 max-w-md md:ml-auto md:text-right">
-              <p className="font-display text-2xl leading-snug text-ink md:text-[1.7rem]">
-                « Fait avec amour, au goût traditionnel qui ne change jamais. »
-              </p>
-              <cite className="mt-3 block text-xs uppercase not-italic tracking-[0.22em] text-muted-warm">
-                Chez Laziz — عند لعزيز
-              </cite>
-            </blockquote>
-          </div>
-          <div className="mask-reveal aspect-[2/3] md:col-span-7">
-            <img
-              src="/images/hands.jpg"
-              alt="Façonnage à la main du makroudh dans l’atelier"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="md:col-span-5 md:-mt-16">
-            <div className="mask-reveal aspect-square">
-              <img
-                src="/images/tea.jpg"
-                alt="Thé à la menthe versé de haut, le compagnon du makroudh"
-                className="h-full w-full object-cover"
-              />
-            </div>
-          </div>
+          ))}
         </div>
+
+        <blockquote data-reveal className="mx-auto mt-14 max-w-xl text-center">
+          <p className="font-display text-2xl leading-snug text-ink md:text-[1.7rem]">
+            « Fait avec amour, au goût traditionnel qui ne change jamais. »
+          </p>
+          <cite className="mt-3 block text-xs uppercase not-italic tracking-[0.22em] text-muted-warm">
+            Chez Laziz — عند لعزيز
+          </cite>
+        </blockquote>
       </div>
       <Ornament className="mt-20 md:mt-28" />
     </section>
