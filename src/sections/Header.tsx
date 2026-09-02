@@ -12,7 +12,7 @@ const LINKS = [
 ]
 
 function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
-  const cls = 'nav-link text-sm font-medium tracking-wide'
+  const cls = 'nav-link whitespace-nowrap text-sm font-medium tracking-wide'
   const inner = (
     <>
       <span className="nl-first">{label}</span>
@@ -84,7 +84,7 @@ export default function Header() {
           </Link>
 
           <nav
-            className={`hidden items-center gap-9 md:flex ${
+            className={`hidden items-center gap-4 md:flex lg:gap-7 xl:gap-9 ${
               scrolled ? 'text-ink' : 'text-[#faf6f3]'
             }`}
           >
