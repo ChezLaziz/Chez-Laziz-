@@ -77,6 +77,10 @@ async function seed() {
       process.env.ADMIN_INITIAL_PASSWORD || randomBytes(9).toString("base64url");
     await db.insert(settings).values([
       {
+        key: "admin_email",
+        value: process.env.ADMIN_INITIAL_EMAIL || "contact@chezlaziz.com",
+      },
+      {
         key: "admin_password_hash",
         value: hashPassword(initialPassword),
       },

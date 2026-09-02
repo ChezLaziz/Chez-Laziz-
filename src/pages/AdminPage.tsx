@@ -58,6 +58,7 @@ function formatDate(d: Date | string) {
 /* ------------------------------ Login ------------------------------ */
 
 function Login({ onLogin }: { onLogin: (token: string) => void }) {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const login = trpc.admin.login.useMutation({
     onSuccess: (token) => onLogin(token),
@@ -89,7 +90,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          login.mutate({ password })
+          login.mutate({ email, password })
         }}
         className="relative w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl border border-white/10 bg-[#faf6f3] p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.65)] duration-700 md:p-10"
       >
@@ -103,12 +104,26 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         <Ornament className="mt-5 opacity-70" />
 
         <label className="mt-6 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
+          Adresse e-mail
+        </label>
+        <input
+          type="email"
+          required
+          autoFocus
+          autoComplete="username"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="contact@chezlaziz.com"
+          className={`${inputCls} mt-2`}
+        />
+
+        <label className="mt-4 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
           Mot de passe
         </label>
         <input
           type="password"
           required
-          autoFocus
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
@@ -463,7 +478,55 @@ function MessagesTab({ token }: { token: string }) {
 
 /* ------------------------------ Paramètres ------------------------------ */
 
-function SettingsTab({ token }: { token: string }) {
+function ChangeEmailCard({ token }: { token: string }) {
+  const utils = trpc.useUtils()
+  const { data: me } = trpc.admin.me.useQuery({ token })
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const change = trpc.admin.changeEmail.useMutation()
+  const [done, setDone] = useState(false)
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    change.mutate(
+      { token, currentPassword, newEmail },
+      {
+        onSuccess: () => {
+          setDone(true)
+          setCurrentPassword('')
+          setNewEmail('')
+          utils.admin.me.invalidate()
+        },
+      },
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="max-w-md space-y-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+      <p className="font-display text-xl">Changer l'adresse de connexion</p>
+      {me && (
+        <p className="text-xs text-ink/45">
+          Adresse actuelle : <span className="font-medium text-ink/70">{me.email}</span>
+        </p>
+      )}
+      <input type="email" required value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Nouvelle adresse e-mail" className={inputCls} />
+      <input type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Mot de passe actuel (confirmation)" className={inputCls} />
+      {change.isError && (
+        <p className="text-sm text-red-600">{change.error.message || 'Erreur'}</p>
+      )}
+      {done && <p className="text-sm text-green-700">Adresse modifiée ✓</p>}
+      <button
+        type="submit"
+        disabled={change.isPending || !newEmail || !currentPassword}
+        className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40"
+      >
+        {change.isPending ? 'Enregistrement…' : 'Enregistrer'}
+      </button>
+    </form>
+  )
+}
+
+function ChangePasswordCard({ token }: { token: string }) {
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -507,6 +570,15 @@ function SettingsTab({ token }: { token: string }) {
         {change.isPending ? 'Enregistrement…' : 'Enregistrer'}
       </button>
     </form>
+  )
+}
+
+function SettingsTab({ token }: { token: string }) {
+  return (
+    <div className="flex flex-wrap gap-6">
+      <ChangeEmailCard token={token} />
+      <ChangePasswordCard token={token} />
+    </div>
   )
 }
 
@@ -828,6 +900,38 @@ function OverviewTab({
 
   return (
     <div className="space-y-8">
+      {/* Bannière de bienvenue */}
+      <div className="relative overflow-hidden rounded-2xl border border-sand/70 bg-ink-deep p-8 shadow-sm md:p-10">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'url(/images/makroudh.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.16,
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'radial-gradient(560px circle at 12% 15%, rgba(184,145,46,0.28), transparent 60%)',
+          }}
+        />
+        <div className="relative">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-accent">
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+          <p className="mt-3 max-w-2xl font-display text-3xl leading-tight text-[#faf6f3] md:text-4xl">
+            Chaque makroudh porte le savoir-faire de Kairouan.
+          </p>
+          <p className="mt-3 max-w-xl text-sm font-light text-[#faf6f3]/70">
+            Bienvenue dans l'espace Chez Laziz — commandes, catalogue et présence en ligne, tout au même endroit.
+          </p>
+        </div>
+      </div>
+
       {/* Chiffre d'affaires */}
       <div>
         <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
