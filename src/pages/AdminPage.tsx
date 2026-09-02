@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
+import Ornament from '@/components/Ornament'
 import {
   BarChart,
   Bar,
@@ -63,28 +64,55 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
   })
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#2e2a27] px-5">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink-deep px-5 py-16">
+      {/* Ambiance dorée + photo en fond très estompée, dans l'esprit éditorial du site */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: 'url(/images/hero.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.1,
+          filter: 'grayscale(0.3)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(640px circle at 50% 8%, rgba(184,145,46,0.22), transparent 60%), radial-gradient(520px circle at 90% 95%, rgba(184,145,46,0.12), transparent 60%)',
+        }}
+      />
+
       <form
         onSubmit={(e) => {
           e.preventDefault()
           login.mutate({ password })
         }}
-        className="w-full max-w-sm bg-[#faf6f3] p-8 md:p-10"
+        className="relative w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl border border-white/10 bg-[#faf6f3] p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.65)] duration-700 md:p-10"
       >
-        <p className="text-center font-display text-2xl tracking-[0.14em] text-ink">
+        <img src="/images/logo.png" alt="Chez Laziz" className="mx-auto h-14 w-14" />
+        <p className="mt-4 text-center font-display text-2xl tracking-[0.14em] text-ink">
           CHEZ&nbsp;LAZIZ
         </p>
         <p className="mt-2 text-center text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
           Espace admin
         </p>
+        <Ornament className="mt-5 opacity-70" />
+
+        <label className="mt-6 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
+          Mot de passe
+        </label>
         <input
           type="password"
           required
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mot de passe"
-          className={`${inputCls} mt-8`}
+          placeholder="••••••••"
+          className={`${inputCls} mt-2`}
         />
         {login.isError && (
           <p className="mt-3 text-center text-sm text-red-600">
@@ -94,15 +122,15 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         <button
           type="submit"
           disabled={login.isPending}
-          className="mt-5 w-full rounded-full bg-[#b8912e] px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
+          className="gold-cta mt-6 w-full rounded-full px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
         >
           {login.isPending ? 'Connexion…' : 'Se connecter'}
         </button>
         <Link
           to="/"
-          className="mt-6 block text-center text-xs text-ink/50 underline underline-offset-4"
+          className="mt-6 block text-center text-xs text-ink/50 underline underline-offset-4 transition-colors hover:text-accent"
         >
-          Retour au site
+          ← Retour au site
         </Link>
       </form>
     </div>
@@ -150,7 +178,7 @@ function OrdersTab({
       )}
 
       {!filtered?.length && (
-        <p className="rounded-xl border border-sand bg-white p-8 text-center text-sm text-ink/50">
+        <p className="rounded-2xl border border-sand/70 bg-white shadow-sm p-8 text-center text-sm text-ink/50">
           {statusFilter ? 'Aucune commande dans ce statut.' : "Aucune commande pour l'instant."}
         </p>
       )}
@@ -158,7 +186,7 @@ function OrdersTab({
       {filtered?.map((o) => {
         const items = parseItems(o.items)
         return (
-          <div key={o.id} className="rounded-xl border border-sand bg-white p-5 md:p-6">
+          <div key={o.id} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-5 md:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-baseline gap-3">
@@ -305,7 +333,7 @@ function ProductsTab({ token }: { token: string }) {
             setShowForm(true)
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
-          className="shrink-0 rounded-full bg-[#b8912e] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-transform hover:scale-[1.03]"
+          className="shrink-0 gold-cta rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-transform hover:scale-[1.03]"
         >
           + Ajouter
         </button>
@@ -346,7 +374,7 @@ function ProductsTab({ token }: { token: string }) {
       {isLoading && <p className="text-sm text-ink/50">Chargement…</p>}
       <div className="space-y-3">
         {(products ?? []).map((p) => (
-          <div key={p.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-sand bg-white p-4 md:p-5">
+          <div key={p.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-4 md:p-5">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{p.name}</span>
@@ -397,7 +425,7 @@ function MessagesTab({ token }: { token: string }) {
   if (isLoading) return <p className="text-sm text-ink/50">Chargement…</p>
   if (!messages?.length)
     return (
-      <p className="rounded-xl border border-sand bg-white p-8 text-center text-sm text-ink/50">
+      <p className="rounded-2xl border border-sand/70 bg-white shadow-sm p-8 text-center text-sm text-ink/50">
         Aucun message pour l'instant.
       </p>
     )
@@ -459,7 +487,7 @@ function SettingsTab({ token }: { token: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="max-w-md space-y-4 rounded-xl border border-sand bg-white p-6 md:p-8">
+    <form onSubmit={submit} className="max-w-md space-y-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
       <p className="font-display text-xl">Changer le mot de passe</p>
       <input type="password" required value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Mot de passe actuel" className={inputCls} />
       <input type="password" required minLength={6} value={next} onChange={(e) => setNext(e.target.value)} placeholder="Nouveau mot de passe (min. 6 caractères)" className={inputCls} />
@@ -509,7 +537,7 @@ function StatsTab({ token }: { token: string }) {
     <div>
       <div className="grid gap-4 sm:grid-cols-3">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-xl border border-sand bg-white p-6 text-center">
+          <div key={c.label} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-center">
             <p className="font-display text-4xl text-accent">{c.value}</p>
             <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
               {c.label}
@@ -518,7 +546,7 @@ function StatsTab({ token }: { token: string }) {
         ))}
       </div>
 
-      <div className="mt-6 rounded-xl border border-sand bg-white p-6">
+      <div className="mt-6 rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
         <p className="mb-4 font-display text-xl">Visites par jour</p>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -651,7 +679,7 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
   }
 
   return (
-    <div className="rounded-xl border border-sand bg-white p-5 md:p-6">
+    <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-5 md:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span
@@ -710,7 +738,7 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
             <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Messages reçus</label>
             <input value={messages} onChange={(e) => setMessages(e.target.value)} placeholder="0" inputMode="numeric" className={inputCls} />
           </div>
-          <button type="submit" disabled={record.isPending} className="rounded-full bg-[#b8912e] px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50">
+          <button type="submit" disabled={record.isPending} className="gold-cta rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50">
             {record.isPending ? '…' : 'Enregistrer'}
           </button>
           <button type="button" onClick={() => setEditing(false)} className="rounded-full border border-ink/25 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink">
@@ -807,7 +835,7 @@ function OverviewTab({
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {revenueCards.map((c) => (
-            <div key={c.label} className="rounded-xl border border-sand bg-white p-6 text-center">
+            <div key={c.label} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-center">
               <p className="font-display text-3xl text-accent">{formatTND(c.value)} <span className="text-base">TND</span></p>
               <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
                 {c.label}
@@ -840,7 +868,7 @@ function OverviewTab({
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Top produits */}
-        <div className="rounded-xl border border-sand bg-white p-6">
+        <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
           <p className="mb-4 font-display text-xl">Produits les plus vendus</p>
           {topProducts.length === 0 ? (
             <p className="text-sm text-ink/50">Pas encore de ventes.</p>
@@ -861,7 +889,7 @@ function OverviewTab({
         </div>
 
         {/* Visiteurs */}
-        <div className="rounded-xl border border-sand bg-white p-6">
+        <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
           <div className="mb-4 flex items-baseline justify-between">
             <p className="font-display text-xl">Visiteurs</p>
             <p className="text-xs text-ink/45">
@@ -895,7 +923,7 @@ function OverviewTab({
         {/* Messages non lus */}
         <button
           onClick={onGoToMessages}
-          className="rounded-xl border border-sand bg-white p-6 text-left transition-transform hover:-translate-y-0.5"
+          className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-left transition-transform hover:-translate-y-0.5"
         >
           <div className="mb-4 flex items-baseline justify-between">
             <p className="font-display text-xl">Messages</p>
@@ -922,7 +950,7 @@ function OverviewTab({
         {/* Réseaux sociaux */}
         <button
           onClick={onGoToMarketing}
-          className="rounded-xl border border-sand bg-white p-6 text-left transition-transform hover:-translate-y-0.5"
+          className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-left transition-transform hover:-translate-y-0.5"
         >
           <p className="mb-4 font-display text-xl">Réseaux sociaux</p>
           {social.length === 0 ? (
@@ -955,6 +983,55 @@ const TABS = [
   { id: 'parametres', label: 'Paramètres' },
 ] as const
 
+// Icônes fines (stroke 1.8, même langage graphique que le panier du header
+// public) — une par onglet, pour repérer la section en un coup d'œil.
+const TAB_ICONS: Record<(typeof TABS)[number]['id'], React.ReactNode> = {
+  apercu: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="3" width="8" height="8" rx="1.5" />
+      <rect x="13" y="3" width="8" height="5" rx="1.5" />
+      <rect x="13" y="12" width="8" height="9" rx="1.5" />
+      <rect x="3" y="15" width="8" height="6" rx="1.5" />
+    </svg>
+  ),
+  commandes: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" strokeLinejoin="round" />
+      <path d="M9 8h6M9 12h6" strokeLinecap="round" />
+    </svg>
+  ),
+  produits: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 3 3 8v8l9 5 9-5V8l-9-5Z" strokeLinejoin="round" />
+      <path d="M3 8l9 5 9-5M12 13v8" />
+    </svg>
+  ),
+  messages: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m4 6.5 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  visiteurs: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  ),
+  marketing: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 10v4h3l6 4V6l-6 4H3Z" strokeLinejoin="round" />
+      <path d="M16 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11" strokeLinecap="round" />
+    </svg>
+  ),
+  parametres: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.5a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+}
+
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('apercu')
@@ -986,13 +1063,23 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">
-      <header className="border-b border-sand/60 bg-white">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 md:px-8">
-          <span className="font-display text-xl tracking-[0.14em] text-ink">
-            CHEZ&nbsp;LAZIZ <span className="ml-2 text-[10px] font-sans font-medium uppercase tracking-[0.3em] text-accent">Admin</span>
-          </span>
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-xs text-ink/50 underline underline-offset-4">
+      {/* Filet doré — signature visuelle du reste du site, en écho discret ici */}
+      <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
+
+      <header className="sticky top-0 z-30 border-b border-sand/60 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-[70px] max-w-6xl items-center justify-between px-5 md:px-8">
+          <div className="flex items-center gap-3">
+            <img src="/images/logo.png" alt="Chez Laziz" className="h-9 w-9" />
+            <div className="leading-tight">
+              <p className="font-display text-lg tracking-[0.1em] text-ink">CHEZ&nbsp;LAZIZ</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-accent">Espace admin</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="rounded-full border border-ink/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent"
+            >
               Voir le site
             </Link>
             <button
@@ -1000,13 +1087,13 @@ export default function AdminPage() {
                 localStorage.removeItem(TOKEN_KEY)
                 setToken(null)
               }}
-              className="rounded-full border border-ink/25 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-red-300 hover:text-red-600"
+              className="rounded-full border border-ink/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-red-300 hover:text-red-600"
             >
               Déconnexion
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-5 pb-0 md:px-8">
+        <nav className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-5 pb-3 md:px-8">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -1014,42 +1101,45 @@ export default function AdminPage() {
                 setOrderFilter(null)
                 setTab(t.id)
               }}
-              className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 tab === t.id
-                  ? 'border-[#b8912e] text-accent'
-                  : 'border-transparent text-ink/50 hover:text-ink'
+                  ? 'bg-ink text-[#faf6f3] shadow-sm'
+                  : 'text-ink/55 hover:bg-ink/5 hover:text-ink'
               }`}
             >
+              <span className={tab === t.id ? 'text-[#b8912e]' : 'text-ink/35'}>{TAB_ICONS[t.id]}</span>
               {t.label}
             </button>
           ))}
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-5 py-10 md:px-8">
-        {tab === 'apercu' && (
-          <OverviewTab
-            token={token}
-            onGoToOrders={(status) => {
-              setOrderFilter(status)
-              setTab('commandes')
-            }}
-            onGoToMessages={() => setTab('messages')}
-            onGoToMarketing={() => setTab('marketing')}
-          />
-        )}
-        {tab === 'commandes' && (
-          <OrdersTab
-            token={token}
-            statusFilter={orderFilter}
-            onClearFilter={() => setOrderFilter(null)}
-          />
-        )}
-        {tab === 'produits' && <ProductsTab token={token} />}
-        {tab === 'messages' && <MessagesTab token={token} />}
-        {tab === 'visiteurs' && <StatsTab token={token} />}
-        {tab === 'marketing' && <MarketingTab token={token} />}
-        {tab === 'parametres' && <SettingsTab token={token} />}
+      <main className="mx-auto max-w-6xl px-5 py-10 md:px-8">
+        <div key={tab} className="animate-in fade-in slide-in-from-bottom-1 duration-500">
+          {tab === 'apercu' && (
+            <OverviewTab
+              token={token}
+              onGoToOrders={(status) => {
+                setOrderFilter(status)
+                setTab('commandes')
+              }}
+              onGoToMessages={() => setTab('messages')}
+              onGoToMarketing={() => setTab('marketing')}
+            />
+          )}
+          {tab === 'commandes' && (
+            <OrdersTab
+              token={token}
+              statusFilter={orderFilter}
+              onClearFilter={() => setOrderFilter(null)}
+            />
+          )}
+          {tab === 'produits' && <ProductsTab token={token} />}
+          {tab === 'messages' && <MessagesTab token={token} />}
+          {tab === 'visiteurs' && <StatsTab token={token} />}
+          {tab === 'marketing' && <MarketingTab token={token} />}
+          {tab === 'parametres' && <SettingsTab token={token} />}
+        </div>
       </main>
     </div>
   )
