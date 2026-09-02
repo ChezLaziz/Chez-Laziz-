@@ -111,24 +111,51 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 
 /* ------------------------------ Commandes ------------------------------ */
 
-function OrdersTab({ token }: { token: string }) {
+function OrdersTab({
+  token,
+  statusFilter,
+  onClearFilter,
+}: {
+  token: string
+  statusFilter?: string | null
+  onClearFilter?: () => void
+}) {
   const utils = trpc.useUtils()
   const { data: orders, isLoading } = trpc.orders.list.useQuery({ token })
   const setStatus = trpc.orders.setStatus.useMutation({
     onSuccess: () => utils.orders.list.invalidate(),
   })
 
+  const filtered = statusFilter
+    ? (orders ?? []).filter((o) => o.status === statusFilter)
+    : orders
+
   if (isLoading) return <p className="text-sm text-ink/50">Chargement…</p>
-  if (!orders?.length)
-    return (
-      <p className="rounded-xl border border-sand bg-white p-8 text-center text-sm text-ink/50">
-        Aucune commande pour l'instant.
-      </p>
-    )
 
   return (
     <div className="space-y-4">
-      {orders.map((o) => {
+      {statusFilter && (
+        <div className="flex items-center gap-3 rounded-xl border border-[#bc773f]/40 bg-[#bc773f]/10 px-5 py-3 text-sm">
+          <span className="font-medium text-accent">
+            Filtré : {STATUS_LABELS[statusFilter] ?? statusFilter}
+          </span>
+          <span className="text-ink/40">({filtered?.length ?? 0})</span>
+          <button
+            onClick={onClearFilter}
+            className="ml-auto text-xs font-semibold uppercase tracking-wide text-ink/50 underline underline-offset-4 hover:text-ink"
+          >
+            Retirer le filtre
+          </button>
+        </div>
+      )}
+
+      {!filtered?.length && (
+        <p className="rounded-xl border border-sand bg-white p-8 text-center text-sm text-ink/50">
+          {statusFilter ? 'Aucune commande dans ce statut.' : "Aucune commande pour l'instant."}
+        </p>
+      )}
+
+      {filtered?.map((o) => {
         const items = parseItems(o.items)
         return (
           <div key={o.id} className="rounded-xl border border-sand bg-white p-5 md:p-6">
@@ -726,9 +753,195 @@ function MarketingTab({ token }: { token: string }) {
   )
 }
 
+/* ------------------------------ Vue d'ensemble ------------------------------ */
+
+function OverviewTab({
+  token,
+  onGoToOrders,
+  onGoToMessages,
+  onGoToMarketing,
+}: {
+  token: string
+  onGoToOrders: (status: string) => void
+  onGoToMessages: () => void
+  onGoToMarketing: () => void
+}) {
+  const { data, isLoading } = trpc.dashboard.overview.useQuery(
+    { token },
+    { refetchInterval: 30000 },
+  )
+
+  if (isLoading || !data) return <p className="text-sm text-ink/50">Chargement…</p>
+
+  const { revenue, statusCounts, topProducts, visits, unreadMessages, unreadCount, social } = data
+
+  const revenueCards = [
+    { label: "Aujourd'hui", value: revenue.todayMillimes },
+    { label: '7 derniers jours', value: revenue.weekMillimes },
+    { label: 'Total', value: revenue.totalMillimes },
+  ]
+
+  const activeStatuses: (keyof typeof STATUS_LABELS)[] = [
+    'nouvelle',
+    'en_preparation',
+    'prete',
+    'terminee',
+    'annulee',
+  ]
+
+  const dayLabel = (iso: string) =>
+    new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
+  const today = visits.byDay[visits.byDay.length - 1]?.day
+
+  return (
+    <div className="space-y-8">
+      {/* Chiffre d'affaires */}
+      <div>
+        <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
+          Chiffre d'affaires
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {revenueCards.map((c) => (
+            <div key={c.label} className="rounded-xl border border-sand bg-white p-6 text-center">
+              <p className="font-display text-3xl text-accent">{formatTND(c.value)} <span className="text-base">TND</span></p>
+              <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
+                {c.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Commandes par statut — cartes cliquables qui filtrent */}
+      <div>
+        <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
+          Commandes — cliquez pour filtrer
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {activeStatuses.map((s) => (
+            <button
+              key={s}
+              onClick={() => onGoToOrders(s)}
+              className={`rounded-xl border p-4 text-center transition-transform hover:-translate-y-0.5 ${STATUS_COLORS[s]}`}
+            >
+              <p className="font-display text-2xl">{statusCounts[s] ?? 0}</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                {STATUS_LABELS[s]}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Top produits */}
+        <div className="rounded-xl border border-sand bg-white p-6">
+          <p className="mb-4 font-display text-xl">Produits les plus vendus</p>
+          {topProducts.length === 0 ? (
+            <p className="text-sm text-ink/50">Pas encore de ventes.</p>
+          ) : (
+            <ul className="space-y-3">
+              {topProducts.map((p, i) => (
+                <li key={p.productId} className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#bc773f]/15 text-xs font-semibold text-accent">
+                    {i + 1}
+                  </span>
+                  <span className="flex-1 text-sm">{p.name}</span>
+                  <span className="text-xs text-ink/45">{p.qtySold} vendus</span>
+                  <span className="font-display text-accent">{formatTND(p.revenueMillimes)} TND</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Visiteurs */}
+        <div className="rounded-xl border border-sand bg-white p-6">
+          <div className="mb-4 flex items-baseline justify-between">
+            <p className="font-display text-xl">Visiteurs</p>
+            <p className="text-xs text-ink/45">
+              {visits.today} aujourd'hui · {visits.week} sur 7 jours
+            </p>
+          </div>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={visits.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <XAxis
+                  dataKey="day"
+                  tickFormatter={dayLabel}
+                  tick={{ fontSize: 10, fill: '#3c3835' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#3c3835' }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v) => [String(v), 'Visites']} labelFormatter={(l) => dayLabel(String(l))} />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {visits.byDay.map((d) => (
+                    <Cell key={d.day} fill={d.day === today ? '#bc773f' : '#dec9b8'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Messages non lus */}
+        <button
+          onClick={onGoToMessages}
+          className="rounded-xl border border-sand bg-white p-6 text-left transition-transform hover:-translate-y-0.5"
+        >
+          <div className="mb-4 flex items-baseline justify-between">
+            <p className="font-display text-xl">Messages</p>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-[#bc773f] px-2.5 py-0.5 text-xs font-semibold text-white">
+                {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          {unreadMessages.length === 0 ? (
+            <p className="text-sm text-ink/50">Aucun message non lu.</p>
+          ) : (
+            <ul className="space-y-2">
+              {unreadMessages.map((m) => (
+                <li key={m.id} className="border-t border-sand/60 pt-2 text-sm first:border-t-0 first:pt-0">
+                  <span className="font-medium">{m.name}</span>
+                  <span className="ml-2 text-ink/50">— {m.message.slice(0, 60)}{m.message.length > 60 ? '…' : ''}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </button>
+
+        {/* Réseaux sociaux */}
+        <button
+          onClick={onGoToMarketing}
+          className="rounded-xl border border-sand bg-white p-6 text-left transition-transform hover:-translate-y-0.5"
+        >
+          <p className="mb-4 font-display text-xl">Réseaux sociaux</p>
+          {social.length === 0 ? (
+            <p className="text-sm text-ink/50">Aucun chiffre enregistré — allez dans « Marketing ».</p>
+          ) : (
+            <ul className="grid grid-cols-2 gap-3">
+              {social.map((s) => (
+                <li key={s.network} className="flex items-center justify-between rounded-lg bg-[#faf6f3] px-3 py-2">
+                  <span className="text-xs font-medium capitalize text-ink/70">{s.network}</span>
+                  <span className="font-display text-accent">{s.followers.toLocaleString('fr-FR')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ------------------------------ Page ------------------------------ */
 
 const TABS = [
+  { id: 'apercu', label: "Vue d'ensemble" },
   { id: 'commandes', label: 'Commandes' },
   { id: 'produits', label: 'Produits & prix' },
   { id: 'messages', label: 'Messages' },
@@ -739,7 +952,8 @@ const TABS = [
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
-  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('commandes')
+  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('apercu')
+  const [orderFilter, setOrderFilter] = useState<string | null>(null)
 
   // Vérifie le token stocké ; si invalide/expiré → retour au login
   trpc.admin.check.useQuery(
@@ -791,7 +1005,10 @@ export default function AdminPage() {
           {TABS.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                setOrderFilter(null)
+                setTab(t.id)
+              }}
               className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 tab === t.id
                   ? 'border-[#bc773f] text-accent'
@@ -805,7 +1022,24 @@ export default function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-5 py-10 md:px-8">
-        {tab === 'commandes' && <OrdersTab token={token} />}
+        {tab === 'apercu' && (
+          <OverviewTab
+            token={token}
+            onGoToOrders={(status) => {
+              setOrderFilter(status)
+              setTab('commandes')
+            }}
+            onGoToMessages={() => setTab('messages')}
+            onGoToMarketing={() => setTab('marketing')}
+          />
+        )}
+        {tab === 'commandes' && (
+          <OrdersTab
+            token={token}
+            statusFilter={orderFilter}
+            onClearFilter={() => setOrderFilter(null)}
+          />
+        )}
         {tab === 'produits' && <ProductsTab token={token} />}
         {tab === 'messages' && <MessagesTab token={token} />}
         {tab === 'visiteurs' && <StatsTab token={token} />}

@@ -4,6 +4,7 @@ import { ordersRouter } from "./ordersRouter";
 import { contactRouter, adminRouter } from "./contactRouter";
 import { statsRouter } from "./statsRouter";
 import { socialRouter } from "./socialRouter";
+import { dashboardRouter } from "./dashboardRouter";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -13,6 +14,7 @@ export const appRouter = createRouter({
   admin: adminRouter,
   stats: statsRouter,
   social: socialRouter,
+  dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;
