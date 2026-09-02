@@ -121,7 +121,7 @@ function ProductCard({
 }
 
 export default function Collection() {
-  const { data: products } = trpc.products.list.useQuery()
+  const { data: products, isLoading } = trpc.products.list.useQuery()
   const { cart, add, setQty } = useCart()
   const groups = products ? groupByCategory(products as DbProduct[]) : []
 
@@ -146,6 +146,27 @@ export default function Collection() {
             </svg>
           </a>
         </div>
+
+        {isLoading && (
+          <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-white">
+                <div className="aspect-square bg-sand/40" />
+                <div className="space-y-2 p-5">
+                  <div className="h-4 w-3/4 rounded bg-sand/50" />
+                  <div className="h-3 w-1/2 rounded bg-sand/40" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && groups.length === 0 && (
+          <p className="mt-16 rounded-xl border border-sand bg-white p-10 text-center text-sm text-ink/50">
+            Le catalogue est en cours de mise à jour — revenez très vite, ou
+            appelez-nous directement au {PHONE_TEL.replace('tel:', '')}.
+          </p>
+        )}
 
         {groups.map((cat) => (
           <div key={cat.title} data-reveal className="mt-16 first:mt-20">
