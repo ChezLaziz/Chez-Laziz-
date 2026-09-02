@@ -90,7 +90,7 @@ export default function Header() {
                 <circle cx="17" cy="20" r="1.4" />
               </svg>
               {count > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#bc773f] text-[10px] font-semibold text-white">
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#b8912e] text-[10px] font-semibold text-white">
                   {count}
                 </span>
               )}
@@ -99,7 +99,7 @@ export default function Header() {
               to="/commande"
               className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors duration-300 ${
                 scrolled
-                  ? 'border-[#bc773f] text-accent hover:bg-[#bc773f] hover:text-white'
+                  ? 'border-[#b8912e] text-accent hover:bg-[#b8912e] hover:text-white'
                   : 'border-[#faf6f3]/70 text-[#faf6f3] hover:bg-[#faf6f3] hover:text-ink'
               }`}
             >
@@ -121,7 +121,7 @@ export default function Header() {
                 <circle cx="17" cy="20" r="1.4" />
               </svg>
               {count > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#bc773f] text-[10px] font-semibold text-white">
+                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#b8912e] text-[10px] font-semibold text-white">
                   {count}
                 </span>
               )}
@@ -179,7 +179,7 @@ export default function Header() {
         )}
         <a
           href="tel:+21623691039"
-          className="mt-4 rounded-full bg-[#bc773f] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"
+          className="mt-4 rounded-full bg-[#b8912e] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"
         >
           Commander par téléphone
         </a>

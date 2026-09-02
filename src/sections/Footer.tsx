@@ -72,7 +72,7 @@ export default function Footer() {
                 rel="noreferrer"
                 aria-label={s.name}
                 title={s.name}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#faf6f3]/25 text-[#faf6f3]/80 transition-all duration-300 hover:border-[#bc773f] hover:text-[#bc773f]"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#faf6f3]/25 text-[#faf6f3]/80 transition-all duration-300 hover:border-[#b8912e] hover:text-[#b8912e]"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                   {s.icon}
@@ -82,13 +82,13 @@ export default function Footer() {
           </div>
 
           <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-[0.2em] text-[#faf6f3]/70">
-            <a href="#maison" className="transition-colors hover:text-[#bc773f]">La Maison</a>
-            <a href="#collection" className="transition-colors hover:text-[#bc773f]">La Collection</a>
-            <a href="#galerie" className="transition-colors hover:text-[#bc773f]">Galerie</a>
-            <a href="#commande" className="transition-colors hover:text-[#bc773f]">Commander</a>
-            <a href="#visite" className="transition-colors hover:text-[#bc773f]">Nous trouver</a>
+            <a href="#maison" className="transition-colors hover:text-[#b8912e]">La Maison</a>
+            <a href="#collection" className="transition-colors hover:text-[#b8912e]">La Collection</a>
+            <a href="#galerie" className="transition-colors hover:text-[#b8912e]">Galerie</a>
+            <a href="#commande" className="transition-colors hover:text-[#b8912e]">Commander</a>
+            <a href="#visite" className="transition-colors hover:text-[#b8912e]">Nous trouver</a>
           </nav>
-          <div className="h-px w-24 bg-[#bc773f]/60" />
+          <div className="h-px w-24 bg-[#b8912e]/60" />
           <p className="text-xs font-light text-[#faf6f3]/45">
             © 2026 Chez Laziz — عند لعزيز · Kairouan. Tous droits réservés.
           </p>

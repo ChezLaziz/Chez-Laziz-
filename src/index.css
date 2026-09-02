@@ -6,7 +6,7 @@
 :root {
   --ink: #3c3835;          /* charcoal brown — primary text */
   --bg: #faf6f3;           /* warm off-white */
-  --accent: #bc773f;       /* terracotta / bronze */
+  --accent: #b8912e;       /* golden antique — accent principal */
   --cream: #f5ece5;        /* peach-tinted cream surfaces */
   --sand: #dec9b8;         /* pale sand — decorative lines */
   --muted: #aeaaa7;        /* warm gray */
@@ -21,19 +21,19 @@
     --card-foreground: 30 6% 22%;
     --popover: 0 0% 100%;
     --popover-foreground: 30 6% 22%;
-    --primary: 27 49% 49%;
+    --primary: 43 60% 45%;
     --primary-foreground: 20 33% 97%;
     --secondary: 25 38% 93%;
     --secondary-foreground: 30 6% 22%;
     --muted: 25 38% 93%;
     --muted-foreground: 30 4% 67%;
     --accent: 25 38% 93%;
-    --accent-foreground: 27 49% 49%;
+    --accent-foreground: 43 60% 45%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 28 30% 86%;
     --input: 28 30% 86%;
-    --ring: 27 49% 49%;
+    --ring: 43 60% 45%;
     --radius: 0.25rem;
   }
 
@@ -254,6 +254,17 @@
   transform: translateX(5px);
 }
 
+/* ---------- Gold shimmer (boutons premium) ---------- */
+.gold-cta {
+  background: linear-gradient(120deg, #a67a1f 0%, #d4ac4a 45%, #b8912e 75%, #c9a03a 100%);
+  background-size: 220% 100%;
+  background-position: 0% 0%;
+  transition: background-position 0.6s ease, transform 0.3s ease;
+}
+.gold-cta:hover {
+  background-position: 100% 0%;
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   [data-reveal], .mask-reveal, .mask-reveal img, .hero-char {
@@ -264,4 +275,5 @@
   }
   .marquee-track { animation: none; }
   html { scroll-behavior: auto; }
+  .gold-cta { transition: none; }
 }

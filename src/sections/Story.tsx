@@ -19,7 +19,7 @@ export default function Story() {
           {/* Dark editorial panel overlapping the photograph */}
           <div className="relative z-10 lg:col-span-5 lg:-ml-24 lg:mt-32">
             <div className="bg-ink-deep p-8 text-[#faf6f3] md:p-12" data-reveal>
-              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#bc773f]">
+              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
                 La Maison
               </p>
               <h2 className="font-display text-3xl leading-tight md:text-[2.6rem]">
@@ -46,7 +46,7 @@ export default function Story() {
                   ['7j/7', 'Ouvert'],
                 ].map(([n, label]) => (
                   <div key={label}>
-                    <div className="font-display text-3xl text-[#bc773f] md:text-4xl">{n}</div>
+                    <div className="font-display text-3xl text-[#b8912e] md:text-4xl">{n}</div>
                     <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#faf6f3]/60">
                       {label}
                     </div>

@@ -91,10 +91,10 @@ export default function InstagramReel() {
             rel="noreferrer"
             className="absolute -bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[#faf6f3] px-4 py-2 text-xs font-semibold text-ink shadow-lg"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bc773f" strokeWidth="2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b8912e" strokeWidth="2">
               <rect x="2.5" y="2.5" width="19" height="19" rx="5" />
               <circle cx="12" cy="12" r="4.2" />
-              <circle cx="17.6" cy="6.4" r="1.1" fill="#bc773f" stroke="none" />
+              <circle cx="17.6" cy="6.4" r="1.1" fill="#b8912e" stroke="none" />
             </svg>
             @chezlaziz
           </a>

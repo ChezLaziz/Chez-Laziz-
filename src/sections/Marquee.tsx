@@ -12,7 +12,7 @@ const ITEMS = [
 export default function Marquee() {
   const row = [...ITEMS, ...ITEMS]
   return (
-    <div className="overflow-hidden border-y border-[#a5663a]/40 bg-[#bc773f] py-4" aria-hidden="true">
+    <div className="overflow-hidden border-y border-[#8f6f22]/40 bg-[#b8912e] py-4" aria-hidden="true">
       <div className="marquee-track">
         {[0, 1].map((half) => (
           <div key={half} className="flex shrink-0 items-center">

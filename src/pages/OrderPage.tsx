@@ -20,7 +20,7 @@ function TopBar({ title }: { title: string }) {
 }
 
 const inputCls =
-  'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#bc773f]'
+  'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e]'
 
 export default function OrderPage() {
   const { data: products, isLoading } = trpc.products.list.useQuery()
@@ -86,7 +86,7 @@ export default function OrderPage() {
       <div className="min-h-screen bg-[#faf6f3]">
         <TopBar title="Commande" />
         <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-24 text-center md:py-32">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#bc773f]/15 text-accent">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#b8912e]/15 text-accent">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 12.5l5 5L20 6.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -146,14 +146,14 @@ export default function OrderPage() {
                 <div
                   key={p.id}
                   className={`flex items-center gap-4 rounded-xl border p-5 transition-colors ${
-                    qty > 0 ? 'border-[#bc773f] bg-[#f5ece5]' : 'border-sand bg-white'
+                    qty > 0 ? 'border-[#b8912e] bg-[#f5ece5]' : 'border-sand bg-white'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-2">
                       <span className="font-medium">{p.name}</span>
                       {p.badge && (
-                        <span className="rounded-full border border-[#bc773f] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
+                        <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
                           {p.badge}
                         </span>
                       )}
@@ -172,7 +172,7 @@ export default function OrderPage() {
                       type="button"
                       aria-label="Moins"
                       onClick={() => setQty(p.id, qty - 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#bc773f] hover:text-accent disabled:opacity-30"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-30"
                       disabled={qty === 0}
                     >
                       −
@@ -182,7 +182,7 @@ export default function OrderPage() {
                       type="button"
                       aria-label="Plus"
                       onClick={() => setQty(p.id, qty + 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#bc773f] hover:text-accent"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent"
                     >
                       +
                     </button>
@@ -209,7 +209,7 @@ export default function OrderPage() {
                       {p.qty} × {p.name}
                     </span>
                     <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
-                    <span className="font-display text-[#bc773f]">
+                    <span className="font-display text-[#b8912e]">
                       {formatTND(p.qty * p.priceMillimes)}
                     </span>
                   </li>
@@ -219,7 +219,7 @@ export default function OrderPage() {
               <div className="mt-6 flex items-baseline border-t border-[#faf6f3]/15 pt-5">
                 <span className="text-sm uppercase tracking-[0.2em]">Total</span>
                 <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
-                <span className="font-display text-2xl text-[#bc773f]">
+                <span className="font-display text-2xl text-[#b8912e]">
                   {formatTND(total)} <span className="text-xs">TND</span>
                 </span>
               </div>
@@ -252,7 +252,7 @@ export default function OrderPage() {
               <button
                 type="submit"
                 disabled={items.length === 0 || createOrder.isPending}
-                className="mt-6 w-full rounded-full bg-[#bc773f] px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
+                className="gold-cta mt-6 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {createOrder.isPending ? 'Envoi…' : 'Envoyer la commande'}
               </button>
@@ -287,7 +287,7 @@ export default function OrderPage() {
           </div>
           <div className="lg:col-span-7">
             {msgSent ? (
-              <div className="rounded-xl border border-[#bc773f] bg-[#f5ece5] p-8 text-center">
+              <div className="rounded-xl border border-[#b8912e] bg-[#f5ece5] p-8 text-center">
                 <p className="font-display text-2xl">Message envoyé, merci !</p>
                 <p className="mt-2 text-sm font-light text-ink/60">
                   Nous vous répondrons très vite.

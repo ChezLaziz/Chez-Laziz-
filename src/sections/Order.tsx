@@ -23,7 +23,7 @@ export default function Order() {
           {/* Order panel */}
           <div className="lg:col-span-6">
             <div className="bg-ink-deep p-8 text-[#faf6f3] md:p-12" data-reveal>
-              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#bc773f]">
+              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
                 Commander
               </p>
               <h2 className="font-display text-3xl leading-tight md:text-5xl">
@@ -46,7 +46,7 @@ export default function Order() {
                       className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25"
                       aria-hidden="true"
                     />
-                    <span className="font-display text-[#bc773f]">
+                    <span className="font-display text-[#b8912e]">
                       {formatTND(q.priceMillimes)} <span className="text-xs">TND</span>
                     </span>
                   </li>
@@ -57,7 +57,7 @@ export default function Order() {
               <div className="mt-10 flex flex-col gap-4">
                 <Link
                   to="/commande"
-                  className="flex items-center justify-center gap-3 rounded-full bg-[#bc773f] px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.03]"
+                  className="gold-cta flex items-center justify-center gap-3 rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.03]"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                     <path d="M6 6h15l-1.5 9h-12L5 3H2" strokeLinecap="round" strokeLinejoin="round" />

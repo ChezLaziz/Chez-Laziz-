@@ -117,7 +117,7 @@ export default function Hero() {
         >
           <a
             href="#collection"
-            className="rounded-full bg-[#bc773f] px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white transition-colors duration-300 hover:bg-[#a5663a]"
+            className="gold-cta rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
           >
             Découvrir la collection
           </a>
@@ -138,7 +138,7 @@ export default function Hero() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-5 py-4 text-[11px] uppercase tracking-[0.22em] text-[#faf6f3]/70 sm:flex-row md:px-10">
           <span>Ouvert 7j/7 · 07h00 — 00h00</span>
           <span className="hidden items-center gap-2 sm:flex">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#bc773f" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#b8912e" aria-hidden="true">
               <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" />
             </svg>
             5,0 sur Google

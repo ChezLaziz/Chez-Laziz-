@@ -17,7 +17,7 @@ import {
 const TOKEN_KEY = 'laziz_admin_token'
 
 const inputCls =
-  'w-full rounded-lg border border-sand bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#bc773f]'
+  'w-full rounded-lg border border-sand bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e]'
 
 const STATUS_LABELS: Record<string, string> = {
   nouvelle: 'Nouvelle',
@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   annulee: 'Annulée',
 }
 const STATUS_COLORS: Record<string, string> = {
-  nouvelle: 'bg-[#bc773f]/15 text-[#8a5527] border-[#bc773f]/40',
+  nouvelle: 'bg-[#b8912e]/15 text-[#8a5527] border-[#b8912e]/40',
   en_preparation: 'bg-blue-50 text-blue-700 border-blue-200',
   prete: 'bg-green-50 text-green-700 border-green-200',
   terminee: 'bg-ink/5 text-ink/50 border-ink/15',
@@ -94,7 +94,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         <button
           type="submit"
           disabled={login.isPending}
-          className="mt-5 w-full rounded-full bg-[#bc773f] px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
+          className="mt-5 w-full rounded-full bg-[#b8912e] px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
         >
           {login.isPending ? 'Connexion…' : 'Se connecter'}
         </button>
@@ -135,7 +135,7 @@ function OrdersTab({
   return (
     <div className="space-y-4">
       {statusFilter && (
-        <div className="flex items-center gap-3 rounded-xl border border-[#bc773f]/40 bg-[#bc773f]/10 px-5 py-3 text-sm">
+        <div className="flex items-center gap-3 rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/10 px-5 py-3 text-sm">
           <span className="font-medium text-accent">
             Filtré : {STATUS_LABELS[statusFilter] ?? statusFilter}
           </span>
@@ -301,14 +301,14 @@ function ProductsTab({ token }: { token: string }) {
             setShowForm(true)
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
-          className="shrink-0 rounded-full bg-[#bc773f] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-transform hover:scale-[1.03]"
+          className="shrink-0 rounded-full bg-[#b8912e] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-transform hover:scale-[1.03]"
         >
           + Ajouter
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={submit} className="mb-8 space-y-4 rounded-xl border border-[#bc773f]/50 bg-[#f5ece5] p-6">
+        <form onSubmit={submit} className="mb-8 space-y-4 rounded-xl border border-[#b8912e]/50 bg-[#f5ece5] p-6">
           <p className="font-display text-xl">{editingId ? 'Modifier le produit' : 'Nouveau produit'}</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nom du produit" className={inputCls} />
@@ -323,7 +323,7 @@ function ProductsTab({ token }: { token: string }) {
             </select>
             <input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="Badge (ex : Nouveau)" className={inputCls} />
             <label className="flex items-center gap-3 text-sm text-ink/70">
-              <input type="checkbox" checked={form.available} onChange={(e) => setForm({ ...form, available: e.target.checked })} className="h-4 w-4 accent-[#bc773f]" />
+              <input type="checkbox" checked={form.available} onChange={(e) => setForm({ ...form, available: e.target.checked })} className="h-4 w-4 accent-[#b8912e]" />
               Visible sur le site
             </label>
           </div>
@@ -346,7 +346,7 @@ function ProductsTab({ token }: { token: string }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{p.name}</span>
                 {p.badge && (
-                  <span className="rounded-full border border-[#bc773f] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
+                  <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
                     {p.badge}
                   </span>
                 )}
@@ -361,7 +361,7 @@ function ProductsTab({ token }: { token: string }) {
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button onClick={() => startEdit(p)} className="rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#bc773f] hover:text-accent">
+              <button onClick={() => startEdit(p)} className="rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
                 Modifier
               </button>
               <button
@@ -402,7 +402,7 @@ function MessagesTab({ token }: { token: string }) {
       {messages.map((m) => (
         <div
           key={m.id}
-          className={`rounded-xl border p-5 ${m.isRead ? 'border-sand bg-white opacity-70' : 'border-[#bc773f]/50 bg-[#f5ece5]'}`}
+          className={`rounded-xl border p-5 ${m.isRead ? 'border-sand bg-white opacity-70' : 'border-[#b8912e]/50 bg-[#f5ece5]'}`}
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -416,7 +416,7 @@ function MessagesTab({ token }: { token: string }) {
             </div>
             <button
               onClick={() => markRead.mutate({ token, id: m.id, isRead: !m.isRead })}
-              className="rounded-full border border-ink/25 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#bc773f] hover:text-accent"
+              className="rounded-full border border-ink/25 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent"
             >
               {m.isRead ? 'Marquer non lu' : 'Marquer lu'}
             </button>
@@ -533,7 +533,7 @@ function StatsTab({ token }: { token: string }) {
               />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {stats.byDay.map((d) => (
-                  <Cell key={d.day} fill={d.day === today ? '#bc773f' : '#dec9b8'} />
+                  <Cell key={d.day} fill={d.day === today ? '#b8912e' : '#dec9b8'} />
                 ))}
               </Bar>
             </BarChart>
@@ -705,7 +705,7 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
             <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Messages reçus</label>
             <input value={messages} onChange={(e) => setMessages(e.target.value)} placeholder="0" inputMode="numeric" className={inputCls} />
           </div>
-          <button type="submit" disabled={record.isPending} className="rounded-full bg-[#bc773f] px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50">
+          <button type="submit" disabled={record.isPending} className="rounded-full bg-[#b8912e] px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50">
             {record.isPending ? '…' : 'Enregistrer'}
           </button>
           <button type="button" onClick={() => setEditing(false)} className="rounded-full border border-ink/25 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink">
@@ -715,7 +715,7 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
       ) : (
         <button
           onClick={() => setEditing(true)}
-          className="mt-4 w-full rounded-full border border-[#bc773f] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-accent transition-colors hover:bg-[#bc773f] hover:text-white"
+          className="mt-4 w-full rounded-full border border-[#b8912e] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-accent transition-colors hover:bg-[#b8912e] hover:text-white"
         >
           Mettre à jour les chiffres
         </button>
@@ -731,7 +731,7 @@ function MarketingTab({ token }: { token: string }) {
   return (
     <div>
       {unread > 0 && (
-        <div className="mb-6 flex items-center justify-between rounded-xl border border-[#bc773f]/50 bg-[#f5ece5] px-5 py-4">
+        <div className="mb-6 flex items-center justify-between rounded-xl border border-[#b8912e]/50 bg-[#f5ece5] px-5 py-4">
           <p className="text-sm">
             📩 <strong>{unread}</strong> message{unread > 1 ? 's' : ''} du site non lu{unread > 1 ? 's' : ''}
           </p>
@@ -843,7 +843,7 @@ function OverviewTab({
             <ul className="space-y-3">
               {topProducts.map((p, i) => (
                 <li key={p.productId} className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#bc773f]/15 text-xs font-semibold text-accent">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#b8912e]/15 text-xs font-semibold text-accent">
                     {i + 1}
                   </span>
                   <span className="flex-1 text-sm">{p.name}</span>
@@ -877,7 +877,7 @@ function OverviewTab({
                 <Tooltip formatter={(v) => [String(v), 'Visites']} labelFormatter={(l) => dayLabel(String(l))} />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {visits.byDay.map((d) => (
-                    <Cell key={d.day} fill={d.day === today ? '#bc773f' : '#dec9b8'} />
+                    <Cell key={d.day} fill={d.day === today ? '#b8912e' : '#dec9b8'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -895,7 +895,7 @@ function OverviewTab({
           <div className="mb-4 flex items-baseline justify-between">
             <p className="font-display text-xl">Messages</p>
             {unreadCount > 0 && (
-              <span className="rounded-full bg-[#bc773f] px-2.5 py-0.5 text-xs font-semibold text-white">
+              <span className="rounded-full bg-[#b8912e] px-2.5 py-0.5 text-xs font-semibold text-white">
                 {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
               </span>
             )}
@@ -1011,7 +1011,7 @@ export default function AdminPage() {
               }}
               className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 tab === t.id
-                  ? 'border-[#bc773f] text-accent'
+                  ? 'border-[#b8912e] text-accent'
                   : 'border-transparent text-ink/50 hover:text-ink'
               }`}
             >

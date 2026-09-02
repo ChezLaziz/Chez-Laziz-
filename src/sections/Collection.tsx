@@ -15,6 +15,13 @@ const CATEGORY_ORDER = ['Les classiques', 'Les signatures', 'Les nouveautés']
 const CATEGORY_NOTES: Record<string, string> = {
   'Les nouveautés': 'Selon la saison — à découvrir en boutique ou sur Instagram',
 }
+// Une photo réelle représentative par catégorie (pas de visuel par produit
+// pour l'instant — on ne met pas d'image générique là où on n'a pas la vraie).
+const CATEGORY_IMAGE: Record<string, string> = {
+  'Les classiques': '/images/makroudh.jpg',
+  'Les signatures': '/images/display.jpg',
+  'Les nouveautés': '/images/hands.jpg',
+}
 
 function groupByCategory(products: DbProduct[]) {
   const categories = [...new Set(products.map((p) => p.category))]
@@ -26,8 +33,91 @@ function groupByCategory(products: DbProduct[]) {
   return categories.map((title) => ({
     title,
     note: CATEGORY_NOTES[title],
+    image: CATEGORY_IMAGE[title] ?? '/images/makroudh.jpg',
     products: products.filter((p) => p.category === title),
   }))
+}
+
+function ProductCard({
+  product,
+  image,
+  qty,
+  onAdd,
+  onSetQty,
+}: {
+  product: DbProduct
+  image: string
+  qty: number
+  onAdd: () => void
+  onSetQty: (qty: number) => void
+}) {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-sand bg-white transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgba(46,42,39,0.25)]">
+      <div className="relative aspect-square overflow-hidden">
+        <img
+          src={image}
+          alt={product.name}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+        />
+        {product.badge && (
+          <span className="absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent shadow">
+            {product.badge}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        {/* Titre court */}
+        <h4 className="font-display text-lg leading-snug">{product.name}</h4>
+
+        {/* Description courte */}
+        {product.description && (
+          <p className="mt-1.5 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
+            {product.description}
+          </p>
+        )}
+
+        {/* Prix — sous le titre/description */}
+        <p className="mt-3 font-display text-xl text-accent">
+          {formatTND(product.priceMillimes)} <span className="text-xs">TND</span>
+        </p>
+
+        {/* Action */}
+        <div className="mt-4">
+          {qty === 0 ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="w-full rounded-full border border-[#b8912e]/50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#b8912e] hover:text-white"
+            >
+              + Ajouter
+            </button>
+          ) : (
+            <div className="flex items-center justify-between rounded-full border border-[#b8912e] bg-[#f5ece5] px-3 py-1.5">
+              <button
+                type="button"
+                aria-label="Retirer un"
+                onClick={() => onSetQty(qty - 1)}
+                className="flex h-7 w-7 items-center justify-center text-accent"
+              >
+                −
+              </button>
+              <span className="text-sm font-semibold text-accent">{qty}</span>
+              <button
+                type="button"
+                aria-label="Ajouter un"
+                onClick={onAdd}
+                className="flex h-7 w-7 items-center justify-center text-accent"
+              >
+                +
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function Collection() {
@@ -38,109 +128,50 @@ export default function Collection() {
   return (
     <section id="collection" className="bg-cream py-24 md:py-36">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
-        <div className="grid gap-14 lg:grid-cols-12">
-          {/* Sticky heading column */}
-          <div className="lg:col-span-4">
-            <div className="lg:sticky lg:top-1/2 lg:-translate-y-1/2">
-              <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
-                La Collection
+        <div className="mx-auto max-w-2xl text-center">
+          <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
+            La Collection
+          </p>
+          <h2 data-reveal className="font-display text-4xl leading-[1.05] md:text-6xl">
+            Le makroudh, dans tous ses états
+          </h2>
+          <p data-reveal className="mx-auto mt-6 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
+            Des classiques aux créations de saison — chaque pièce est
+            façonnée à la main, chaque jour. Prix en dinars tunisiens (TND).
+          </p>
+          <a data-reveal href={PHONE_TEL} className="arrow-link mt-8 inline-flex">
+            Commander par téléphone
+            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+              <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+          </a>
+        </div>
+
+        {groups.map((cat) => (
+          <div key={cat.title} data-reveal className="mt-16 first:mt-20">
+            <div className="mb-8 flex items-baseline gap-5">
+              <h3 className="font-display text-2xl md:text-3xl">{cat.title}</h3>
+              <span className="h-px flex-1 bg-[#b8912e]/50" />
+            </div>
+            {cat.note && (
+              <p className="-mt-4 mb-6 text-xs uppercase tracking-[0.18em] text-muted-warm">
+                {cat.note}
               </p>
-              <h2 data-reveal className="font-display text-4xl leading-[1.05] md:text-6xl">
-                Le makroudh,
-                <br />
-                dans tous
-                <br />
-                ses états
-              </h2>
-              <p
-                data-reveal
-                className="mt-6 max-w-xs text-[15px] font-light leading-relaxed text-ink/70"
-              >
-                Des classiques aux créations de saison — chaque pièce est
-                façonnée à la main, chaque jour. Prix en dinars tunisiens (TND).
-              </p>
-              <a data-reveal href={PHONE_TEL} className="arrow-link mt-8">
-                Commander par téléphone
-                <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
-                  <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
-                </svg>
-              </a>
+            )}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
+              {cat.products.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  image={cat.image}
+                  qty={cart[p.id] ?? 0}
+                  onAdd={() => add(p.id, 1)}
+                  onSetQty={(q) => setQty(p.id, q)}
+                />
+              ))}
             </div>
           </div>
-
-          {/* Products */}
-          <div className="lg:col-span-8">
-            {groups.map((cat) => (
-              <div key={cat.title} data-reveal className="mb-16 last:mb-0">
-                <div className="mb-8 flex items-baseline gap-5">
-                  <h3 className="font-display text-2xl md:text-3xl">{cat.title}</h3>
-                  <span className="h-px flex-1 bg-[#bc773f]/50" />
-                </div>
-                {cat.note && (
-                  <p className="-mt-4 mb-6 text-xs uppercase tracking-[0.18em] text-muted-warm">
-                    {cat.note}
-                  </p>
-                )}
-                <ul className="space-y-6">
-                  {cat.products.map((p) => {
-                  const qty = cart[p.id] ?? 0
-                  return (
-                    <li key={p.id}>
-                      <div className="flex items-baseline">
-                        <span className="text-lg font-medium">{p.name}</span>
-                        {p.badge && (
-                          <span className="ml-3 rounded-full border border-[#bc773f] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-                            {p.badge}
-                          </span>
-                        )}
-                        <span className="leader" aria-hidden="true" />
-                        <span className="font-display shrink-0 text-lg text-accent">
-                          {formatTND(p.priceMillimes)}
-                          <span className="ml-1 text-xs">TND</span>
-                        </span>
-                      </div>
-                      {p.description && (
-                        <p className="mt-1 max-w-md text-sm font-light text-ink/60">{p.description}</p>
-                      )}
-                      <div className="mt-2.5 flex items-center gap-3">
-                        {qty === 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => add(p.id, 1)}
-                            className="inline-flex items-center gap-2 rounded-full border border-[#bc773f]/50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#bc773f] hover:text-white"
-                          >
-                            + Ajouter
-                          </button>
-                        ) : (
-                          <div className="inline-flex items-center gap-3 rounded-full border border-[#bc773f] bg-[#f5ece5] px-3 py-1">
-                            <button
-                              type="button"
-                              aria-label="Retirer un"
-                              onClick={() => setQty(p.id, qty - 1)}
-                              className="flex h-6 w-6 items-center justify-center text-accent"
-                            >
-                              −
-                            </button>
-                            <span className="w-4 text-center text-sm font-semibold text-accent">{qty}</span>
-                            <button
-                              type="button"
-                              aria-label="Ajouter un"
-                              onClick={() => add(p.id, 1)}
-                              className="flex h-6 w-6 items-center justify-center text-accent"
-                            >
-                              +
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </li>
-                  )
-                })}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </section>
   )
