@@ -9,6 +9,7 @@ type DbProduct = {
   priceMillimes: number
   category: string
   badge: string | null
+  imageUrl: string | null
 }
 
 const CATEGORY_ORDER = ['Les classiques', 'Les signatures', 'Les nouveautés']
@@ -184,7 +185,7 @@ export default function Collection() {
                 <ProductCard
                   key={p.id}
                   product={p}
-                  image={cat.image}
+                  image={p.imageUrl || cat.image}
                   qty={cart[p.id] ?? 0}
                   onAdd={() => add(p.id, 1)}
                   onSetQty={(q) => setQty(p.id, q)}

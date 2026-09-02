@@ -26,6 +26,7 @@ export const products = pgTable("products", {
   priceMillimes: integer("price_millimes").notNull(),
   category: varchar("category", { length: 100 }).notNull(),
   badge: varchar("badge", { length: 50 }),
+  imageUrl: varchar("image_url", { length: 255 }),
   available: boolean("available").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),

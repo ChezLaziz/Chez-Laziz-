@@ -15,6 +15,7 @@ const productInput = z.object({
   priceMillimes: z.number().int().min(0),
   category: z.string().min(1).max(100),
   badge: z.string().max(50).optional().nullable(),
+  imageUrl: z.string().max(255).optional().nullable(),
   available: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 });
@@ -41,6 +42,7 @@ export const productsRouter = createRouter({
         priceMillimes: input.data.priceMillimes,
         category: input.data.category,
         badge: input.data.badge ?? null,
+        imageUrl: input.data.imageUrl ?? null,
         available: input.data.available ?? true,
         sortOrder: input.data.sortOrder ?? 0,
       });
@@ -59,6 +61,7 @@ export const productsRouter = createRouter({
       const data = { ...input.data };
       if (data.description === undefined) delete data.description;
       if (data.badge === undefined) delete data.badge;
+      if (data.imageUrl === undefined) delete data.imageUrl;
       return updateProduct(input.id, data);
     }),
 

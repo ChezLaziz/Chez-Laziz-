@@ -224,6 +224,7 @@ type ProductForm = {
   priceTND: string
   category: string
   badge: string
+  imageUrl: string
   available: boolean
 }
 
@@ -233,6 +234,7 @@ const EMPTY_FORM: ProductForm = {
   priceTND: '',
   category: 'Les classiques',
   badge: '',
+  imageUrl: '',
   available: true,
 }
 
@@ -261,6 +263,7 @@ function ProductsTab({ token }: { token: string }) {
       priceTND: formatTND(p.priceMillimes),
       category: p.category,
       badge: p.badge ?? '',
+      imageUrl: p.imageUrl ?? '',
       available: p.available,
     })
     setShowForm(true)
@@ -275,6 +278,7 @@ function ProductsTab({ token }: { token: string }) {
       priceMillimes: toMillimes(form.priceTND),
       category: form.category.trim() || 'Les classiques',
       badge: form.badge.trim() || null,
+      imageUrl: form.imageUrl.trim() || null,
       available: form.available,
     }
     if (Number.isNaN(data.priceMillimes)) return
@@ -315,6 +319,7 @@ function ProductsTab({ token }: { token: string }) {
             <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix en TND (ex : 8.000)" inputMode="decimal" className={inputCls} />
           </div>
           <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (facultative)" rows={2} className={`${inputCls} resize-none`} />
+          <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="Photo — chemin ou URL (ex : /images/products/makroudh-dattes.jpg)" className={inputCls} />
           <div className="grid gap-4 sm:grid-cols-3">
             <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputCls}>
               <option>Les classiques</option>
