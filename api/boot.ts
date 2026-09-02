@@ -9,6 +9,19 @@ import { rateLimit } from "./lib/rateLimit";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
+// Railway termine le TLS puis transmet la requête en clair à ce service ;
+// sans ce contrôle, une visite en http:// reste servie telle quelle au
+// lieu d'être renvoyée vers https:// (d'où l'avertissement "Not secure"
+// du navigateur, alors que le certificat lui-même est valide).
+app.use("*", async (c, next) => {
+  if (c.req.header("x-forwarded-proto") === "http") {
+    const url = new URL(c.req.url);
+    url.protocol = "https:";
+    return c.redirect(url.toString(), 301);
+  }
+  await next();
+});
+
 // admin.chezlaziz.com pointe vers ce même service (voir custom domains
 // Railway) ; la racine du sous-domaine doit ouvrir directement le tableau
 // de bord au lieu de la page d'accueil du site vitrine.
