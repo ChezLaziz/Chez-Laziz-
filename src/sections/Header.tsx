@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { useCart } from '@/providers/cart'
 
 const LINKS = [
   { href: '#accueil', label: 'Accueil' },
@@ -29,6 +30,7 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [open, setOpen] = useState(false)
+  const { count } = useCart()
 
   useEffect(() => {
     let lastY = window.scrollY
@@ -79,6 +81,22 @@ export default function Header() {
             ))}
             <Link
               to="/commande"
+              aria-label="Voir le panier"
+              className="relative flex h-9 w-9 items-center justify-center"
+            >
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M6 6h15l-1.5 9h-12L5 3H2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="9" cy="20" r="1.4" />
+                <circle cx="17" cy="20" r="1.4" />
+              </svg>
+              {count > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#bc773f] text-[10px] font-semibold text-white">
+                  {count}
+                </span>
+              )}
+            </Link>
+            <Link
+              to="/commande"
               className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors duration-300 ${
                 scrolled
                   ? 'border-[#bc773f] text-accent hover:bg-[#bc773f] hover:text-white'
@@ -89,10 +107,29 @@ export default function Header() {
             </Link>
           </nav>
 
-          <button
+          <div className="flex items-center gap-1 md:hidden">
+            <Link
+              to="/commande"
+              aria-label="Voir le panier"
+              className={`relative flex h-10 w-10 items-center justify-center ${
+                scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
+              }`}
+            >
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M6 6h15l-1.5 9h-12L5 3H2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="9" cy="20" r="1.4" />
+                <circle cx="17" cy="20" r="1.4" />
+              </svg>
+              {count > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#bc773f] text-[10px] font-semibold text-white">
+                  {count}
+                </span>
+              )}
+            </Link>
+            <button
             onClick={() => setOpen(!open)}
             aria-label="Menu"
-            className={`flex h-10 w-10 flex-col items-center justify-center gap-[6px] md:hidden ${
+            className={`flex h-10 w-10 flex-col items-center justify-center gap-[6px] ${
               scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
             }`}
           >
@@ -106,7 +143,8 @@ export default function Header() {
                 open ? '-translate-y-[3.5px] -rotate-45' : ''
               }`}
             />
-          </button>
+            </button>
+          </div>
         </div>
       </header>
 

@@ -1,4 +1,5 @@
 import { trpc } from '@/providers/trpc'
+import { useCart } from '@/providers/cart'
 import { formatTND, PHONE_TEL } from '@/lib/shop'
 
 type DbProduct = {
@@ -31,6 +32,7 @@ function groupByCategory(products: DbProduct[]) {
 
 export default function Collection() {
   const { data: products } = trpc.products.list.useQuery()
+  const { cart, add, setQty } = useCart()
   const groups = products ? groupByCategory(products as DbProduct[]) : []
 
   return (
@@ -80,7 +82,9 @@ export default function Collection() {
                   </p>
                 )}
                 <ul className="space-y-6">
-                  {cat.products.map((p) => (
+                  {cat.products.map((p) => {
+                  const qty = cart[p.id] ?? 0
+                  return (
                     <li key={p.id}>
                       <div className="flex items-baseline">
                         <span className="text-lg font-medium">{p.name}</span>
@@ -98,8 +102,40 @@ export default function Collection() {
                       {p.description && (
                         <p className="mt-1 max-w-md text-sm font-light text-ink/60">{p.description}</p>
                       )}
+                      <div className="mt-2.5 flex items-center gap-3">
+                        {qty === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => add(p.id, 1)}
+                            className="inline-flex items-center gap-2 rounded-full border border-[#bc773f]/50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#bc773f] hover:text-white"
+                          >
+                            + Ajouter
+                          </button>
+                        ) : (
+                          <div className="inline-flex items-center gap-3 rounded-full border border-[#bc773f] bg-[#f5ece5] px-3 py-1">
+                            <button
+                              type="button"
+                              aria-label="Retirer un"
+                              onClick={() => setQty(p.id, qty - 1)}
+                              className="flex h-6 w-6 items-center justify-center text-accent"
+                            >
+                              −
+                            </button>
+                            <span className="w-4 text-center text-sm font-semibold text-accent">{qty}</span>
+                            <button
+                              type="button"
+                              aria-label="Ajouter un"
+                              onClick={() => add(p.id, 1)}
+                              className="flex h-6 w-6 items-center justify-center text-accent"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </li>
-                  ))}
+                  )
+                })}
                 </ul>
               </div>
             ))}

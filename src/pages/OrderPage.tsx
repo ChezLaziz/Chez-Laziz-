@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
+import { useCart } from '@/providers/cart'
 import { formatTND, PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
-
-type Cart = Record<number, number>
 
 function TopBar({ title }: { title: string }) {
   return (
@@ -28,7 +27,7 @@ export default function OrderPage() {
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
 
-  const [cart, setCart] = useState<Cart>({})
+  const { cart, setQty, clear } = useCart()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [note, setNote] = useState('')
@@ -47,9 +46,6 @@ export default function OrderPage() {
     [products, cart],
   )
   const total = items.reduce((s, p) => s + p.qty * p.priceMillimes, 0)
-
-  const setQty = (id: number, qty: number) =>
-    setCart((c) => ({ ...c, [id]: Math.max(0, qty) }))
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +66,7 @@ export default function OrderPage() {
             id: order?.id ?? 0,
             waUrl: 'https://wa.me/21623691039?text=' + encodeURIComponent(text),
           })
+          clear()
           window.scrollTo({ top: 0 })
         },
       },
