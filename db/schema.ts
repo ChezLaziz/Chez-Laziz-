@@ -1,51 +1,51 @@
 import {
-  mysqlTable,
-  mysqlEnum,
+  pgTable,
+  pgEnum,
   serial,
   varchar,
   text,
-  int,
+  integer,
   boolean,
   timestamp,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
+
+export const orderStatusEnum = pgEnum("order_status", [
+  "nouvelle",
+  "en_preparation",
+  "prete",
+  "terminee",
+  "annulee",
+]);
 
 // Catalogue des produits (géré depuis l'admin, affiché sur le site)
-export const products = mysqlTable("products", {
+export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   // Prix en millimes : 8000 = 8.000 TND
-  priceMillimes: int("price_millimes").notNull(),
+  priceMillimes: integer("price_millimes").notNull(),
   category: varchar("category", { length: 100 }).notNull(),
   badge: varchar("badge", { length: 50 }),
   available: boolean("available").notNull().default(true),
-  sortOrder: int("sort_order").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Commandes passées via le formulaire en ligne
-export const orders = mysqlTable("orders", {
+export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   customerName: varchar("customer_name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 50 }).notNull(),
   // JSON : [{ productId, name, qty, priceMillimes }]
   items: text("items").notNull(),
-  totalMillimes: int("total_millimes").notNull(),
+  totalMillimes: integer("total_millimes").notNull(),
   note: text("note"),
-  status: mysqlEnum("status", [
-    "nouvelle",
-    "en_preparation",
-    "prete",
-    "terminee",
-    "annulee",
-  ])
-    .notNull()
-    .default("nouvelle"),
+  status: orderStatusEnum("status").notNull().default("nouvelle"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Messages du formulaire de contact
-export const contactMessages = mysqlTable("contact_messages", {
+export const contactMessages = pgTable("contact_messages", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 50 }),
@@ -55,24 +55,24 @@ export const contactMessages = mysqlTable("contact_messages", {
 });
 
 // Paramètres internes (mot de passe admin, secret des tokens)
-export const settings = mysqlTable("settings", {
+export const settings = pgTable("settings", {
   key: varchar("key", { length: 100 }).primaryKey(),
   value: text("value").notNull(),
 });
 
 // Visites du site (compteur anonyme, une ligne par page vue)
-export const pageViews = mysqlTable("page_views", {
+export const pageViews = pgTable("page_views", {
   id: serial("id").primaryKey(),
   path: varchar("path", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Relevés réseaux sociaux : un enregistrement par mise à jour (historique)
-export const socialStats = mysqlTable("social_stats", {
+export const socialStats = pgTable("social_stats", {
   id: serial("id").primaryKey(),
   network: varchar("network", { length: 30 }).notNull(), // instagram | facebook | tiktok | google
-  followers: int("followers").notNull(),
-  messages: int("messages").notNull().default(0),
+  followers: integer("followers").notNull(),
+  messages: integer("messages").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

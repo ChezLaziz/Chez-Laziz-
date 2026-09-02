@@ -25,7 +25,7 @@ export async function createOrder(data: {
       totalMillimes: data.totalMillimes,
       note: data.note,
     } satisfies Omit<InsertOrder, "id" | "createdAt" | "status">)
-    .$returningId();
+    .returning({ id: orders.id });
   return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
 }
 

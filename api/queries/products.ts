@@ -18,7 +18,10 @@ export async function listAvailableProducts() {
 export async function createProduct(
   data: Omit<InsertProduct, "id" | "createdAt">,
 ) {
-  const [{ id }] = await getDb().insert(products).values(data).$returningId();
+  const [{ id }] = await getDb()
+    .insert(products)
+    .values(data)
+    .returning({ id: products.id });
   return getDb().query.products.findFirst({ where: eq(products.id, id) });
 }
 
