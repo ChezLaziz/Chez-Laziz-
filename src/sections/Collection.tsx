@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
 import { formatTND, PHONE_TEL } from '@/lib/shop'
@@ -195,6 +196,11 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
             </svg>
           </a>
+          <div data-reveal className="mt-4">
+            <Link to="/makroudh-aux-dattes" className="text-xs uppercase tracking-[0.18em] text-ink/45 underline underline-offset-4 hover:text-accent">
+              La recette traditionnelle du makroudh aux dattes
+            </Link>
+          </div>
         </div>
 
         {isLoading && (

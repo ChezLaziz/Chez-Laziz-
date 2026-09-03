@@ -14,6 +14,13 @@ const GaleriePage = lazy(() => import('./pages/GaleriePage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
+const MakroudhTunisienPage = lazy(() => import('./pages/MakroudhTunisienPage'))
+const MakroudhKairouanPage = lazy(() => import('./pages/MakroudhKairouanPage'))
+const MakroudhDattesPage = lazy(() => import('./pages/MakroudhDattesPage'))
+const BlogIndexPage = lazy(() => import('./pages/blog/BlogIndexPage'))
+const QuestCeQueLeMakroudhPage = lazy(() => import('./pages/blog/QuestCeQueLeMakroudhPage'))
+const MakroudhKairouanHistoirePage = lazy(() => import('./pages/blog/MakroudhKairouanHistoirePage'))
+const CommentEstPreparePage = lazy(() => import('./pages/blog/CommentEstPreparePage'))
 
 function Lazy({ Component }: { Component: React.ComponentType }) {
   return (
@@ -46,6 +53,13 @@ export default function App() {
       <Route path="/admin" element={<Lazy Component={AdminPage} />} />
       <Route path="/politique-de-confidentialite" element={<Lazy Component={PrivacyPage} />} />
       <Route path="/conditions-generales" element={<Lazy Component={TermsPage} />} />
+      <Route path="/makroudh-tunisien" element={<Lazy Component={MakroudhTunisienPage} />} />
+      <Route path="/makroudh-kairouan" element={<Lazy Component={MakroudhKairouanPage} />} />
+      <Route path="/makroudh-aux-dattes" element={<Lazy Component={MakroudhDattesPage} />} />
+      <Route path="/journal" element={<Lazy Component={BlogIndexPage} />} />
+      <Route path="/journal/quest-ce-que-le-makroudh-tunisien" element={<Lazy Component={QuestCeQueLeMakroudhPage} />} />
+      <Route path="/journal/makroudh-kairouan-histoire-tradition" element={<Lazy Component={MakroudhKairouanHistoirePage} />} />
+      <Route path="/journal/comment-est-prepare-le-makroudh" element={<Lazy Component={CommentEstPreparePage} />} />
       <Route path="*" element={<Home />} />
       </Routes>
     </>
