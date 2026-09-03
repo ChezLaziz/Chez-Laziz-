@@ -1,6 +1,5 @@
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
-import Cursor from '../components/Cursor'
 import Header from '../sections/Header'
 import Gallery from '../sections/Gallery'
 import Reviews from '../sections/Reviews'
@@ -17,7 +16,6 @@ export default function GaleriePage() {
   })
   return (
     <>
-      <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
         <Gallery headingLevel="h1" />

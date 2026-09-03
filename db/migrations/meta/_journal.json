@@ -15,6 +15,13 @@
       "when": 1788442910301,
       "tag": "0001_cool_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788449537681,
+      "tag": "0002_awesome_silver_fox",
+      "breakpoints": true
     }
   ]
 }

@@ -37,6 +37,36 @@ describe("D17 payment-proof upload endpoint", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("rejects a non-image file type", async () => {
+    const body = new FormData();
+    body.append("file", new File(["not an image"], "proof.txt", { type: "text/plain" }));
+    const res = await app.request("/api/uploads/payment-proof", { method: "POST", body });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toMatch(/non supporté/i);
+  });
+
+  it("rejects a file that claims to be an image but isn't (fake MIME type)", async () => {
+    const body = new FormData();
+    body.append("file", new File(["definitely not a png"], "proof.png", { type: "image/png" }));
+    const res = await app.request("/api/uploads/payment-proof", { method: "POST", body });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toMatch(/illisible/i);
+  });
+
+  it("rejects an empty image file", async () => {
+    const body = new FormData();
+    body.append("file", new File([], "empty.jpg", { type: "image/jpeg" }));
+    const res = await app.request("/api/uploads/payment-proof", { method: "POST", body });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("unknown routes", () => {
+  it("answers 404 in JSON for unknown API paths", async () => {
+    const res = await app.request("/api/does-not-exist");
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("admin data export is admin-only", () => {

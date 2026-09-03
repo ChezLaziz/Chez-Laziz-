@@ -7,6 +7,7 @@ import {
   integer,
   boolean,
   timestamp,
+  index,
 } from "drizzle-orm/pg-core";
 
 export const orderStatusEnum = pgEnum("order_status", [
@@ -65,11 +66,15 @@ export const orders = pgTable("orders", {
   paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending"),
   // Clé de stockage R2 de la capture d'écran D17 (jamais une URL publique — voir api/lib/r2.ts)
   paymentProofKey: varchar("payment_proof_key", { length: 255 }),
+  // Clé générée par le client pour une tentative de commande : un double
+  // clic ou une nouvelle tentative réseau renvoie la commande déjà créée
+  // au lieu d'en créer une deuxième.
+  idempotencyKey: varchar("idempotency_key", { length: 64 }).unique(),
   note: text("note"),
   status: orderStatusEnum("status").notNull().default("nouvelle"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (t) => [index("orders_created_at_idx").on(t.createdAt)]);
 
 // Messages du formulaire de contact
 export const contactMessages = pgTable("contact_messages", {
@@ -92,7 +97,7 @@ export const pageViews = pgTable("page_views", {
   id: serial("id").primaryKey(),
   path: varchar("path", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => [index("page_views_created_at_idx").on(t.createdAt)]);
 
 // Comptes admin (email + mot de passe) — plusieurs personnes peuvent
 // gérer le site, chacune avec ses propres identifiants.

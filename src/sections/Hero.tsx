@@ -30,20 +30,19 @@ export default function Hero() {
   const subtitleAr = data?.homeSubtitleAr || DEFAULT_SUBTITLE_AR
   const subtitleFr = data?.homeSubtitleFr || DEFAULT_SUBTITLE_FR
 
-  let cumulativeDelay = 250
-  const titleWords = title
-    .split(' ')
-    .filter(Boolean)
-    .map((word, i) => {
-      const el = (
-        <span key={i}>
-          {i > 0 && <span className="inline-block w-[0.35em]" />}
-          <StaggerWord word={word} base={cumulativeDelay} />
-        </span>
-      )
-      cumulativeDelay += word.length * 38 + 60
-      return el
-    })
+  // Délai d'apparition de chaque mot : cumul des lettres des mots précédents
+  // (calculé sans variable mutée pendant le rendu).
+  const words = title.split(' ').filter(Boolean)
+  const bases = words.reduce<number[]>((acc, _w, i) => {
+    acc.push(i === 0 ? 250 : acc[i - 1] + words[i - 1].length * 38 + 60)
+    return acc
+  }, [])
+  const titleWords = words.map((word, i) => (
+    <span key={i}>
+      {i > 0 && <span className="inline-block w-[0.35em]" />}
+      <StaggerWord word={word} base={bases[i]} />
+    </span>
+  ))
 
   // entrance
   useEffect(() => {
@@ -168,8 +167,8 @@ export default function Hero() {
           >
             Découvrir la collection
           </Link>
-          <Link to="/contact" className="arrow-link !text-[#faf6f3]">
-            Nous trouver
+          <Link to="/commande" className="arrow-link !text-[#faf6f3]">
+            Commander en ligne
             <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
             </svg>
@@ -177,20 +176,28 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Bottom info bar */}
+      {/* Bottom info bar — les 4 réponses qu'un visiteur cherche en 5 secondes :
+          c'est ouvert ?, ça livre ?, c'est sérieux ?, comment joindre ? */}
       <div
         className="absolute inset-x-0 bottom-0 z-10 border-t border-[#faf6f3]/15"
         style={{ opacity: on ? 1 : 0, transition: 'opacity 1s ease 1.4s' }}
       >
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-5 py-4 text-[11px] uppercase tracking-[0.22em] text-[#faf6f3]/70 sm:flex-row md:px-10">
-          <span>Ouvert 7j/7 · 07h00 — 00h00</span>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 py-4 text-[11px] uppercase tracking-[0.22em] text-[#faf6f3]/70 md:justify-between md:px-10">
+          <span className="hidden sm:inline">Ouvert 7j/7 · 07h00 — 00h00</span>
+          <span className="flex items-center gap-2 text-[#faf6f3]/85">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b8912e" strokeWidth="2" aria-hidden="true">
+              <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" strokeLinejoin="round" />
+              <circle cx="7" cy="18" r="1.6" /><circle cx="18" cy="18" r="1.6" />
+            </svg>
+            Livraison toute la Tunisie · 24h
+          </span>
           <span className="hidden items-center gap-2 sm:flex">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="#b8912e" aria-hidden="true">
               <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" />
             </svg>
             5,0 sur Google
           </span>
-          <span>+216 23 691 039</span>
+          <a href="tel:+21623691039" className="hover:text-[#faf6f3]">+216 23 691 039</a>
         </div>
       </div>
     </section>

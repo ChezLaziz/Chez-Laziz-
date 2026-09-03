@@ -7,11 +7,19 @@ import { useCart } from '@/providers/cart'
 // Galerie restent en ligne (liens dans le pied de page) mais n'ont pas
 // besoin d'être dans la navigation principale — elles n'aident pas à
 // décider ou à commander, elles alourdissent juste le choix.
+// Sur grand écran, "Commander" est déjà le bouton doré à droite (plus le
+// panier) : le répéter en lien texte ferait trois entrées pour la même
+// page. Le menu mobile, lui, n'a pas ce bouton et garde le lien.
 const LINKS = [
   { href: '/', label: 'Accueil' },
   { href: '/collection', label: 'La Collection' },
-  { href: '/commande', label: 'Commander' },
   { href: '/contact', label: 'Nous trouver' },
+]
+const MOBILE_LINKS = [
+  LINKS[0],
+  LINKS[1],
+  { href: '/commande', label: 'Commander' },
+  LINKS[2],
 ]
 
 function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
@@ -169,7 +177,7 @@ export default function Header() {
           open ? '[clip-path:inset(0_0_0_0)]' : 'pointer-events-none [clip-path:inset(0_0_100%_0)]'
         }`}
       >
-        {LINKS.map((l, i) =>
+        {MOBILE_LINKS.map((l, i) =>
           l.href.startsWith('/') ? (
             <Link
               key={l.href}

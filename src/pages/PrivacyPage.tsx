@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import { useSEO } from '../hooks/useSEO'
+import { analyticsEnabled } from '@/lib/analytics'
 
 export default function PrivacyPage() {
   useSEO({
@@ -68,12 +69,24 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="mb-2 font-display text-xl text-ink">Statistiques de visite</h2>
-            <p>
-              Nous mesurons de façon anonyme le nombre de pages vues sur notre propre
-              serveur, sans cookies publicitaires ni outil de suivi tiers (pas de
-              Google Analytics, pas de pixel Meta). Ces chiffres nous aident
-              uniquement à comprendre la fréquentation du site.
-            </p>
+            {analyticsEnabled ? (
+              <p>
+                Nous mesurons le nombre de pages vues de deux façons : un compteur
+                anonyme sur notre propre serveur, et Google Analytics (adresse IP
+                anonymisée) pour comprendre d'où viennent les visiteurs et quelles
+                pages ils consultent. Aucune donnée saisie dans les formulaires
+                (nom, téléphone, adresse, capture d'écran) n'est transmise à Google —
+                seuls les produits consultés ou commandés et les montants le sont.
+                Pas de pixel publicitaire.
+              </p>
+            ) : (
+              <p>
+                Nous mesurons de façon anonyme le nombre de pages vues sur notre propre
+                serveur, sans cookies publicitaires ni outil de suivi tiers (pas de
+                Google Analytics, pas de pixel Meta). Ces chiffres nous aident
+                uniquement à comprendre la fréquentation du site.
+              </p>
+            )}
           </section>
 
           <section>

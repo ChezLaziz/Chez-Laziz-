@@ -25,28 +25,50 @@ export async function createOrder(data: {
   paymentMethod: PaymentMethod;
   paymentStatus: (typeof orders.$inferSelect)["paymentStatus"];
   paymentProofKey?: string;
+  idempotencyKey?: string;
   note?: string;
 }) {
-  const [{ id }] = await getDb()
-    .insert(orders)
-    .values({
-      customerName: data.customerName,
-      phone: data.phone,
-      governorate: data.governorate,
-      city: data.city,
-      address: data.address,
-      postalCode: data.postalCode,
-      items: JSON.stringify(data.items),
-      subtotalMillimes: data.subtotalMillimes,
-      deliveryFeeMillimes: data.deliveryFeeMillimes,
-      totalMillimes: data.totalMillimes,
-      paymentMethod: data.paymentMethod,
-      paymentStatus: data.paymentStatus,
-      paymentProofKey: data.paymentProofKey,
-      note: data.note,
-    } satisfies Omit<InsertOrder, "id" | "createdAt" | "updatedAt" | "status">)
-    .returning({ id: orders.id });
+  // Double clic / nouvelle tentative réseau : même clé → même commande.
+  if (data.idempotencyKey) {
+    const existing = await findOrderByIdempotencyKey(data.idempotencyKey);
+    if (existing) return existing;
+  }
+  let id: number;
+  try {
+    [{ id }] = await getDb()
+      .insert(orders)
+      .values({
+        customerName: data.customerName,
+        phone: data.phone,
+        governorate: data.governorate,
+        city: data.city,
+        address: data.address,
+        postalCode: data.postalCode,
+        items: JSON.stringify(data.items),
+        subtotalMillimes: data.subtotalMillimes,
+        deliveryFeeMillimes: data.deliveryFeeMillimes,
+        totalMillimes: data.totalMillimes,
+        paymentMethod: data.paymentMethod,
+        paymentStatus: data.paymentStatus,
+        paymentProofKey: data.paymentProofKey,
+        idempotencyKey: data.idempotencyKey,
+        note: data.note,
+      } satisfies Omit<InsertOrder, "id" | "createdAt" | "updatedAt" | "status">)
+      .returning({ id: orders.id });
+  } catch (err) {
+    // Deux requêtes strictement simultanées avec la même clé : la seconde
+    // échoue sur la contrainte unique — on renvoie la commande de la première.
+    if (data.idempotencyKey) {
+      const existing = await findOrderByIdempotencyKey(data.idempotencyKey);
+      if (existing) return existing;
+    }
+    throw err;
+  }
   return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
+}
+
+async function findOrderByIdempotencyKey(key: string) {
+  return getDb().query.orders.findFirst({ where: eq(orders.idempotencyKey, key) });
 }
 
 export async function listOrders() {

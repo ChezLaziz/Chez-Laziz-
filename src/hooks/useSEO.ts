@@ -12,11 +12,36 @@ function setMeta(attr: 'name' | 'property', key: string, content: string) {
 
 /** Met à jour title/description/canonical/OG pour la page courante (SPA sans SSR :
  * les valeurs statiques d'index.html ne servent que pour "/" et le premier chargement). */
+/** JSON-LD à insérer dans un <script> : "</" y est échappé pour qu'une
+ * valeur venant de la base (nom de produit, description) ne puisse jamais
+ * fermer la balise et injecter du HTML dans la page. */
+export function safeJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c')
+}
+
+/** Insère (ou met à jour) un bloc JSON-LD identifié par id dans <head>.
+ * Retourne une fonction de nettoyage à appeler au démontage. */
+export function setJsonLd(id: string, data: unknown): () => void {
+  let script = document.getElementById(id) as HTMLScriptElement | null
+  if (!script) {
+    script = document.createElement('script')
+    script.id = id
+    script.type = 'application/ld+json'
+    document.head.appendChild(script)
+  }
+  script.textContent = safeJsonLd(data)
+  return () => {
+    document.getElementById(id)?.remove()
+  }
+}
+
 export function useSEO({
   title,
   description,
   path,
   breadcrumb,
+  noindex = false,
+  article,
 }: {
   title: string
   description: string
@@ -24,7 +49,33 @@ export function useSEO({
   /** Nom affiché de la page courante dans le fil d'Ariane (schema.org
    * BreadcrumbList) — omis sur l'accueil, qui n'a pas de fil d'Ariane. */
   breadcrumb?: string
+  /** Pages à ne pas indexer (404, admin). */
+  noindex?: boolean
+  /** Articles du Journal : ajoute un schéma Article (date réelle de
+   * publication, auteur = la maison). */
+  article?: { datePublished: string; dateModified?: string }
 }) {
+  useEffect(() => {
+    const articleId = 'seo-article-jsonld'
+    if (article) {
+      setJsonLd(articleId, {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: title.replace(/ — Journal Chez Laziz$/, ''),
+        description,
+        inLanguage: 'fr',
+        mainEntityOfPage: `https://chezlaziz.com${path}`,
+        image: 'https://chezlaziz.com/images/hero.jpg',
+        datePublished: article.datePublished,
+        dateModified: article.dateModified ?? article.datePublished,
+        author: { '@type': 'Organization', name: 'Chez Laziz', url: 'https://chezlaziz.com/' },
+        publisher: { '@id': 'https://chezlaziz.com/#business' },
+      })
+    } else {
+      document.getElementById(articleId)?.remove()
+    }
+  }, [article, title, description, path])
+
   useEffect(() => {
     document.title = title
     setMeta('name', 'description', description)
@@ -33,6 +84,13 @@ export function useSEO({
     setMeta('property', 'og:url', `https://chezlaziz.com${path}`)
     setMeta('name', 'twitter:title', title)
     setMeta('name', 'twitter:description', description)
+
+    const robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
+    if (noindex) {
+      setMeta('name', 'robots', 'noindex, nofollow')
+    } else {
+      robots?.remove()
+    }
 
     let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
     if (!canonical) {
@@ -43,15 +101,8 @@ export function useSEO({
     canonical.setAttribute('href', `https://chezlaziz.com${path}`)
 
     const scriptId = 'seo-breadcrumb-jsonld'
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null
     if (breadcrumb) {
-      if (!script) {
-        script = document.createElement('script')
-        script.id = scriptId
-        script.type = 'application/ld+json'
-        document.head.appendChild(script)
-      }
-      script.textContent = JSON.stringify({
+      setJsonLd(scriptId, {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
@@ -60,7 +111,7 @@ export function useSEO({
         ],
       })
     } else {
-      script?.remove()
+      document.getElementById(scriptId)?.remove()
     }
-  }, [title, description, path, breadcrumb])
+  }, [title, description, path, breadcrumb, noindex])
 }

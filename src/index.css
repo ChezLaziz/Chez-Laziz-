@@ -187,38 +187,6 @@
   min-width: 2rem;
 }
 
-/* ---------- Custom cursor ---------- */
-.cursor-dot,
-.cursor-ring {
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  z-index: 9999;
-  border-radius: 9999px;
-  mix-blend-mode: difference;
-}
-.cursor-dot {
-  width: 8px;
-  height: 8px;
-  background: #fff;
-  transform: translate3d(-100px, -100px, 0) translate(-50%, -50%);
-}
-.cursor-ring {
-  width: 40px;
-  height: 40px;
-  border: 1px solid #fff;
-  transform: translate3d(-100px, -100px, 0) translate(-50%, -50%);
-  transition: width 0.25s ease, height 0.25s ease, opacity 0.25s ease;
-}
-.cursor-ring.cursor-active {
-  width: 64px;
-  height: 64px;
-}
-@media (pointer: coarse) {
-  .cursor-dot, .cursor-ring { display: none; }
-}
-
 /* ---------- Link with arrow (reference-style button) ---------- */
 .arrow-link {
   display: inline-flex;

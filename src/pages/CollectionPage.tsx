@@ -1,6 +1,5 @@
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
-import Cursor from '../components/Cursor'
 import Header from '../sections/Header'
 import Collection from '../sections/Collection'
 import InstagramReel from '../sections/InstagramReel'
@@ -17,7 +16,6 @@ export default function CollectionPage() {
   })
   return (
     <>
-      <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
         <Collection headingLevel="h1" />

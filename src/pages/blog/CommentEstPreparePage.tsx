@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import { useReveal } from '../../hooks/useReveal'
 import { useSEO } from '../../hooks/useSEO'
-import Cursor from '../../components/Cursor'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
 
@@ -13,11 +12,11 @@ export default function CommentEstPreparePage() {
       'De la pâte de semoule au bain de miel, les étapes de fabrication du makroudh — et ce qui distingue un makroudh fait main.',
     path: '/journal/comment-est-prepare-le-makroudh',
     breadcrumb: 'Comment est préparé le makroudh ?',
+    article: { datePublished: '2026-09-03' },
   })
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">
-      <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">

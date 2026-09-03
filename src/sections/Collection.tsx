@@ -3,6 +3,9 @@ import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
 import { formatTND, PHONE_TEL } from '@/lib/shop'
+import { track } from '@/lib/analytics'
+import { setJsonLd } from '@/hooks/useSEO'
+import ProductImage from '@/components/ProductImage'
 
 type DbProduct = {
   id: number
@@ -18,13 +21,6 @@ const CATEGORY_ORDER = ['Les classiques', 'Les signatures', 'Les nouveautés']
 const CATEGORY_NOTES: Record<string, string> = {
   'Les nouveautés': 'Selon la saison — à découvrir en boutique ou sur Instagram',
 }
-// Une photo réelle représentative par catégorie (pas de visuel par produit
-// pour l'instant — on ne met pas d'image générique là où on n'a pas la vraie).
-const CATEGORY_IMAGE: Record<string, string> = {
-  'Les classiques': '/images/makroudh.webp',
-  'Les signatures': '/images/display.webp',
-  'Les nouveautés': '/images/hands.webp',
-}
 
 function groupByCategory(products: DbProduct[]) {
   const categories = [...new Set(products.map((p) => p.category))]
@@ -36,20 +32,17 @@ function groupByCategory(products: DbProduct[]) {
   return categories.map((title) => ({
     title,
     note: CATEGORY_NOTES[title],
-    image: CATEGORY_IMAGE[title] ?? '/images/makroudh.webp',
     products: products.filter((p) => p.category === title),
   }))
 }
 
 function ProductCard({
   product,
-  image,
   qty,
   onAdd,
   onSetQty,
 }: {
   product: DbProduct
-  image: string
   qty: number
   onAdd: () => void
   onSetQty: (qty: number) => void
@@ -57,11 +50,10 @@ function ProductCard({
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-sand bg-white transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgba(46,42,39,0.25)]">
       <div className="relative aspect-square overflow-hidden">
-        <img
-          src={image}
+        <ProductImage
+          src={product.imageUrl}
           alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+          className="transition-transform duration-500 hover:scale-105"
         />
         {product.badge && (
           <span className="absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent shadow">
@@ -87,32 +79,34 @@ function ProductCard({
           {formatTND(product.priceMillimes)} <span className="text-xs">TND / kg</span>
         </p>
 
-        {/* Action */}
-        <div className="mt-4">
+        {/* Action — ajoute 1 kg ; le poids se change ensuite sur la page Commander */}
+        <div className="mt-auto pt-4">
           {qty === 0 ? (
             <button
               type="button"
               onClick={onAdd}
-              className="w-full rounded-full border border-[#b8912e]/50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#b8912e] hover:text-white"
+              className="w-full rounded-full border border-[#b8912e]/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#b8912e] hover:text-white"
             >
               + Ajouter
             </button>
           ) : (
-            <div className="flex items-center justify-between rounded-full border border-[#b8912e] bg-[#f5ece5] px-3 py-1.5">
+            <div className="flex items-center justify-between rounded-full border border-[#b8912e] bg-[#f5ece5] px-2 py-1">
               <button
                 type="button"
-                aria-label="Retirer un"
+                aria-label={`Retirer un ${product.name}`}
                 onClick={() => onSetQty(qty - 1)}
-                className="flex h-7 w-7 items-center justify-center text-accent"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-[#b8912e]/15"
               >
                 −
               </button>
-              <span className="text-sm font-semibold text-accent">{qty}</span>
+              <span className="text-sm font-semibold text-accent" aria-live="polite">
+                {qty} <span className="font-normal text-accent/70">× 1 kg</span>
+              </span>
               <button
                 type="button"
-                aria-label="Ajouter un"
+                aria-label={`Ajouter un ${product.name}`}
                 onClick={onAdd}
-                className="flex h-7 w-7 items-center justify-center text-accent"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-[#b8912e]/15"
               >
                 +
               </button>
@@ -137,45 +131,37 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
   const groups = products ? groupByCategory(products as DbProduct[]) : []
 
   // Schema.org ItemList/Product — aide Google à comprendre le catalogue
-  // (nom, prix, disponibilité) au-delà du simple texte de la page.
+  // (nom, prix pour 1 kg, disponibilité) au-delà du simple texte de la page.
   useEffect(() => {
-    const scriptId = 'collection-products-jsonld'
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null
-    if (products && products.length > 0) {
-      if (!script) {
-        script = document.createElement('script')
-        script.id = scriptId
-        script.type = 'application/ld+json'
-        document.head.appendChild(script)
-      }
-      script.textContent = JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'ItemList',
-        itemListElement: (products as DbProduct[]).map((p, i) => ({
-          '@type': 'ListItem',
-          position: i + 1,
-          item: {
-            '@type': 'Product',
-            name: p.name,
-            category: p.category,
-            ...(p.description ? { description: p.description } : {}),
-            ...(p.imageUrl ? { image: `https://chezlaziz.com${p.imageUrl}` } : {}),
-            offers: {
-              '@type': 'Offer',
-              price: (p.priceMillimes / 1000).toFixed(3),
-              priceCurrency: 'TND',
-              availability: 'https://schema.org/InStock',
-              url: 'https://chezlaziz.com/collection',
-            },
+    if (!products || products.length === 0) return
+    const list = products as DbProduct[]
+    track('view_item_list', {
+      item_list_id: 'collection',
+      item_list_name: 'La Collection',
+      items: list.map((p) => ({ item_id: String(p.id), item_name: p.name, price: p.priceMillimes / 1000 })),
+    })
+    return setJsonLd('collection-products-jsonld', {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      itemListElement: list.map((p, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        item: {
+          '@type': 'Product',
+          name: p.name,
+          category: p.category,
+          ...(p.description ? { description: p.description } : {}),
+          ...(p.imageUrl ? { image: `https://chezlaziz.com${p.imageUrl}` } : {}),
+          offers: {
+            '@type': 'Offer',
+            price: (p.priceMillimes / 1000).toFixed(3),
+            priceCurrency: 'TND',
+            availability: 'https://schema.org/InStock',
+            url: 'https://chezlaziz.com/collection',
           },
-        })),
-      })
-    } else {
-      script?.remove()
-    }
-    return () => {
-      document.getElementById(scriptId)?.remove()
-    }
+        },
+      })),
+    })
   }, [products])
 
   return (
@@ -241,9 +227,14 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
                 <ProductCard
                   key={p.id}
                   product={p}
-                  image={p.imageUrl || cat.image}
                   qty={qtyFor(p.id)}
-                  onAdd={() => add(p.id)}
+                  onAdd={() => {
+                    add(p.id)
+                    track('add_to_cart', {
+                      value: p.priceMillimes / 1000,
+                      items: [{ item_id: String(p.id), item_name: p.name, item_variant: '1 kg', price: p.priceMillimes / 1000, quantity: 1 }],
+                    })
+                  }}
                   onSetQty={(q) => setQty(p.id, 1, q)}
                 />
               ))}

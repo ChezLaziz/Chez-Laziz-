@@ -1,6 +1,5 @@
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
-import Cursor from '../components/Cursor'
 import Header from '../sections/Header'
 import Story from '../sections/Story'
 import MakroudhHistory from '../sections/MakroudhHistory'
@@ -17,7 +16,6 @@ export default function MaisonPage() {
   })
   return (
     <>
-      <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
         <Story headingLevel="h1" />

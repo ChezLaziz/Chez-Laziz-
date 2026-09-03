@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import { useReveal } from '../../hooks/useReveal'
 import { useSEO } from '../../hooks/useSEO'
-import Cursor from '../../components/Cursor'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
 import { ARTICLES } from './articles'
@@ -18,7 +17,6 @@ export default function BlogIndexPage() {
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">
-      <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
         <section className="mx-auto max-w-4xl px-5 py-24 md:px-10 md:py-32">

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { formatWeight, type WeightKg } from '@contracts/shop'
 import Ornament from '@/components/Ornament'
+import { useSEO } from '@/hooks/useSEO'
 import {
   AreaChart,
   Area,
@@ -311,20 +312,71 @@ function OrdersTab({
     onSuccess: () => utils.orders.list.invalidate(),
   })
 
-  const filtered = statusFilter
-    ? (orders ?? []).filter((o) => o.status === statusFilter)
-    : orders
+  const [search, setSearch] = useState('')
+  const [payFilter, setPayFilter] = useState<'all' | 'cod' | 'd17' | 'd17_pending'>('all')
+
+  const query = search.trim().toLowerCase()
+  const filtered = (orders ?? []).filter((o) => {
+    if (statusFilter && o.status !== statusFilter) return false
+    if (payFilter === 'cod' && o.paymentMethod !== 'cod') return false
+    if (payFilter === 'd17' && o.paymentMethod !== 'd17') return false
+    if (payFilter === 'd17_pending' && !(o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification')) return false
+    if (query) {
+      const hay = `#${o.id} ${o.customerName} ${o.phone} ${o.city} ${o.governorate}`.toLowerCase()
+      if (!hay.includes(query)) return false
+    }
+    return true
+  })
+  const d17Pending = (orders ?? []).filter(
+    (o) => o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification',
+  ).length
 
   if (isLoading) return <p className="text-sm text-ink/50">Chargement…</p>
 
   return (
     <div className="space-y-4">
+      {/* Recherche + filtre paiement : retrouver une commande par nom, téléphone
+          ou numéro, et isoler les D17 qui attendent une vérification. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher : nom, téléphone, n°, ville…"
+          aria-label="Rechercher une commande"
+          className={`${inputCls} sm:max-w-xs`}
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {(
+            [
+              ['all', 'Toutes'],
+              ['cod', 'Espèces'],
+              ['d17', 'D17'],
+              ['d17_pending', `D17 à vérifier${d17Pending ? ` (${d17Pending})` : ''}`],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setPayFilter(value)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                payFilter === value
+                  ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#8a5527]'
+                  : 'border-sand text-ink/55 hover:border-[#b8912e]/50'
+              } ${value === 'd17_pending' && d17Pending ? 'ring-1 ring-amber-300' : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {statusFilter && (
         <div className="flex items-center gap-3 rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/10 px-5 py-3 text-sm">
           <span className="font-medium text-accent">
             Filtré : {STATUS_LABELS[statusFilter] ?? statusFilter}
           </span>
-          <span className="text-ink/40">({filtered?.length ?? 0})</span>
+          <span className="text-ink/40">({filtered.length})</span>
           <button
             onClick={onClearFilter}
             className="ml-auto text-xs font-semibold uppercase tracking-wide text-ink/50 underline underline-offset-4 hover:text-ink"
@@ -334,13 +386,15 @@ function OrdersTab({
         </div>
       )}
 
-      {!filtered?.length && (
+      {!filtered.length && (
         <p className="rounded-2xl border border-sand/70 bg-white shadow-sm p-8 text-center text-sm text-ink/50">
-          {statusFilter ? 'Aucune commande dans ce statut.' : "Aucune commande pour l'instant."}
+          {statusFilter || query || payFilter !== 'all'
+            ? 'Aucune commande ne correspond à ce filtre.'
+            : "Aucune commande pour l'instant."}
         </p>
       )}
 
-      {filtered?.map((o) => {
+      {filtered.map((o) => {
         const items = parseItems(o.items)
         return (
           <div key={o.id} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-5 md:p-6">
@@ -1333,19 +1387,20 @@ function GalleryManager({ token }: { token: string }) {
   )
 }
 
+type FooterForm = { tagline: string; instagram: string; facebook: string; tiktok: string; copyright: string }
+
 function FooterEditor({ token }: { token: string }) {
   const { data } = trpc.content.footer.useQuery()
-  const update = trpc.content.updateFooter.useMutation()
-  const [form, setForm] = useState({ tagline: '', instagram: '', facebook: '', tiktok: '', copyright: '' })
-  const [done, setDone] = useState(false)
-  const [loaded, setLoaded] = useState(false)
+  if (!data) return <p className="mt-6 text-sm text-ink/50">Chargement…</p>
+  // Le formulaire n'est monté qu'une fois les valeurs connues : son état
+  // initial vient directement de la base, sans effet de synchronisation.
+  return <FooterEditorForm token={token} initial={data} />
+}
 
-  useEffect(() => {
-    if (data && !loaded) {
-      setForm(data)
-      setLoaded(true)
-    }
-  }, [data, loaded])
+function FooterEditorForm({ token, initial }: { token: string; initial: FooterForm }) {
+  const update = trpc.content.updateFooter.useMutation()
+  const [form, setForm] = useState<FooterForm>(initial)
+  const [done, setDone] = useState(false)
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -1423,17 +1478,14 @@ const EMPTY_PAGES_FORM: PagesForm = {
 
 function PagesEditor({ token }: { token: string }) {
   const { data } = trpc.content.pages.useQuery()
-  const update = trpc.content.updatePages.useMutation()
-  const [form, setForm] = useState<PagesForm>(EMPTY_PAGES_FORM)
-  const [loaded, setLoaded] = useState(false)
-  const [done, setDone] = useState(false)
+  if (!data) return <p className="mt-6 text-sm text-ink/50">Chargement…</p>
+  return <PagesEditorForm token={token} initial={data} />
+}
 
-  useEffect(() => {
-    if (data && !loaded) {
-      setForm(data)
-      setLoaded(true)
-    }
-  }, [data, loaded])
+function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm }) {
+  const update = trpc.content.updatePages.useMutation()
+  const [form, setForm] = useState<PagesForm>({ ...EMPTY_PAGES_FORM, ...initial })
+  const [done, setDone] = useState(false)
 
   const field = (key: keyof PagesForm) => ({
     value: form[key],
@@ -1862,6 +1914,7 @@ const TAB_ICONS: Record<(typeof TABS)[number]['id'], React.ReactNode> = {
 }
 
 export default function AdminPage() {
+  useSEO({ title: 'Espace admin — Chez Laziz', description: 'Tableau de bord Chez Laziz.', path: '/admin', noindex: true })
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('apercu')
   const [orderFilter, setOrderFilter] = useState<string | null>(null)
