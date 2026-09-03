@@ -81,7 +81,7 @@ export async function loginAdmin(
     getSetting("admin_token_secret"),
   ]);
   const emailOk = safeEqual(email.trim().toLowerCase(), storedEmail.trim().toLowerCase());
-  const passwordOk = verifyPassword(password, storedHash);
+  const passwordOk = verifyPassword(password.trim(), storedHash);
   if (!emailOk || !passwordOk) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
@@ -114,13 +114,13 @@ export async function changeAdminPassword(
   newPassword: string,
 ): Promise<void> {
   const storedHash = await getSetting("admin_password_hash");
-  if (!verifyPassword(currentPassword, storedHash)) {
+  if (!verifyPassword(currentPassword.trim(), storedHash)) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Mot de passe actuel incorrect",
     });
   }
-  await setSetting("admin_password_hash", hashPassword(newPassword));
+  await setSetting("admin_password_hash", hashPassword(newPassword.trim()));
   // Rotation du secret de signature : invalide immédiatement toutes les
   // sessions actives (anciens tokens), y compris celles volées.
   await setSetting("admin_token_secret", randomBytes(32).toString("hex"));
@@ -135,7 +135,7 @@ export async function changeAdminEmail(
   newEmail: string,
 ): Promise<void> {
   const storedHash = await getSetting("admin_password_hash");
-  if (!verifyPassword(currentPassword, storedHash)) {
+  if (!verifyPassword(currentPassword.trim(), storedHash)) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Mot de passe actuel incorrect",
