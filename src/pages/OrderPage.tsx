@@ -5,6 +5,7 @@ import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
 import { PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
 import { track } from '@/lib/analytics'
+import { trackMeta, type MetaContentItem } from '@/lib/metaPixel'
 import { buildDisplayLines, kgLabel, type CatalogProduct, type DisplayLine } from '@/lib/orderLines'
 import PackCard from '@/components/order/PackCard'
 import CustomPackComposer from '@/components/order/CustomPackComposer'
@@ -227,6 +228,8 @@ export default function OrderPage() {
       price: l.unitPriceMillimes / 1000,
       quantity: l.qty,
     }))
+  const metaContents = (): MetaContentItem[] =>
+    items.map((l) => ({ id: l.analyticsId, quantity: l.qty, item_price: l.unitPriceMillimes / 1000 }))
 
   useEffect(() => {
     if (items.length > 0 && !cartViewedRef.current) {
@@ -249,6 +252,10 @@ export default function OrderPage() {
       value: pack.priceMillimes / 1000,
       items: [{ item_id: `pack:${packId}`, item_name: pack.name, price: pack.priceMillimes / 1000, quantity: 1 }],
     })
+    trackMeta('AddToCart', {
+      value: pack.priceMillimes / 1000,
+      contents: [{ id: `pack:${packId}`, quantity: 1, item_price: pack.priceMillimes / 1000 }],
+    })
   }
 
   /** Quantités déjà commandées d'un produit, par poids (cartes à la carte). */
@@ -259,9 +266,14 @@ export default function OrderPage() {
   }
   const handleAddProduct = (product: CatalogProduct, weightKg: WeightKg) => {
     add(product.id, weightKg, 1)
+    const unitPrice = priceForWeight(product.priceMillimes, weightKg) / 1000
     track('add_to_cart', {
-      value: priceForWeight(product.priceMillimes, weightKg) / 1000,
-      items: [{ item_id: String(product.id), item_name: product.name, item_variant: `${weightKg} kg`, price: priceForWeight(product.priceMillimes, weightKg) / 1000, quantity: 1 }],
+      value: unitPrice,
+      items: [{ item_id: String(product.id), item_name: product.name, item_variant: `${weightKg} kg`, price: unitPrice, quantity: 1 }],
+    })
+    trackMeta('AddToCart', {
+      value: unitPrice,
+      contents: [{ id: String(product.id), quantity: 1, item_price: unitPrice }],
     })
   }
   const categories = useMemo(() => {
@@ -280,6 +292,10 @@ export default function OrderPage() {
     track('add_to_cart', {
       value: price / 1000,
       items: [{ item_id: `custom:${selected.join('-')}`, item_name: 'Custom Pack', price: price / 1000, quantity: 1 }],
+    })
+    trackMeta('AddToCart', {
+      value: price / 1000,
+      contents: [{ id: `custom:${selected.join('-')}`, quantity: 1, item_price: price / 1000 }],
     })
     setSelected([])
     setCustomJustAdded(true)
@@ -305,11 +321,13 @@ export default function OrderPage() {
     if (checkoutStartedRef.current || items.length === 0) return
     checkoutStartedRef.current = true
     track('begin_checkout', { value: total / 1000, items: analyticsItems() })
+    trackMeta('InitiateCheckout', { value: total / 1000, contents: metaContents() })
   }
 
   const choosePayment = (method: PaymentMethod) => {
     setPaymentMethod(method)
     track('add_payment_info', { payment_type: method === 'd17' ? 'D17' : 'Cash on delivery', value: total / 1000, items: analyticsItems() })
+    trackMeta('AddPaymentInfo', { value: total / 1000, contents: metaContents() })
   }
 
   const handleProofChange = async (file: File | null) => {
@@ -385,6 +403,9 @@ export default function OrderPage() {
             shipping: DELIVERY_FEE_MILLIMES / 1000,
             items: analyticsItems(),
           })
+          // Même eventID que la Conversions API côté serveur (api/lib/metaConversionsApi.ts)
+          // — Meta déduplique les deux envois d'un même achat.
+          if (order?.id) trackMeta('Purchase', { value: total / 1000, contents: metaContents() }, `order-${order.id}`)
           setPlaced({
             id: order?.id ?? 0,
             waUrl: 'https://wa.me/21623691039?text=' + encodeURIComponent(text),

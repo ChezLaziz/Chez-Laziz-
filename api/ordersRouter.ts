@@ -12,6 +12,7 @@ import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
 import { paymentProofExists } from "./lib/r2";
 import { notifyAdminNewOrder } from "./lib/email";
+import { sendMetaPurchaseEvent } from "./lib/metaConversionsApi";
 import { TRPCError } from "@trpc/server";
 import {
   ALLOWED_WEIGHTS_KG,
@@ -192,9 +193,20 @@ export const ordersRouter = createRouter({
         paymentProofKey: input.paymentMethod === "d17" ? input.paymentProofKey : undefined,
         idempotencyKey: input.idempotencyKey,
       });
-      // Notification e-mail : sans attendre, et sans jamais faire échouer
-      // la commande si l'envoi échoue (voir api/lib/email.ts).
-      if (order) void notifyAdminNewOrder(order);
+      // Notification e-mail + Meta Conversions API : sans attendre, et sans
+      // jamais faire échouer la commande si l'envoi échoue (voir
+      // api/lib/email.ts et api/lib/metaConversionsApi.ts).
+      if (order) {
+        void notifyAdminNewOrder(order);
+        void sendMetaPurchaseEvent({
+          orderId: order.id,
+          phone: order.phone,
+          totalMillimes: order.totalMillimes,
+          contentIds: items.map((i) =>
+            i.kind === "pack" ? `pack:${i.packId}` : i.kind === "custom" ? "custom" : String(i.productId),
+          ),
+        });
+      }
       return order;
     }),
 
