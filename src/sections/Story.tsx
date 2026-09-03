@@ -20,20 +20,48 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
   return (
     <section id="maison" className="relative overflow-hidden py-24 md:py-36">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
-        <div className="grid items-start gap-10 lg:grid-cols-12">
-          {/* Photography — offset, mask reveal */}
+        <div className="grid items-start gap-16 lg:grid-cols-12 lg:gap-10">
+          {/* Photographie éditoriale : le plateau de makroudh, encadré d'un
+              filet doré décalé, avec un médaillon « détail » en photo réelle. */}
           <div className="lg:col-span-7">
-            <div className="mask-reveal aspect-[2/3] max-h-[760px] w-full lg:w-[92%]">
-              <img
-                src="/images/hands.webp"
-                alt="Façonnage à la main du makroudh : semoule, pâte de dattes et moule en bois sculpté"
-                className="h-full w-full object-cover"
-                loading="lazy"
+            <div className="relative w-full lg:w-[92%]">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 translate-x-3 translate-y-3 border border-[#b8912e]/60 md:translate-x-5 md:translate-y-5"
               />
+              <div className="mask-reveal relative aspect-[2/3] max-h-[760px] w-full bg-[#e9dccf]">
+                <img
+                  src="/images/maison.webp"
+                  width={774}
+                  height={1018}
+                  alt="Plateau doré de makroudh kairouanais estampés, deux pièces coupées révélant la pâte de dattes"
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <p className="absolute left-4 top-4 rounded-full bg-[#faf6f3]/90 px-3.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.28em] text-[#2e2a27] backdrop-blur-sm md:left-5 md:top-5">
+                  Kairouan · fait main
+                </p>
+              </div>
+
+              <figure
+                className="absolute -bottom-8 -left-3 w-[38%] max-w-[230px] border-[5px] border-[#faf6f3] bg-[#faf6f3] shadow-[0_28px_60px_-22px_rgba(0,0,0,0.5)] md:-bottom-10 md:-left-8"
+                data-reveal
+              >
+                <img
+                  src="/images/maison-detail.webp"
+                  width={640}
+                  height={640}
+                  alt="Gros plan sur des makroudh enrobés de graines de sésame"
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
             </div>
           </div>
 
-          {/* Dark editorial panel overlapping the photograph */}
+          {/* Panneau éditorial sombre chevauchant la photographie */}
           <div className="relative z-10 lg:col-span-5 lg:-ml-24 lg:mt-32">
             <div className="bg-ink-deep p-8 text-[#faf6f3] md:p-12" data-reveal>
               <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
@@ -57,7 +85,15 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
                 </svg>
               </Link>
 
-              <div className="mt-10 grid grid-cols-3 gap-4 border-t border-[#faf6f3]/15 pt-8 text-center">
+              <p
+                className="mt-7 text-left font-display text-2xl leading-none text-[#b8912e]/90"
+                lang="ar"
+                dir="rtl"
+              >
+                عند لعزيز
+              </p>
+
+              <div className="mt-8 grid grid-cols-3 gap-4 border-t border-[#faf6f3]/15 pt-8 text-center">
                 {[
                   ['100%', 'Fait main'],
                   ['5,0', 'Note Google'],

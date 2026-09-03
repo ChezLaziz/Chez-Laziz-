@@ -1,23 +1,45 @@
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
+import { DELIVERY_TIME_LABEL, DELIVERY_FEE_MILLIMES } from '@contracts/shop'
+import { formatTND } from '@/lib/shop'
 
-// Vignettes dédiées (600px) — la bande défilante n'affiche ces photos qu'à
-// 144–288px de large, inutile d'y charger les mêmes fichiers pleine résolution
-// utilisés ailleurs sur le site.
-const STRIP = [
-  '/images/hero-thumb.webp',
-  '/images/makroudh-thumb.webp',
-  '/images/hands-thumb.webp',
-  '/images/display-thumb.webp',
-  '/images/tea-thumb.webp',
-  '/images/box-thumb.webp',
-]
+const MAPS_URL =
+  'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
+const PHONE_DISPLAY = '+216 23 691 039'
+const PHONE_TEL = 'tel:+21623691039'
+const WHATSAPP_URL = 'https://wa.me/21623691039'
+const EMAIL = 'contact@chezlaziz.com'
 
 const DEFAULT_TAGLINE =
-  "Pâtisserie artisanale — Kairouan, Tunisie. Le makroudh kairouanais authentique, fait main chaque jour."
+  'Pâtisserie artisanale — Kairouan, Tunisie. Le makroudh kairouanais authentique, fait main chaque jour.'
 const DEFAULT_COPYRIGHT = '© 2026 Chez Laziz — عند لعزيز · Kairouan. Tous droits réservés.'
+const DEFAULT_VISIT_EYEBROW = 'Nous trouver'
+const DEFAULT_VISIT_TITLE = 'La boutique vous attend à Kairouan'
 
-const SOCIAL_ICONS: Record<string, React.ReactNode> = {
+const SHOP_LINKS = [
+  ['/', 'Accueil'],
+  ['/collection', 'La Collection'],
+  ['/commande', 'Commander en ligne'],
+  ['/livraison', 'Livraison'],
+  ['/faq', 'Questions fréquentes'],
+] as const
+
+const HOUSE_LINKS = [
+  ['/la-maison', 'La Maison'],
+  ['/galerie', 'Galerie'],
+  ['/journal', 'Journal'],
+  ['/makroudh-tunisien', 'Makroudh tunisien'],
+  ['/makroudh-kairouan', 'Makroudh de Kairouan'],
+  ['/makroudh-aux-dattes', 'Makroudh aux dattes'],
+  ['/contact', 'Nous trouver'],
+] as const
+
+const LEGAL_LINKS = [
+  ['/politique-de-confidentialite', 'Politique de confidentialité'],
+  ['/conditions-generales', 'Conditions générales'],
+] as const
+
+const ICONS: Record<string, React.ReactNode> = {
   Instagram: (
     <>
       <rect x="2.5" y="2.5" width="19" height="19" rx="5" />
@@ -26,93 +48,410 @@ const SOCIAL_ICONS: Record<string, React.ReactNode> = {
     </>
   ),
   Facebook: (
-    <path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V2.5h-2.5A4 4 0 0 0 10.5 6.5v2H8V12h2.5v9.5H14V12h2.5l.5-3.5H14Z" fill="currentColor" stroke="none" />
+    <path
+      d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V2.5h-2.5A4 4 0 0 0 10.5 6.5v2H8V12h2.5v9.5H14V12h2.5l.5-3.5H14Z"
+      fill="currentColor"
+      stroke="none"
+    />
   ),
   TikTok: (
-    <path d="M16.5 3c.4 2.2 1.8 3.6 4 3.9v3c-1.6 0-3-.5-4-1.3v6.9a5.5 5.5 0 1 1-5.5-5.5c.3 0 .7 0 1 .1v3.1a2.5 2.5 0 1 0 1.5 2.3V3h3Z" fill="currentColor" stroke="none" />
+    <path
+      d="M16.5 3c.4 2.2 1.8 3.6 4 3.9v3c-1.6 0-3-.5-4-1.3v6.9a5.5 5.5 0 1 1-5.5-5.5c.3 0 .7 0 1 .1v3.1a2.5 2.5 0 1 0 1.5 2.3V3h3Z"
+      fill="currentColor"
+      stroke="none"
+    />
+  ),
+  WhatsApp: (
+    <>
+      <path d="M12 2.6a9.4 9.4 0 0 0-8.1 14.1L2.6 21.4l4.8-1.3A9.4 9.4 0 1 0 12 2.6Z" />
+      <path
+        d="M8.9 7.7c.2-.4.5-.5.8-.5h.5c.2 0 .4.1.5.4l.8 1.8c.1.2 0 .4-.1.6l-.5.6c-.1.2-.1.3 0 .5a6.4 6.4 0 0 0 3.1 3c.2.1.4.1.5-.1l.6-.7c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.3.4.5 0 .9-.5 1.6-1.3 1.9-.7.3-1.5.3-2.2 0a9.7 9.7 0 0 1-5.3-5.2c-.3-.8-.3-1.6 0-2.3.1-.5.3-.9.8-1.3Z"
+        fill="currentColor"
+        stroke="none"
+      />
+    </>
+  ),
+  Maps: (
+    <>
+      <path d="M12 21.5s-7-6.4-7-12a7 7 0 0 1 14 0c0 5.6-7 12-7 12Z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </>
+  ),
+  Phone: (
+    <path d="M5.5 3.5h3l1.6 4-2 1.3a11 11 0 0 0 5.6 5.6l1.3-2 4 1.6v3a2 2 0 0 1-2 2A15.5 15.5 0 0 1 3.5 5.5a2 2 0 0 1 2-2Z" />
+  ),
+  Mail: (
+    <>
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="m4 7 8 6 8-6" />
+    </>
   ),
 }
 
-export default function Footer() {
+function Icon({ name, size = 18 }: { name: string; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {ICONS[name]}
+    </svg>
+  )
+}
+
+/**
+ * Silhouette au trait de la Grande Mosquée de Kairouan (Okba Ibn Nafaa) :
+ * minaret à trois étages coiffé d'une coupole, portique à arcs outrepassés,
+ * coupole côtelée de la salle de prière, mur d'enceinte crénelé. Affichée
+ * tant qu'aucune photo n'a été ajoutée depuis l'admin.
+ */
+function KairouanSkyline({ className = '' }: { className?: string }) {
+  const merlons = (x0: number, x1: number, y: number, step: number, w: number, h: number) => {
+    const parts: string[] = []
+    for (let x = x0; x + w <= x1; x += step) {
+      parts.push(`M${x} ${y} v-${h} a${w / 2} ${w / 2} 0 0 1 ${w} 0 v${h}`)
+    }
+    return parts.join(' ')
+  }
+  const horseshoe = (cx: number, top: number, bottom: number, r: number) =>
+    `M${cx - r + 1} ${bottom} V${top + r} A${r} ${r} 0 1 1 ${cx + r - 1} ${top + r} V${bottom}`
+  const columns = [160, 240, 320, 400, 480, 560, 640, 720]
+
+  return (
+    <svg
+      viewBox="0 0 1200 600"
+      preserveAspectRatio="xMidYMax meet"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <g
+        fill="none"
+        stroke="#b8912e"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.42"
+      >
+        {/* sol */}
+        <path d="M60 522H1140" />
+        <path d="M120 540H1080" opacity="0.5" />
+
+        {/* portique de la cour : colonnes et arcs outrepassés */}
+        <path d="M120 342H752" />
+        <path d={merlons(124, 752, 342, 20, 10, 9)} />
+        <path d="M120 342V522M752 342V522" />
+        {columns.map(x => (
+          <rect key={x} x={x - 7} y={396} width="14" height="126" />
+        ))}
+        {columns.slice(0, -1).map((x, i) => (
+          <path key={`a${x}`} d={`M${x + 7} 396V386A37 37 0 1 1 ${columns[i + 1] - 7} 386V396`} />
+        ))}
+
+        {/* coupole côtelée de la salle de prière */}
+        <path d="M242 342A58 58 0 0 1 358 342" />
+        <path d="M300 284V268" />
+        <circle cx="300" cy="264" r="4" />
+        <path d="M300 284Q262 300 254 342M300 284Q281 302 277 342M300 284V342M300 284Q319 302 323 342M300 284Q338 300 346 342" />
+
+        {/* minaret à trois étages */}
+        <rect x="790" y="236" width="150" height="286" />
+        <path d={merlons(794, 940, 236, 18, 10, 10)} />
+        <rect x="813" y="166" width="104" height="70" />
+        <path d={merlons(817, 917, 166, 16, 8, 8)} />
+        <rect x="833" y="110" width="64" height="56" />
+        <path d="M837 110Q865 58 893 110" />
+        <path d="M851 110Q865 76 879 110" />
+        <path d="M865 70V50" />
+        <circle cx="865" cy="46" r="4" />
+        {[262, 342].map(y => (
+          <path key={y} d={horseshoe(865, y, y + 46, 9)} />
+        ))}
+        <path d={horseshoe(840, 184, 222, 8)} />
+        <path d={horseshoe(890, 184, 222, 8)} />
+        <path d={horseshoe(865, 122, 152, 8)} />
+        <path d={horseshoe(865, 456, 522, 18)} />
+
+        {/* mur d'enceinte crénelé */}
+        <path d="M940 522V400H1140" />
+        <path d={merlons(946, 1140, 400, 20, 10, 9)} />
+      </g>
+    </svg>
+  )
+}
+
+function FooterColumn({
+  title,
+  links,
+  className = '',
+}: {
+  title: string
+  links: readonly (readonly [string, string])[]
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">{title}</p>
+      <ul className="space-y-3 text-sm font-light text-[#faf6f3]/75">
+        {links.map(([to, label]) => (
+          <li key={to}>
+            <Link to={to} className="transition-colors hover:text-[#b8912e]">
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** `hideVisit` : la page /contact affiche déjà ce bloc en pleine page. */
+export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
   const { data } = trpc.content.footer.useQuery()
+  const { data: pages } = trpc.content.pages.useQuery()
+  const banner = data?.bannerImage || ''
   const socials = [
-    { name: 'Instagram', href: data?.instagram || 'https://www.instagram.com/chezlaziz' },
-    { name: 'Facebook', href: data?.facebook || 'https://www.facebook.com/profile.php?id=61573444418563' },
-    { name: 'TikTok', href: data?.tiktok || 'https://www.tiktok.com/search?q=chez%20laziz%20kairouan' },
+    {
+      name: 'Instagram',
+      icon: 'Instagram',
+      href: data?.instagram || 'https://www.instagram.com/chezlaziz',
+    },
+    {
+      name: 'Facebook',
+      icon: 'Facebook',
+      href: data?.facebook || 'https://www.facebook.com/profile.php?id=61573444418563',
+    },
+    {
+      name: 'TikTok',
+      icon: 'TikTok',
+      href: data?.tiktok || 'https://www.tiktok.com/search?q=chez%20laziz%20kairouan',
+    },
+    { name: 'WhatsApp', icon: 'WhatsApp', href: WHATSAPP_URL },
+    { name: 'Google Maps', icon: 'Maps', href: MAPS_URL },
   ]
 
   return (
     <footer className="bg-ink-deep text-[#faf6f3]">
-      {/* Continuous auto-scrolling image strip */}
-      <div className="overflow-hidden border-t border-[#faf6f3]/10" aria-hidden="true">
-        <div className="marquee-track marquee-slow py-4">
-          {[0, 1].map((half) => (
-            <div key={half} className="flex shrink-0">
-              {STRIP.map((src, i) => (
+      {/* ── Bandeau « Nous trouver » : adresse, horaires, contact ── */}
+      {!hideVisit && (
+        <section
+          aria-labelledby="footer-visit-title"
+          className="relative overflow-hidden border-t border-[#faf6f3]/10"
+        >
+          <div className="absolute inset-0" aria-hidden="true">
+            {banner ? (
+              <>
                 <img
-                  key={`${half}-${i}`}
-                  src={src}
+                  src={banner}
                   alt=""
+                  className="h-full w-full object-cover object-center"
                   loading="lazy"
-                  width="288"
-                  height="176"
-                  className="mx-3 h-28 w-44 rounded-sm object-cover opacity-80 transition-opacity duration-300 hover:opacity-100 md:h-36 md:w-56"
+                  decoding="async"
                 />
-              ))}
+                {/* Voile : uni sur mobile (texte au-dessus de la photo), dégradé
+                  gauche → droite sur grand écran pour garder le texte lisible
+                  et laisser la photo respirer à droite. */}
+                <div className="absolute inset-0 bg-[#2e2a27]/80 lg:bg-transparent lg:bg-gradient-to-r lg:from-[#2e2a27] lg:via-[#2e2a27]/85 lg:to-[#2e2a27]/25" />
+              </>
+            ) : (
+              <>
+                <KairouanSkyline className="absolute bottom-0 right-0 hidden h-full w-[46%] lg:block" />
+                <p className="absolute bottom-5 right-6 hidden text-[10px] uppercase tracking-[0.3em] text-[#b8912e]/60 lg:block">
+                  Grande Mosquée de Kairouan
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="relative mx-auto max-w-7xl px-5 py-20 md:px-10 md:py-24">
+            <div className="lg:max-w-[52%]">
+              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
+                {pages?.contactEyebrow || DEFAULT_VISIT_EYEBROW}
+              </p>
+              <h2 id="footer-visit-title" className="font-display text-4xl leading-[1.08] md:text-5xl">
+                {pages?.contactTitle || DEFAULT_VISIT_TITLE}
+              </h2>
+
+              <div className="mt-12 grid gap-10 border-t border-[#faf6f3]/15 pt-10 sm:grid-cols-3">
+                <div>
+                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+                    Adresse
+                  </h3>
+                  <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
+                    M3MG+VJP
+                    <br />
+                    Kairouan, Tunisie
+                  </p>
+                  <a href={MAPS_URL} target="_blank" rel="noreferrer" className="arrow-link mt-5">
+                    Ouvrir dans Google Maps
+                    <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+                      <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                  </a>
+                </div>
+
+                <div>
+                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+                    Horaires
+                  </h3>
+                  <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
+                    Tous les jours
+                    <br />
+                    07h00 – 00h00
+                  </p>
+                  <p className="mt-4 text-sm font-light text-[#faf6f3]/55">
+                    Makroudh façonné et cuit chaque matin — venez tôt pour les nouveautés du jour.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+                    Contact
+                  </h3>
+                  <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
+                    <a href={PHONE_TEL} className="transition-colors hover:text-[#b8912e]">
+                      {PHONE_DISPLAY}
+                    </a>
+                  </p>
+                  <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
+                    <a href={`mailto:${EMAIL}`} className="transition-colors hover:text-[#b8912e]">
+                      {EMAIL}
+                    </a>
+                  </p>
+                  <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="arrow-link mt-5">
+                    Écrire sur WhatsApp
+                    <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+                      <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
             </div>
-          ))}
+
+            {!banner && (
+              <div className="mt-12 h-40 lg:hidden" aria-hidden="true">
+                <KairouanSkyline className="h-full w-full" />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Marque, réseaux sociaux et plan du site ── */}
+      <div className="border-t border-[#faf6f3]/10">
+        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-14 md:px-10 lg:grid-cols-12 lg:gap-8">
+          <div className="lg:col-span-4">
+            <Link to="/" className="inline-flex items-center gap-4">
+              <img
+                src="/images/logo.webp"
+                alt=""
+                className="h-14 w-14 md:h-16 md:w-16"
+                loading="lazy"
+                width="64"
+                height="64"
+              />
+              <span>
+                <span className="block font-display text-2xl tracking-[0.18em]">CHEZ LAZIZ</span>
+                <span className="block font-display text-base text-[#b8912e]" lang="ar" dir="rtl">
+                  عند لعزيز
+                </span>
+              </span>
+            </Link>
+            <p className="mt-6 max-w-sm text-sm font-light leading-relaxed text-[#faf6f3]/60">
+              {data?.tagline || DEFAULT_TAGLINE}
+            </p>
+
+            <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
+              Suivez-nous
+            </p>
+            <ul className="mt-4 flex flex-wrap items-center gap-3">
+              {socials.map(s => (
+                <li key={s.name}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={s.name}
+                    title={s.name}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-[#faf6f3]/25 text-[#faf6f3]/80 transition-all duration-300 hover:border-[#b8912e] hover:text-[#b8912e]"
+                  >
+                    <Icon name={s.icon} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <FooterColumn title="Boutique" links={SHOP_LINKS} className="lg:col-span-2" />
+          <FooterColumn title="La Maison" links={HOUSE_LINKS} className="lg:col-span-3" />
+
+          <div className="lg:col-span-3">
+            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
+              Commander
+            </p>
+            <ul className="space-y-3 text-sm font-light text-[#faf6f3]/75">
+              <li>
+                <a
+                  href={PHONE_TEL}
+                  className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
+                >
+                  <Icon name="Phone" size={16} />
+                  {PHONE_DISPLAY}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
+                >
+                  <Icon name="WhatsApp" size={16} />
+                  WhatsApp
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`mailto:${EMAIL}`}
+                  className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
+                >
+                  <Icon name="Mail" size={16} />
+                  {EMAIL}
+                </a>
+              </li>
+            </ul>
+            <Link
+              to="/commande"
+              className="gold-cta mt-6 inline-flex items-center justify-center rounded-full bg-[#b8912e] px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#2e2a27] transition-colors hover:bg-[#d4ab3a]"
+            >
+              Commander en ligne
+            </Link>
+            <p className="mt-4 text-xs font-light leading-relaxed text-[#faf6f3]/50">
+              Livraison partout en Tunisie sous {DELIVERY_TIME_LABEL} · {formatTND(DELIVERY_FEE_MILLIMES)} TND
+              · Paiement à la livraison ou D17.
+            </p>
+          </div>
         </div>
       </div>
 
+      {/* ── Barre légale ── */}
       <div className="border-t border-[#faf6f3]/10">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-5 py-10 text-center md:px-10">
-          <img src="/images/logo.webp" alt="Chez Laziz — عند لعزيز" className="h-16 w-16 md:h-20 md:w-20" loading="lazy" width="80" height="80" />
-          <p className="max-w-md text-sm font-light leading-relaxed text-[#faf6f3]/60">
-            {data?.tagline || DEFAULT_TAGLINE}
-          </p>
-
-          {/* Social profiles */}
-          <div className="flex items-center gap-4">
-            {socials.map((s) => (
-              <a
-                key={s.name}
-                href={s.href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={s.name}
-                title={s.name}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#faf6f3]/25 text-[#faf6f3]/80 transition-all duration-300 hover:border-[#b8912e] hover:text-[#b8912e]"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-                  {SOCIAL_ICONS[s.name]}
-                </svg>
-              </a>
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-6 text-center text-xs font-light text-[#faf6f3]/45 md:flex-row md:px-10 md:text-left">
+          <p>{data?.copyright || DEFAULT_COPYRIGHT}</p>
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em]">
+            {LEGAL_LINKS.map(([to, label]) => (
+              <Link key={to} to={to} className="transition-colors hover:text-[#b8912e]">
+                {label}
+              </Link>
             ))}
-          </div>
-
-          <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-[0.2em] text-[#faf6f3]/70">
-            <Link to="/la-maison" className="transition-colors hover:text-[#b8912e]">La Maison</Link>
-            <Link to="/collection" className="transition-colors hover:text-[#b8912e]">La Collection</Link>
-            <Link to="/galerie" className="transition-colors hover:text-[#b8912e]">Galerie</Link>
-            <Link to="/commande" className="transition-colors hover:text-[#b8912e]">Commander</Link>
-            <Link to="/contact" className="transition-colors hover:text-[#b8912e]">Nous trouver</Link>
           </nav>
-          <div className="h-px w-24 bg-[#b8912e]/60" />
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em] text-[#faf6f3]/50">
-            <Link to="/makroudh-tunisien" className="transition-colors hover:text-[#b8912e]">Makroudh tunisien</Link>
-            <Link to="/makroudh-kairouan" className="transition-colors hover:text-[#b8912e]">Makroudh de Kairouan</Link>
-            <Link to="/makroudh-aux-dattes" className="transition-colors hover:text-[#b8912e]">Makroudh aux dattes</Link>
-            <Link to="/journal" className="transition-colors hover:text-[#b8912e]">Journal</Link>
-            <Link to="/livraison" className="transition-colors hover:text-[#b8912e]">Livraison</Link>
-            <Link to="/faq" className="transition-colors hover:text-[#b8912e]">FAQ</Link>
-          </nav>
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em] text-[#faf6f3]/45">
-            <Link to="/politique-de-confidentialite" className="transition-colors hover:text-[#b8912e]">Politique de confidentialité</Link>
-            <Link to="/conditions-generales" className="transition-colors hover:text-[#b8912e]">Conditions générales</Link>
-          </nav>
-          <p className="text-xs font-light text-[#faf6f3]/45">
-            {data?.copyright || DEFAULT_COPYRIGHT}
-          </p>
         </div>
       </div>
     </footer>

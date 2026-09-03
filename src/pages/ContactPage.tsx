@@ -19,7 +19,7 @@ export default function ContactPage() {
       <main className="pt-16 md:pt-20">
         <Visit headingLevel="h1" />
       </main>
-      <Footer />
+      <Footer hideVisit />
     </>
   )
 }
