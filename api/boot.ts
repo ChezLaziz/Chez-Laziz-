@@ -58,7 +58,7 @@ app.post(
     const form = await c.req.formData();
     const file = form.get("file");
     const folderRaw = form.get("folder");
-    const folder = folderRaw === "gallery" ? "gallery" : "products";
+    const folder = folderRaw === "gallery" || folderRaw === "site" ? folderRaw : "products";
     if (!(file instanceof File)) {
       return c.json({ error: "Fichier manquant" }, 400);
     }
@@ -124,7 +124,7 @@ app.get("/api/admin/proofs/*", async (c) => {
 // Sert les photos uploadées (lecture publique, comme les images statiques).
 app.get("/api/uploads/*", async (c) => {
   const key = c.req.path.replace(/^\/api\/uploads\//, "");
-  if (!/^(products|gallery)\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(key)) {
+  if (!/^(products|gallery|site)\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(key)) {
     return c.json({ error: "Not Found" }, 404);
   }
   const result = await getUploadedImage(key);

@@ -26,6 +26,13 @@ const pagesInput = z.object({
   contactTitle: z.string().max(200),
 });
 
+// Seule une image passée par notre propre upload (dossier site/) est
+// acceptée comme bandeau — jamais une URL externe arbitraire.
+const bannerImageInput = z
+  .string()
+  .max(300)
+  .regex(/^$|^\/api\/uploads\/site\/[a-zA-Z0-9_-]+\.jpg$/, "Image de bandeau invalide");
+
 export const contentRouter = createRouter({
   /** Contenu du pied de page (public) */
   footer: publicQuery.query(() => getFooterContent()),
@@ -39,6 +46,7 @@ export const contentRouter = createRouter({
         facebook: z.string().max(300),
         tiktok: z.string().max(300),
         copyright: z.string().max(300),
+        bannerImage: bannerImageInput.default(""),
       }),
     )
     .mutation(async ({ input }) => {
@@ -49,6 +57,7 @@ export const contentRouter = createRouter({
         facebook: input.facebook,
         tiktok: input.tiktok,
         copyright: input.copyright,
+        bannerImage: input.bannerImage,
       });
       return { ok: true };
     }),

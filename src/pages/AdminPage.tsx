@@ -1373,7 +1373,7 @@ function GalleryManager({ token }: { token: string }) {
               onClick={() => {
                 if (window.confirm('Retirer cette photo de la galerie ?')) removePhoto.mutate({ token, id: p.id })
               }}
-              className="absolute inset-x-0 bottom-0 bg-ink-deep/80 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100"
+              className="absolute inset-x-0 bottom-0 bg-[#2e2a27]/80 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100"
             >
               Supprimer
             </button>
@@ -1387,7 +1387,14 @@ function GalleryManager({ token }: { token: string }) {
   )
 }
 
-type FooterForm = { tagline: string; instagram: string; facebook: string; tiktok: string; copyright: string }
+type FooterForm = {
+  tagline: string
+  instagram: string
+  facebook: string
+  tiktok: string
+  copyright: string
+  bannerImage: string
+}
 
 function FooterEditor({ token }: { token: string }) {
   const { data } = trpc.content.footer.useQuery()
@@ -1399,17 +1406,107 @@ function FooterEditor({ token }: { token: string }) {
 
 function FooterEditorForm({ token, initial }: { token: string; initial: FooterForm }) {
   const update = trpc.content.updateFooter.useMutation()
+  const utils = trpc.useUtils()
   const [form, setForm] = useState<FooterForm>(initial)
   const [done, setDone] = useState(false)
+  const [bannerUploading, setBannerUploading] = useState(false)
+  const [bannerError, setBannerError] = useState<string | null>(null)
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    update.mutate({ token, ...form }, { onSuccess: () => setDone(true) })
+    setDone(false)
+    update.mutate(
+      { token, ...form },
+      {
+        onSuccess: () => {
+          setDone(true)
+          utils.content.footer.invalidate()
+        },
+      },
+    )
   }
+
+  const uploadBanner = async (file: File) => {
+    setBannerUploading(true)
+    setBannerError(null)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('folder', 'site')
+      const res = await fetch('/api/uploads', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Échec de l'envoi")
+      setForm((f) => ({ ...f, bannerImage: data.url }))
+      setDone(false)
+    } catch (e) {
+      setBannerError(e instanceof Error ? e.message : "Échec de l'envoi")
+    } finally {
+      setBannerUploading(false)
+    }
+  }
+
+  const uploadBtnCls =
+    'inline-flex cursor-pointer items-center gap-2 rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent'
 
   return (
     <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
       <p className="font-display text-xl">Pied de page</p>
+
+      <div>
+        <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">
+          Photo du bandeau « Nous trouver »
+        </label>
+        <p className="mb-3 text-xs text-ink/55">
+          Idéal : une photo de Kairouan (Grande Mosquée, médina…) en format paysage, 2 400 px de large ou
+          plus — elle est optimisée automatiquement. Sans photo, le site affiche une illustration dorée de
+          la Grande Mosquée.
+        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          {form.bannerImage ? (
+            <img
+              src={form.bannerImage}
+              alt="Aperçu du bandeau du pied de page"
+              className="h-24 w-44 rounded-lg border border-sand object-cover"
+            />
+          ) : (
+            <div className="flex h-24 w-44 items-center justify-center rounded-lg border border-dashed border-sand text-[10px] uppercase tracking-[0.18em] text-ink/40">
+              Aucune photo
+            </div>
+          )}
+          <label className={uploadBtnCls}>
+            {bannerUploading ? 'Envoi…' : form.bannerImage ? 'Remplacer la photo' : '+ Ajouter une photo'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={bannerUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) uploadBanner(file)
+                e.target.value = ''
+              }}
+              className="hidden"
+            />
+          </label>
+          {form.bannerImage && (
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, bannerImage: '' }))}
+              className="text-xs font-semibold uppercase tracking-wide text-red-600 hover:underline"
+            >
+              Retirer
+            </button>
+          )}
+        </div>
+        {bannerError && <p className="mt-2 text-sm text-red-600">{bannerError}</p>}
+        {form.bannerImage !== initial.bannerImage && (
+          <p className="mt-2 text-xs text-[#8a6a1c]">Pensez à cliquer sur « Enregistrer » pour publier la photo.</p>
+        )}
+      </div>
+
       <div>
         <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de présentation</label>
         <textarea value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} rows={2} className={`${inputCls} resize-none`} />

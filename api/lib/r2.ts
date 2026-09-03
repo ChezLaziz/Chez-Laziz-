@@ -30,12 +30,17 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 // recadrée à une taille d'affichage réelle et réencodée en JPEG. Sans ça,
 // une photo trop lourde ralentit le site pour chaque visiteur, exactement
 // le problème déjà réglé pour les images du thème (voir hero.webp).
-const MAX_DIMENSION = 1600;
+// Le dossier site/ (bandeau pleine largeur du pied de page) garde plus de
+// définition que les vignettes produits/galerie.
+export type UploadFolder = "products" | "gallery" | "site";
+const MAX_DIMENSION: Record<UploadFolder, number> = { products: 1600, gallery: 1600, site: 2400 };
 const JPEG_QUALITY = 82;
+// Captures d'écran D17 : taille d'écran de téléphone, 1600px suffisent largement.
+const PROOF_MAX_DIMENSION = 1600;
 
 export async function uploadProductImage(
   file: File,
-  folder: "products" | "gallery" = "products",
+  folder: UploadFolder = "products",
 ): Promise<string> {
   if (!ALLOWED_TYPES.has(file.type)) {
     throw new Error("Format d'image non supporté (jpg, png ou webp uniquement).");
@@ -48,7 +53,12 @@ export async function uploadProductImage(
   try {
     outputBytes = await sharp(inputBytes)
       .rotate() // applique l'orientation EXIF (photos de téléphone) avant le resize
-      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+      .resize({
+        width: MAX_DIMENSION[folder],
+        height: MAX_DIMENSION[folder],
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .flatten({ background: "#ffffff" }) // PNG transparent -> fond blanc (le JPEG n'a pas de canal alpha)
       .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
       .toBuffer();
@@ -84,7 +94,7 @@ export async function uploadPaymentProof(file: File): Promise<string> {
   try {
     outputBytes = await sharp(inputBytes)
       .rotate()
-      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+      .resize({ width: PROOF_MAX_DIMENSION, height: PROOF_MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
       .flatten({ background: "#ffffff" })
       .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
       .toBuffer();

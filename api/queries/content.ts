@@ -7,6 +7,9 @@ const FOOTER_KEYS = {
   facebook: "footer_facebook",
   tiktok: "footer_tiktok",
   copyright: "footer_copyright",
+  // Photo du bandeau « Nous trouver » du pied de page (clé d'image uploadée
+  // depuis l'admin, dossier site/). Vide = illustration dorée de Kairouan.
+  bannerImage: "footer_banner_image",
 } as const;
 
 export const FOOTER_DEFAULTS = {
@@ -16,6 +19,7 @@ export const FOOTER_DEFAULTS = {
   facebook: "https://www.facebook.com/profile.php?id=61573444418563",
   tiktok: "https://www.tiktok.com/search?q=chez%20laziz%20kairouan",
   copyright: "© 2026 Chez Laziz — عند لعزيز · Kairouan. Tous droits réservés.",
+  bannerImage: "",
 };
 
 export type FooterContent = typeof FOOTER_DEFAULTS;
@@ -29,6 +33,7 @@ export async function getFooterContent(): Promise<FooterContent> {
     facebook: map.get(FOOTER_KEYS.facebook) ?? FOOTER_DEFAULTS.facebook,
     tiktok: map.get(FOOTER_KEYS.tiktok) ?? FOOTER_DEFAULTS.tiktok,
     copyright: map.get(FOOTER_KEYS.copyright) ?? FOOTER_DEFAULTS.copyright,
+    bannerImage: map.get(FOOTER_KEYS.bannerImage) ?? FOOTER_DEFAULTS.bannerImage,
   };
 }
 
