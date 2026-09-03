@@ -52,10 +52,17 @@ export default function PackCard({
         </span>
       )}
 
-      {/* Mosaïque des produits inclus */}
-      <div className={`grid aspect-[5/4] gap-0.5 bg-sand/40 ${n === 3 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-2 grid-rows-2'}`}>
+      {/* Mosaïque des produits inclus. Les photos réelles ont des cadrages très
+          différents (portrait, panoramique…) : dans une grille CSS à lignes
+          `1fr`, un <img> conserve par défaut sa taille intrinsèque comme
+          hauteur minimale, ce qui peut faire exploser la grille bien au-delà
+          de aspect-[5/4] (une photo étirée dans une case beaucoup trop haute
+          se retrouve alors zoomée/coupée). min-h-0/min-w-0 neutralise ce
+          minimum automatique pour que les cases restent bien à leur taille
+          prévue, quel que soit le cadrage d'origine des photos. */}
+      <div className="grid aspect-[5/4] min-h-0 grid-cols-2 grid-rows-2 gap-0.5 bg-sand/40">
         {photos.map((ph, i) => (
-          <div key={i} className={`overflow-hidden ${n === 3 && i === 0 ? 'row-span-2' : ''}`}>
+          <div key={i} className={`min-h-0 min-w-0 overflow-hidden ${n === 3 && i === 0 ? 'row-span-2' : ''}`}>
             <ProductImage src={ph.src} alt={ph.alt} compact />
           </div>
         ))}
