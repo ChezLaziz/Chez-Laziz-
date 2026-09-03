@@ -1,0 +1,169 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { TRPCError } from "@trpc/server";
+
+const listAvailableProducts = vi.fn();
+const createOrder = vi.fn();
+const paymentProofExists = vi.fn();
+const assertAdmin = vi.fn();
+
+vi.mock("./queries/products", () => ({ listAvailableProducts }));
+vi.mock("./queries/orders", () => ({
+  createOrder,
+  updateOrderStatus: vi.fn(),
+  updatePaymentStatus: vi.fn(),
+  deleteOrder: vi.fn(),
+  listOrders: vi.fn(),
+}));
+vi.mock("./lib/r2", () => ({ paymentProofExists }));
+vi.mock("./queries/admin", () => ({ assertAdmin }));
+
+const { ordersRouter } = await import("./ordersRouter");
+
+const CATALOG = [
+  { id: 1, name: "Makroudh aux Dattes", priceMillimes: 8000, available: true },
+  { id: 2, name: "Makroudh Blanc à la Pistache", priceMillimes: 40000, available: true },
+];
+
+const ctx = { req: new Request("http://localhost"), resHeaders: new Headers() };
+const caller = ordersRouter.createCaller(ctx);
+
+const baseInput = {
+  customerName: "Amine",
+  phone: "23691039",
+  governorate: "Kairouan" as const,
+  city: "Kairouan",
+  address: "M3MG+VJP, avenue de la République",
+  items: [{ productId: 1, weightKg: 1 as const, qty: 2 }],
+  paymentMethod: "cod" as const,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  listAvailableProducts.mockResolvedValue(CATALOG);
+  createOrder.mockImplementation(async (data: unknown) => ({ id: 42, ...(data as object) }));
+});
+
+describe("orders.create — server-side price recalculation", () => {
+  it("computes unit price from the 1kg base price × selected weight, never from the client", async () => {
+    await caller.create({
+      ...baseInput,
+      items: [{ productId: 2, weightKg: 1.5, qty: 1 }],
+    });
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({ productId: 2, weightKg: 1.5, unitPriceMillimes: 60000 }),
+        ],
+        subtotalMillimes: 60000,
+        deliveryFeeMillimes: 8000,
+        totalMillimes: 68000,
+      }),
+    );
+  });
+
+  it("ignores any extra client-supplied pricing fields", async () => {
+    await caller.create({
+      ...baseInput,
+      // Champs en trop simulant un client malveillant (pas dans le schéma zod
+      // ordersRouter.create, ignorés silencieusement puis jamais utilisés
+      // côté serveur — voir l'assertion ci-dessous).
+      ...({ totalMillimes: 1 } as object),
+      items: [{ productId: 1, weightKg: 1, qty: 2, ...({ unitPriceMillimes: 1 } as object) }],
+    });
+    // 2 × 8.000 (prix catalogue réel, pas 1 envoyé par le client) + 8.000 livraison
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ subtotalMillimes: 16000, totalMillimes: 24000 }),
+    );
+  });
+
+  it("rejects an order for a product that isn't in the available catalog", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ productId: 999, weightKg: 1, qty: 1 }] }),
+    ).rejects.toThrow(TRPCError);
+  });
+
+  it("rejects a weight that isn't one of the five allowed values", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 0.75 as 1, qty: 1 }] }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a payment method other than cod/d17", async () => {
+    await expect(
+      // @ts-expect-error — méthode de paiement volontairement invalide pour le test
+      caller.create({ ...baseInput, paymentMethod: "stripe" }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects an order missing the required delivery address fields", async () => {
+    await expect(
+      // @ts-expect-error — governorate manquant
+      caller.create({ ...baseInput, governorate: undefined }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("orders.create — D17 payment proof is mandatory", () => {
+  it("rejects a D17 order with no proof key at all", async () => {
+    await expect(
+      caller.create({ ...baseInput, paymentMethod: "d17" }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("obligatoire") });
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("rejects a D17 order whose proof key doesn't actually exist in storage", async () => {
+    paymentProofExists.mockResolvedValue(false);
+    await expect(
+      caller.create({
+        ...baseInput,
+        paymentMethod: "d17",
+        paymentProofKey: "payment-proof/fake-key-a-client-made-up.jpg",
+      }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("obligatoire") });
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("accepts a D17 order once a real, existing proof key is supplied", async () => {
+    paymentProofExists.mockResolvedValue(true);
+    await caller.create({
+      ...baseInput,
+      paymentMethod: "d17",
+      paymentProofKey: "payment-proof/real-key.jpg",
+    });
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentMethod: "d17",
+        paymentStatus: "pending_verification",
+        paymentProofKey: "payment-proof/real-key.jpg",
+      }),
+    );
+  });
+
+  it("never marks a D17 order as approved just because a proof was submitted", async () => {
+    paymentProofExists.mockResolvedValue(true);
+    await caller.create({ ...baseInput, paymentMethod: "d17", paymentProofKey: "payment-proof/real-key.jpg" });
+    const [order] = createOrder.mock.calls.at(-1)!;
+    expect(order.paymentStatus).not.toBe("approved");
+  });
+
+  it("a COD order needs no proof and is immediately payable on delivery", async () => {
+    await caller.create(baseInput);
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: "cod", paymentStatus: "pending", paymentProofKey: undefined }),
+    );
+  });
+});
+
+describe("admin-only order procedures reject unauthenticated access", () => {
+  it("orders.list requires a valid admin token", async () => {
+    assertAdmin.mockRejectedValue(new TRPCError({ code: "UNAUTHORIZED" }));
+    await expect(caller.list({ token: "" })).rejects.toThrow(TRPCError);
+  });
+
+  it("orders.setPaymentStatus requires a valid admin token", async () => {
+    assertAdmin.mockRejectedValue(new TRPCError({ code: "UNAUTHORIZED" }));
+    await expect(
+      caller.setPaymentStatus({ token: "not-a-real-token", id: 1, paymentStatus: "approved" }),
+    ).rejects.toThrow(TRPCError);
+  });
+});

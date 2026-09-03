@@ -7,7 +7,7 @@ import { createContext } from "./context";
 import { env } from "./lib/env";
 import { rateLimit } from "./lib/rateLimit";
 import { assertAdmin } from "./queries/admin";
-import { getUploadedImage, uploadProductImage } from "./lib/r2";
+import { getUploadedImage, uploadProductImage, uploadPaymentProof } from "./lib/r2";
 import { getFullExport } from "./queries/backup";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -70,6 +70,56 @@ app.post(
     }
   },
 );
+
+// Upload de la capture d'écran de paiement D17 — endpoint public (le client
+// n'est pas connecté) mais limité en débit et en taille, et le fichier n'est
+// JAMAIS servi publiquement (voir /api/admin/payment-proof/:key ci-dessous
+// et la route GET /api/uploads/* qui exclut explicitement ce préfixe).
+app.post(
+  "/api/uploads/payment-proof",
+  rateLimit({ windowMs: 60 * 1000, max: 10 }),
+  bodyLimit({
+    maxSize: 8 * 1024 * 1024,
+    onError: (c) => c.json({ error: "Image trop lourde (8 Mo maximum)." }, 413),
+  }),
+  async (c) => {
+    const form = await c.req.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      return c.json({ error: "Fichier manquant" }, 400);
+    }
+    try {
+      const key = await uploadPaymentProof(file);
+      return c.json({ key });
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : "Erreur d'upload" }, 400);
+    }
+  },
+);
+
+// Sert une preuve de paiement D17 à l'admin uniquement (jamais public — la
+// capture peut contenir des informations bancaires/personnelles du client).
+// URL : /api/admin/proofs/<clé retournée à l'upload, ex. "payment-proof/xxx.jpg">
+app.get("/api/admin/proofs/*", async (c) => {
+  const token = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  try {
+    await assertAdmin(token);
+  } catch {
+    return c.json({ error: "Non autorisé" }, 401);
+  }
+  const key = c.req.path.replace(/^\/api\/admin\/proofs\//, "");
+  if (!/^payment-proof\/[a-zA-Z0-9_-]+\.jpg$/.test(key)) {
+    return c.json({ error: "Not Found" }, 404);
+  }
+  const result = await getUploadedImage(key);
+  if (!result) return c.json({ error: "Not Found" }, 404);
+  return new Response(result.body, {
+    headers: {
+      "Content-Type": result.contentType,
+      "Cache-Control": "private, no-store",
+    },
+  });
+});
 
 // Sert les photos uploadées (lecture publique, comme les images statiques).
 app.get("/api/uploads/*", async (c) => {

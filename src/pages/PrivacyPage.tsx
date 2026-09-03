@@ -39,25 +39,30 @@ export default function PrivacyPage() {
             <h2 className="mb-2 font-display text-xl text-ink">Quelles données nous collectons</h2>
             <p>Lorsque vous utilisez le formulaire de commande ou de contact, nous recevons :</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>Votre nom</li>
-              <li>Votre numéro de téléphone</li>
+              <li>Votre nom et numéro de téléphone</li>
+              <li>Votre adresse de livraison (gouvernorat, ville, adresse, code postal)</li>
               <li>Le détail de votre commande ou de votre message</li>
+              <li>
+                Si vous payez par D17 : la capture d'écran du paiement, utilisée
+                uniquement pour vérifier la transaction
+              </li>
             </ul>
             <p className="mt-2">
-              Nous ne demandons ni mot de passe, ni adresse email, ni moyen de
-              paiement en ligne — le paiement se fait actuellement uniquement en
-              boutique, au retrait.
+              Nous ne demandons ni mot de passe, ni adresse email, ni numéro de carte
+              bancaire — aucun paiement en ligne n'est traité sur ce site (paiement en
+              espèces ou par virement D17 uniquement).
             </p>
           </section>
 
           <section>
             <h2 className="mb-2 font-display text-xl text-ink">Comment nous utilisons ces données</h2>
             <p>
-              Ces informations servent uniquement à préparer et confirmer votre
-              commande, ou à répondre à votre message (par téléphone ou WhatsApp).
-              Elles sont conservées dans notre base de données pour le suivi des
-              commandes et ne sont ni vendues, ni partagées avec des tiers à des fins
-              commerciales.
+              Ces informations servent uniquement à préparer, livrer et confirmer
+              votre commande, à vérifier un paiement D17, ou à répondre à votre
+              message (par téléphone ou WhatsApp). Elles sont conservées dans notre
+              base de données pour le suivi des commandes et ne sont ni vendues, ni
+              partagées avec des tiers à des fins commerciales. La capture d'écran
+              D17 n'est accessible qu'à notre équipe, jamais publiée ni partagée.
             </p>
           </section>
 

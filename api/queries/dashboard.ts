@@ -6,7 +6,7 @@ type OrderItem = {
   productId: number;
   name: string;
   qty: number;
-  priceMillimes: number;
+  unitPriceMillimes: number;
 };
 
 function parseItems(json: string): OrderItem[] {
@@ -81,13 +81,13 @@ export async function getTopProducts(limit = 5): Promise<TopProduct[]> {
       const existing = map.get(it.productId);
       if (existing) {
         existing.qtySold += it.qty;
-        existing.revenueMillimes += it.qty * it.priceMillimes;
+        existing.revenueMillimes += it.qty * it.unitPriceMillimes;
       } else {
         map.set(it.productId, {
           productId: it.productId,
           name: it.name,
           qtySold: it.qty,
-          revenueMillimes: it.qty * it.priceMillimes,
+          revenueMillimes: it.qty * it.unitPriceMillimes,
         });
       }
     }

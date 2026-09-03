@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
+import { formatWeight, type WeightKg } from '@contracts/shop'
 import Ornament from '@/components/Ornament'
 import {
   AreaChart,
@@ -101,7 +102,21 @@ const STATUS_COLORS: Record<string, string> = {
   annulee: 'bg-red-50 text-red-600 border-red-200',
 }
 
-type OrderItem = { productId: number; name: string; qty: number; priceMillimes: number }
+const PAYMENT_METHOD_LABELS: Record<string, string> = { cod: 'Espèces à la livraison', d17: 'D17' }
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: 'À encaisser',
+  pending_verification: 'D17 à vérifier',
+  approved: 'D17 approuvé',
+  rejected: 'D17 rejeté',
+}
+const PAYMENT_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-ink/5 text-ink/50 border-ink/15',
+  pending_verification: 'bg-amber-50 text-amber-700 border-amber-200',
+  approved: 'bg-green-50 text-green-700 border-green-200',
+  rejected: 'bg-red-50 text-red-600 border-red-200',
+}
+
+type OrderItem = { productId: number; name: string; weightKg: WeightKg; qty: number; unitPriceMillimes: number }
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -220,6 +235,61 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 
 /* ------------------------------ Commandes ------------------------------ */
 
+/** Preuve de paiement D17 : jamais une URL publique — récupérée via fetch
+ * authentifié (Bearer token) et affichée depuis un blob local. */
+function PaymentProofViewer({ token, proofKey }: { token: string; proofKey: string }) {
+  const [open, setOpen] = useState(false)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const view = async () => {
+    setOpen(true)
+    setError(null)
+    if (blobUrl) return
+    try {
+      const res = await fetch(`/api/admin/proofs/${proofKey}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Introuvable')
+      const blob = await res.blob()
+      setBlobUrl(URL.createObjectURL(blob))
+    } catch {
+      setError("Impossible de charger la capture d'écran.")
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={view}
+        className="text-xs font-semibold uppercase tracking-wide text-accent underline underline-offset-4 hover:text-[#8a5527]"
+      >
+        Voir la capture D17
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+          onClick={() => setOpen(false)}
+        >
+          <div className="max-h-[85vh] max-w-lg overflow-auto rounded-xl bg-white p-3" onClick={(e) => e.stopPropagation()}>
+            {error && <p className="p-6 text-sm text-red-600">{error}</p>}
+            {!error && !blobUrl && <p className="p-6 text-sm text-ink/50">Chargement…</p>}
+            {blobUrl && <img src={blobUrl} alt="Preuve de paiement D17" className="max-w-full rounded-lg" />}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-2 w-full rounded-lg border border-sand py-2 text-xs font-semibold uppercase tracking-wide text-ink/60 hover:bg-sand/30"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 function OrdersTab({
   token,
   statusFilter,
@@ -232,6 +302,9 @@ function OrdersTab({
   const utils = trpc.useUtils()
   const { data: orders, isLoading } = trpc.orders.list.useQuery({ token })
   const setStatus = trpc.orders.setStatus.useMutation({
+    onSuccess: () => utils.orders.list.invalidate(),
+  })
+  const setPaymentStatus = trpc.orders.setPaymentStatus.useMutation({
     onSuccess: () => utils.orders.list.invalidate(),
   })
   const removeOrder = trpc.orders.delete.useMutation({
@@ -282,32 +355,45 @@ function OrdersTab({
                 </div>
                 <p className="mt-0.5 text-xs text-ink/45">{formatDate(o.createdAt)}</p>
               </div>
-              <select
-                value={o.status}
-                onChange={(e) =>
-                  setStatus.mutate({
-                    token,
-                    id: o.id,
-                    status: e.target.value as typeof o.status,
-                  })
-                }
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide outline-none ${STATUS_COLORS[o.status]}`}
-              >
-                {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${PAYMENT_STATUS_COLORS[o.paymentStatus]}`}
+                >
+                  {PAYMENT_METHOD_LABELS[o.paymentMethod]}
+                  {o.paymentMethod === 'd17' ? ` · ${PAYMENT_STATUS_LABELS[o.paymentStatus]}` : ''}
+                </span>
+                <select
+                  value={o.status}
+                  onChange={(e) =>
+                    setStatus.mutate({
+                      token,
+                      id: o.id,
+                      status: e.target.value as typeof o.status,
+                    })
+                  }
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide outline-none ${STATUS_COLORS[o.status]}`}
+                >
+                  {Object.entries(STATUS_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+
+            <p className="mt-3 border-t border-sand/60 pt-3 text-sm font-light text-ink/65">
+              {o.address}, {o.city}{o.postalCode ? ` ${o.postalCode}` : ''}, {o.governorate}
+            </p>
+
             <ul className="mt-4 space-y-1.5 border-t border-sand/60 pt-4 text-sm font-light">
               {items.map((it, i) => (
                 <li key={i} className="flex items-baseline">
                   <span>
-                    {it.qty} × {it.name}
+                    {it.qty} × {it.name} <span className="text-ink/40">({formatWeight(it.weightKg)})</span>
                   </span>
                   <span className="mx-3 flex-1 border-b border-dotted border-ink/15" />
-                  <span className="font-display text-accent">{formatTND(it.qty * it.priceMillimes)}</span>
+                  <span className="font-display text-accent">{formatTND(it.qty * it.unitPriceMillimes)}</span>
                 </li>
               ))}
             </ul>
@@ -316,7 +402,42 @@ function OrdersTab({
                 « {o.note} »
               </p>
             )}
-            <div className="mt-4 flex items-baseline border-t border-sand/60 pt-3">
+
+            {o.paymentMethod === 'd17' && o.paymentProofKey && (
+              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <PaymentProofViewer token={token} proofKey={o.paymentProofKey} />
+                {o.paymentStatus === 'pending_verification' && (
+                  <>
+                    <button
+                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'approved' })}
+                      className="ml-auto rounded-full bg-green-600 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-green-700"
+                    >
+                      Approuver
+                    </button>
+                    <button
+                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'rejected' })}
+                      className="rounded-full bg-red-500 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-red-600"
+                    >
+                      Rejeter
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 space-y-1 border-t border-sand/60 pt-3 text-sm font-light text-ink/50">
+              <div className="flex items-baseline">
+                <span>Sous-total</span>
+                <span className="mx-3 flex-1" />
+                <span>{formatTND(o.subtotalMillimes)} TND</span>
+              </div>
+              <div className="flex items-baseline">
+                <span>Livraison</span>
+                <span className="mx-3 flex-1" />
+                <span>{formatTND(o.deliveryFeeMillimes)} TND</span>
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline">
               <span className="text-xs uppercase tracking-[0.2em] text-ink/50">Total</span>
               <span className="mx-3 flex-1" />
               <span className="font-display text-xl text-accent">{formatTND(o.totalMillimes)} TND</span>

@@ -1,6 +1,10 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "node:crypto";
 import sharp from "sharp";
+import {
+  PAYMENT_PROOF_ALLOWED_MIME,
+  PAYMENT_PROOF_MAX_SIZE_BYTES,
+} from "@contracts/shop";
 
 function getClient(): { client: S3Client; bucket: string } {
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -62,6 +66,51 @@ export async function uploadProductImage(
     }),
   );
   return key;
+}
+
+// Preuve de paiement D17 (capture d'écran) — stockage séparé des photos
+// produits (préfixe payment-proof/), jamais servi par la route publique
+// /api/uploads/* (voir boot.ts) : uniquement accessible à l'admin via
+// /api/admin/payment-proof/:key.
+export async function uploadPaymentProof(file: File): Promise<string> {
+  if (!PAYMENT_PROOF_ALLOWED_MIME.has(file.type)) {
+    throw new Error("Format d'image non supporté (jpg, png ou webp uniquement).");
+  }
+  if (file.size > PAYMENT_PROOF_MAX_SIZE_BYTES) {
+    throw new Error("Image trop lourde (8 Mo maximum).");
+  }
+  const inputBytes = new Uint8Array(await file.arrayBuffer());
+  let outputBytes: Buffer;
+  try {
+    outputBytes = await sharp(inputBytes)
+      .rotate()
+      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+      .toBuffer();
+  } catch {
+    throw new Error("Image illisible — essayez une autre capture d'écran.");
+  }
+  const { client, bucket } = getClient();
+  const key = `payment-proof/${Date.now()}-${randomBytes(6).toString("hex")}.jpg`;
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: outputBytes,
+      ContentType: "image/jpeg",
+    }),
+  );
+  return key;
+}
+
+/** Vrai seulement si la clé existe réellement dans le stockage — empêche un
+ * client malveillant d'envoyer une clé inventée pour contourner l'obligation
+ * de preuve de paiement D17. */
+export async function paymentProofExists(key: string): Promise<boolean> {
+  if (!/^payment-proof\/[a-zA-Z0-9_-]+\.jpg$/.test(key)) return false;
+  const result = await getUploadedImage(key);
+  return result !== null;
 }
 
 export async function getUploadedImage(

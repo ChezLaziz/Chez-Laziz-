@@ -46,19 +46,22 @@ export default function TermsPage() {
           <section>
             <h2 className="mb-2 font-display text-xl text-ink">Paiement</h2>
             <p>
-              Le paiement s'effectue actuellement en espèces, en boutique, au moment
-              du retrait de la commande. Aucun paiement en ligne n'est demandé ou
-              traité sur ce site.
+              Deux moyens de paiement : en espèces à la livraison, ou par virement D17
+              (une capture d'écran du paiement est alors obligatoire et vérifiée par
+              notre équipe avant confirmation). Aucune carte bancaire n'est demandée
+              ou traitée sur ce site.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 font-display text-xl text-ink">Retrait des commandes</h2>
+            <h2 className="mb-2 font-display text-xl text-ink">Livraison et retrait</h2>
             <p>
-              Nos produits sont préparés le jour même ; nous recommandons de préciser
-              une date et une heure de retrait souhaitées dans le champ « note » du
-              formulaire de commande. En cas d'empêchement, merci de nous prévenir par
-              téléphone.
+              Nos produits sont préparés le jour même. Les commandes passées via ce
+              site sont livrées à domicile partout en Tunisie sous 24h (8.000 TND de
+              frais de livraison, voir la page{' '}
+              <Link to="/livraison" className="text-accent underline underline-offset-2">Livraison</Link>). Vous pouvez aussi passer
+              directement à la boutique de Kairouan, ouverte 7j/7 de 07h00 à minuit,
+              sans frais de livraison.
             </p>
           </section>
 
