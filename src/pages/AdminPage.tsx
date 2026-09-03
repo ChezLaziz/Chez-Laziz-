@@ -4,10 +4,12 @@ import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import Ornament from '@/components/Ornament'
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   LineChart,
   Line,
+  PieChart,
+  Pie,
   XAxis,
   YAxis,
   Tooltip,
@@ -26,6 +28,13 @@ const STATUS_LABELS: Record<string, string> = {
   prete: 'Prête',
   terminee: 'Terminée',
   annulee: 'Annulée',
+}
+const STATUS_HEX: Record<string, string> = {
+  nouvelle: '#b8912e',
+  en_preparation: '#3b82f6',
+  prete: '#22c55e',
+  terminee: '#9c9490',
+  annulee: '#ef4444',
 }
 const STATUS_COLORS: Record<string, string> = {
   nouvelle: 'bg-[#b8912e]/15 text-[#8a5527] border-[#b8912e]/40',
@@ -168,6 +177,9 @@ function OrdersTab({
   const setStatus = trpc.orders.setStatus.useMutation({
     onSuccess: () => utils.orders.list.invalidate(),
   })
+  const removeOrder = trpc.orders.delete.useMutation({
+    onSuccess: () => utils.orders.list.invalidate(),
+  })
 
   const filtered = statusFilter
     ? (orders ?? []).filter((o) => o.status === statusFilter)
@@ -251,6 +263,16 @@ function OrdersTab({
               <span className="text-xs uppercase tracking-[0.2em] text-ink/50">Total</span>
               <span className="mx-3 flex-1" />
               <span className="font-display text-xl text-accent">{formatTND(o.totalMillimes)} TND</span>
+              <button
+                onClick={() => {
+                  if (window.confirm(`Supprimer la commande #${o.id} ?`)) {
+                    removeOrder.mutate({ token, id: o.id })
+                  }
+                }}
+                className="ml-4 text-xs font-semibold uppercase tracking-wide text-red-500 underline underline-offset-4 hover:text-red-600"
+              >
+                Supprimer
+              </button>
             </div>
           </div>
         )
@@ -654,7 +676,6 @@ function StatsTab({ token }: { token: string }) {
       weekday: 'short',
       day: 'numeric',
     })
-  const today = stats.byDay[stats.byDay.length - 1]?.day
 
   const cards = [
     { label: 'Visites totales', value: stats.total },
@@ -679,7 +700,13 @@ function StatsTab({ token }: { token: string }) {
         <p className="mb-4 font-display text-xl">Visites par jour</p>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stats.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={stats.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="visitsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#b8912e" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#b8912e" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <XAxis
                 dataKey="day"
                 tickFormatter={dayLabel}
@@ -691,14 +718,18 @@ function StatsTab({ token }: { token: string }) {
               <Tooltip
                 formatter={(v) => [String(v), 'Visites']}
                 labelFormatter={(l) => dayLabel(String(l))}
-                cursor={{ fill: '#f5ece5' }}
+                cursor={{ stroke: '#dec9b8', strokeWidth: 1 }}
               />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {stats.byDay.map((d) => (
-                  <Cell key={d.day} fill={d.day === today ? '#b8912e' : '#dec9b8'} />
-                ))}
-              </Bar>
-            </BarChart>
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="#b8912e"
+                strokeWidth={2.5}
+                fill="url(#visitsGradient)"
+                dot={{ r: 3, fill: '#b8912e', strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
         <p className="mt-3 text-xs font-light text-ink/45">
@@ -953,7 +984,6 @@ function OverviewTab({
 
   const dayLabel = (iso: string) =>
     new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
-  const today = visits.byDay[visits.byDay.length - 1]?.day
 
   return (
     <div className="space-y-8">
@@ -1006,25 +1036,75 @@ function OverviewTab({
         </div>
       </div>
 
-      {/* Commandes par statut — cartes cliquables qui filtrent */}
-      <div>
-        <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
-          Commandes — cliquez pour filtrer
-        </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {activeStatuses.map((s) => (
-            <button
-              key={s}
-              onClick={() => onGoToOrders(s)}
-              className={`rounded-xl border p-4 text-center transition-transform hover:-translate-y-0.5 ${STATUS_COLORS[s]}`}
-            >
-              <p className="font-display text-2xl">{statusCounts[s] ?? 0}</p>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                {STATUS_LABELS[s]}
-              </p>
-            </button>
-          ))}
+      {/* Commandes par statut — cartes cliquables qui filtrent + répartition */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
+        <div>
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
+            Commandes — cliquez pour filtrer
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {activeStatuses.map((s) => (
+              <button
+                key={s}
+                onClick={() => onGoToOrders(s)}
+                className={`rounded-xl border p-4 text-center transition-transform hover:-translate-y-0.5 ${STATUS_COLORS[s]}`}
+              >
+                <p className="font-display text-2xl">{statusCounts[s] ?? 0}</p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                  {STATUS_LABELS[s]}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {(() => {
+          const total = activeStatuses.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0)
+          const pieData = activeStatuses
+            .map((s) => ({ key: s, value: statusCounts[s] ?? 0 }))
+            .filter((d) => d.value > 0)
+          return (
+            <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
+                Répartition
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="relative h-28 w-28 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData.length ? pieData : [{ key: 'vide', value: 1 }]}
+                        dataKey="value"
+                        nameKey="key"
+                        innerRadius={38}
+                        outerRadius={54}
+                        paddingAngle={pieData.length > 1 ? 2 : 0}
+                        stroke="none"
+                      >
+                        {(pieData.length ? pieData : [{ key: 'vide', value: 1 }]).map((d) => (
+                          <Cell key={d.key} fill={STATUS_HEX[d.key] ?? '#e5ddd6'} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="font-display text-xl text-ink">{total}</span>
+                    <span className="text-[9px] uppercase tracking-wide text-ink/45">total</span>
+                  </div>
+                </div>
+                <ul className="space-y-1.5 text-xs">
+                  {activeStatuses.map((s) => (
+                    <li key={s} className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_HEX[s] }} />
+                      <span className="text-ink/60">{STATUS_LABELS[s]}</span>
+                      <span className="ml-auto font-semibold text-ink">{statusCounts[s] ?? 0}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -1059,7 +1139,13 @@ function OverviewTab({
           </div>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={visits.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={visits.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="overviewVisitsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#b8912e" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#b8912e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <XAxis
                   dataKey="day"
                   tickFormatter={dayLabel}
@@ -1068,13 +1154,17 @@ function OverviewTab({
                   tickLine={false}
                 />
                 <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#3c3835' }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v) => [String(v), 'Visites']} labelFormatter={(l) => dayLabel(String(l))} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {visits.byDay.map((d) => (
-                    <Cell key={d.day} fill={d.day === today ? '#b8912e' : '#dec9b8'} />
-                  ))}
-                </Bar>
-              </BarChart>
+                <Tooltip formatter={(v) => [String(v), 'Visites']} labelFormatter={(l) => dayLabel(String(l))} cursor={{ stroke: '#dec9b8', strokeWidth: 1 }} />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#b8912e"
+                  strokeWidth={2.5}
+                  fill="url(#overviewVisitsGradient)"
+                  dot={{ r: 2.5, fill: '#b8912e', strokeWidth: 0 }}
+                  activeDot={{ r: 4 }}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>

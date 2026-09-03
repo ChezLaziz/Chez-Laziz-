@@ -35,6 +35,10 @@ export async function listOrders() {
   });
 }
 
+export async function deleteOrder(id: number) {
+  await getDb().delete(orders).where(eq(orders.id, id));
+}
+
 export async function updateOrderStatus(
   id: number,
   status: (typeof orders.$inferSelect)["status"],
