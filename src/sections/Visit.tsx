@@ -24,8 +24,8 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
           </div>
           <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">
             <img
-              src="/images/box.webp"
-              alt="Coffret de makroudh Chez Laziz, prêt à offrir"
+              src="/images/visit-lifestyle.webp"
+              alt="Makroudh Chez Laziz dégusté en terrasse avec un thé, à Kairouan"
               className="h-full w-full object-cover"
               loading="lazy"
             />
