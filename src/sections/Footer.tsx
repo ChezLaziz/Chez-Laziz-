@@ -1,13 +1,16 @@
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 
+// Vignettes dédiées (600px) — la bande défilante n'affiche ces photos qu'à
+// 144–288px de large, inutile d'y charger les mêmes fichiers pleine résolution
+// utilisés ailleurs sur le site.
 const STRIP = [
-  '/images/hero.webp',
-  '/images/makroudh.webp',
-  '/images/hands.webp',
-  '/images/display.webp',
-  '/images/tea.webp',
-  '/images/box.webp',
+  '/images/hero-thumb.webp',
+  '/images/makroudh-thumb.webp',
+  '/images/hands-thumb.webp',
+  '/images/display-thumb.webp',
+  '/images/tea-thumb.webp',
+  '/images/box-thumb.webp',
 ]
 
 const DEFAULT_TAGLINE =
