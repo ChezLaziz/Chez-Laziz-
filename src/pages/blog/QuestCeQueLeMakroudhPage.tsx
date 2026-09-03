@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import { useReveal } from '../../hooks/useReveal'
 import { useSEO } from '../../hooks/useSEO'
-import Cursor from '../../components/Cursor'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
 
@@ -13,11 +12,11 @@ export default function QuestCeQueLeMakroudhPage() {
       "Origines, ingrédients et place du makroudh dans la pâtisserie tunisienne — une présentation complète pour qui découvre cette douceur.",
     path: '/journal/quest-ce-que-le-makroudh-tunisien',
     breadcrumb: 'Qu\'est-ce que le makroudh tunisien ?',
+    article: { datePublished: '2026-09-03' },
   })
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">
-      <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">

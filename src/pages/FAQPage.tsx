@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
-import { useSEO } from '../hooks/useSEO'
+import { useSEO, setJsonLd } from '../hooks/useSEO'
 import { formatTND, PHONE_DISPLAY, PHONE_TEL, D17_NUMBER_DISPLAY, ALLOWED_WEIGHTS_KG, DELIVERY_FEE_MILLIMES, formatWeight } from '@/lib/shop'
 
 const FAQ: { q: string; a: string }[] = [
@@ -37,26 +37,19 @@ export default function FAQPage() {
     breadcrumb: 'FAQ',
   })
 
-  useEffect(() => {
-    const scriptId = 'faq-jsonld'
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null
-    if (!script) {
-      script = document.createElement('script')
-      script.id = scriptId
-      script.type = 'application/ld+json'
-      document.head.appendChild(script)
-    }
-    script.textContent = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: FAQ.map((item) => ({
-        '@type': 'Question',
-        name: item.q,
-        acceptedAnswer: { '@type': 'Answer', text: item.a },
-      })),
-    })
-    return () => { document.getElementById(scriptId)?.remove() }
-  }, [])
+  useEffect(
+    () =>
+      setJsonLd('faq-jsonld', {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: FAQ.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      }),
+    [],
+  )
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">

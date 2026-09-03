@@ -10,6 +10,7 @@ import {
 import { assertAdmin } from "./queries/admin";
 import { listAvailableProducts } from "./queries/products";
 import { paymentProofExists } from "./lib/r2";
+import { notifyAdminNewOrder } from "./lib/email";
 import { TRPCError } from "@trpc/server";
 import {
   ALLOWED_WEIGHTS_KG,
@@ -62,6 +63,9 @@ export const ordersRouter = createRouter({
         // paymentMethod === "d17", vérifiée ci-dessous (existence réelle dans
         // le stockage, pas seulement présence de la valeur).
         paymentProofKey: z.string().max(255).optional(),
+        // Générée par le client pour chaque tentative — protège contre les
+        // commandes en double (double clic, nouvelle tentative réseau).
+        idempotencyKey: z.string().min(8).max(64).optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -101,7 +105,7 @@ export const ordersRouter = createRouter({
         }
       }
 
-      return createOrder({
+      const order = await createOrder({
         customerName: input.customerName,
         phone: input.phone,
         governorate: input.governorate,
@@ -116,7 +120,12 @@ export const ordersRouter = createRouter({
         paymentMethod: input.paymentMethod,
         paymentStatus: input.paymentMethod === "d17" ? "pending_verification" : "pending",
         paymentProofKey: input.paymentMethod === "d17" ? input.paymentProofKey : undefined,
+        idempotencyKey: input.idempotencyKey,
       });
+      // Notification e-mail : sans attendre, et sans jamais faire échouer
+      // la commande si l'envoi échoue (voir api/lib/email.ts).
+      if (order) void notifyAdminNewOrder(order);
+      return order;
     }),
 
   list: publicQuery

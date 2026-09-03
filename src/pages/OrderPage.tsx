@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
 import { formatTND, PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
+import { track } from '@/lib/analytics'
+import ProductImage from '@/components/ProductImage'
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
@@ -25,7 +27,7 @@ function TopBar({ title }: { title: string }) {
       <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 md:h-20 md:px-10">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 md:h-10 md:w-10" />
+          <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 md:h-10 md:w-10" width="40" height="40" />
           <span className="font-display text-xl tracking-[0.14em] text-ink md:text-2xl">
             CHEZ&nbsp;LAZIZ
           </span>
@@ -50,8 +52,9 @@ function TopBar({ title }: { title: string }) {
 }
 
 const inputCls =
-  'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e]'
-const labelCls = 'mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] text-ink/45'
+  'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25'
+const stepperBtnCls =
+  'flex h-11 w-11 items-center justify-center rounded-full border border-sand text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
 
 type DbProduct = {
   id: number
@@ -64,29 +67,60 @@ type DbProduct = {
   available: boolean
 }
 
+const GENERIC_ERROR = `Une erreur est survenue — réessayez, ou appelez-nous au ${PHONE_DISPLAY}.`
+
+/** Les messages métier du serveur ("preuve D17 obligatoire", "produit
+ * indisponible") sont lisibles tels quels ; une erreur de validation
+ * technique (JSON, zod) est remplacée par un message humain. */
+function friendlyError(message?: string): string {
+  if (!message) return GENERIC_ERROR
+  const technical =
+    message.startsWith('[') ||
+    message.startsWith('{') ||
+    /invalid_type|expected|received|zod|undefined|null/i.test(message) ||
+    message.length > 180
+  return technical ? GENERIC_ERROR : message
+}
+
+function newIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`
+}
+
 /** Une ligne produit : sélecteur de poids (500 g à 2,5 kg, prix recalculé en
  * direct depuis le prix pour 1 kg) + quantité. Le poids affiché suit la
  * ligne déjà présente dans le panier ; le changer déplace la quantité vers
  * le nouveau poids plutôt que d'ajouter une ligne séparée. */
 function ProductRow({ product }: { product: DbProduct }) {
-  const { qtyFor, add, setQty, setWeight } = useCart()
-  const [weight, setLocalWeight] = useState<WeightKg>(1)
+  const { lines, qtyFor, add, setQty, setWeight } = useCart()
+  const [weight, setLocalWeight] = useState<WeightKg>(
+    () => lines.find((l) => l.productId === product.id)?.weightKg ?? 1,
+  )
   const qty = qtyFor(product.id, weight)
   const unitPrice = priceForWeight(product.priceMillimes, weight)
 
+  const increment = () => {
+    if (qty === 0) add(product.id, weight)
+    else setQty(product.id, weight, qty + 1)
+    track('add_to_cart', {
+      value: unitPrice / 1000,
+      items: [
+        { item_id: String(product.id), item_name: product.name, item_variant: formatWeight(weight), price: unitPrice / 1000, quantity: 1 },
+      ],
+    })
+  }
+
   return (
     <div
-      className={`rounded-xl border p-5 shadow-sm transition-colors ${
+      className={`rounded-xl border p-4 shadow-sm transition-colors md:p-5 ${
         qty > 0 ? 'border-[#b8912e] bg-[#f5ece5]' : 'border-sand bg-white'
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
-          {product.imageUrl ? (
-            <img src={product.imageUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-[9px] text-ink/30">Chez Laziz</span>
-          )}
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-sand">
+          <ProductImage src={product.imageUrl} alt={product.name} compact />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-2">
@@ -100,8 +134,9 @@ function ProductRow({ product }: { product: DbProduct }) {
           {product.description && (
             <p className="mt-1 line-clamp-2 text-sm font-light text-ink/55">{product.description}</p>
           )}
-          <span className="mt-1 block font-display text-accent">
+          <span className="mt-1 block font-display text-accent" aria-live="polite">
             {formatTND(unitPrice)} <span className="text-xs">TND</span>
+            <span className="ml-1.5 text-xs font-light text-ink/45">pour {formatWeight(weight)}</span>
           </span>
         </div>
       </div>
@@ -110,39 +145,37 @@ function ProductRow({ product }: { product: DbProduct }) {
         <label className="flex items-center gap-2 text-sm">
           <span className="text-ink/50">Poids</span>
           <select
+            aria-label={`Poids — ${product.name}`}
             value={weight}
             onChange={(e) => {
               const next = Number(e.target.value) as WeightKg
               if (qty > 0) setWeight(product.id, weight, next)
               setLocalWeight(next)
             }}
-            className="rounded-lg border border-sand bg-white px-3 py-1.5 text-sm outline-none focus:border-[#b8912e]"
+            className="h-11 rounded-lg border border-sand bg-white px-3 text-sm outline-none focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25"
           >
             {ALLOWED_WEIGHTS_KG.map((w) => (
               <option key={w} value={w}>
-                {formatWeight(w)}
+                {formatWeight(w)} — {formatTND(priceForWeight(product.priceMillimes, w))} TND
               </option>
             ))}
           </select>
         </label>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            aria-label="Moins"
+            aria-label={`Retirer un ${product.name}`}
             onClick={() => setQty(product.id, weight, qty - 1)}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-30"
+            className={stepperBtnCls}
             disabled={qty === 0}
           >
             −
           </button>
-          <span className="w-6 text-center font-display text-lg">{qty}</span>
-          <button
-            type="button"
-            aria-label="Plus"
-            onClick={() => (qty === 0 ? add(product.id, weight) : setQty(product.id, weight, qty + 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent"
-          >
+          <span className="w-7 text-center font-display text-lg" aria-live="polite" aria-label={`Quantité : ${qty}`}>
+            {qty}
+          </span>
+          <button type="button" aria-label={`Ajouter un ${product.name}`} onClick={increment} className={stepperBtnCls}>
             +
           </button>
         </div>
@@ -162,6 +195,18 @@ function isValidTunisianPhone(phone: string): boolean {
   return local.length === 8
 }
 
+type Placed = {
+  id: number
+  waUrl: string
+  paymentMethod: PaymentMethod
+  recap: {
+    lines: { key: string; label: string; totalMillimes: number }[]
+    subtotalMillimes: number
+    totalMillimes: number
+    address: string
+  }
+}
+
 export default function OrderPage() {
   useSEO({
     title: 'Commander — Chez Laziz | Livraison de makroudh partout en Tunisie',
@@ -174,7 +219,7 @@ export default function OrderPage() {
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
 
-  const { lines, clear } = useCart()
+  const { lines, count, remove, clear } = useCart()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [governorate, setGovernorate] = useState('')
@@ -187,7 +232,10 @@ export default function OrderPage() {
   const [proofPreview, setProofPreview] = useState<string | null>(null)
   const [proofUploading, setProofUploading] = useState(false)
   const [proofError, setProofError] = useState<string | null>(null)
-  const [placed, setPlaced] = useState<{ id: number; waUrl: string; paymentMethod: PaymentMethod } | null>(null)
+  const [idempotencyKey, setIdempotencyKey] = useState(() => newIdempotencyKey())
+  const [placed, setPlaced] = useState<Placed | null>(null)
+  const checkoutStartedRef = useRef(false)
+  const cartViewedRef = useRef(false)
 
   const [msgName, setMsgName] = useState('')
   const [msgPhone, setMsgPhone] = useState('')
@@ -208,10 +256,39 @@ export default function OrderPage() {
   const subtotal = items.reduce((s, p) => s + p.qty * p.unitPriceMillimes, 0)
   const total = subtotal + DELIVERY_FEE_MILLIMES
 
+  const analyticsItems = () =>
+    items.map((p) => ({
+      item_id: String(p.id),
+      item_name: p.name,
+      item_variant: formatWeight(p.weightKg),
+      price: p.unitPriceMillimes / 1000,
+      quantity: p.qty,
+    }))
+
+  useEffect(() => {
+    if (items.length > 0 && !cartViewedRef.current) {
+      cartViewedRef.current = true
+      track('view_cart', { value: total / 1000, items: analyticsItems() })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length])
+
   const phoneValid = isValidTunisianPhone(phone)
-  const addressValid = name.trim().length >= 2 && phoneValid && !!governorate && city.trim().length > 0 && address.trim().length >= 5
+  const addressValid =
+    name.trim().length >= 2 && phoneValid && !!governorate && city.trim().length > 0 && address.trim().length >= 5
   const paymentValid = paymentMethod === 'cod' || !!proofKey
-  const canSubmit = items.length > 0 && addressValid && paymentValid && !createOrder.isPending
+  const canSubmit = items.length > 0 && addressValid && paymentValid && !createOrder.isPending && !proofUploading
+
+  const onCheckoutStart = () => {
+    if (checkoutStartedRef.current || items.length === 0) return
+    checkoutStartedRef.current = true
+    track('begin_checkout', { value: total / 1000, items: analyticsItems() })
+  }
+
+  const choosePayment = (method: PaymentMethod) => {
+    setPaymentMethod(method)
+    track('add_payment_info', { payment_type: method === 'd17' ? 'D17' : 'Cash on delivery', value: total / 1000, items: analyticsItems() })
+  }
 
   const handleProofChange = async (file: File | null) => {
     setProofError(null)
@@ -233,7 +310,7 @@ export default function OrderPage() {
       const body = new FormData()
       body.append('file', file)
       const res = await fetch('/api/uploads/payment-proof', { method: 'POST', body })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Échec de l'envoi de la capture")
       setProofKey(data.key)
     } catch (e) {
@@ -246,6 +323,12 @@ export default function OrderPage() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!canSubmit) return
+    const snapshot = items.map((p) => ({
+      key: `${p.id}:${p.weightKg}`,
+      label: `${p.qty} × ${p.name} (${formatWeight(p.weightKg)})`,
+      totalMillimes: p.qty * p.unitPriceMillimes,
+    }))
+    const addressLine = `${address.trim()}, ${city.trim()}${postalCode.trim() ? ` ${postalCode.trim()}` : ''}, ${governorate}`
     createOrder.mutate(
       {
         customerName: name.trim(),
@@ -258,19 +341,25 @@ export default function OrderPage() {
         items: items.map((p) => ({ productId: p.id, weightKg: p.weightKg, qty: p.qty })),
         paymentMethod,
         paymentProofKey: paymentMethod === 'd17' ? (proofKey ?? undefined) : undefined,
+        idempotencyKey,
       },
       {
         onSuccess: (order) => {
-          const lines = items
-            .map((p) => `• ${p.qty} × ${p.name} (${formatWeight(p.weightKg)})`)
-            .join('\n')
-          const text = `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${lines}\nLivraison : ${city.trim()}, ${governorate}\nTotal (livraison incluse) : ${formatTND(total)} TND\nPaiement : ${paymentMethod === 'd17' ? 'D17 (capture envoyée)' : 'À la livraison'}`
+          const text = `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${snapshot.map((l) => `• ${l.label}`).join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatTND(total)} TND\nPaiement : ${paymentMethod === 'd17' ? 'D17 (capture envoyée)' : 'À la livraison'}`
+          track('purchase', {
+            transaction_id: String(order?.id ?? ''),
+            value: total / 1000,
+            shipping: DELIVERY_FEE_MILLIMES / 1000,
+            items: analyticsItems(),
+          })
           setPlaced({
             id: order?.id ?? 0,
             waUrl: 'https://wa.me/21623691039?text=' + encodeURIComponent(text),
             paymentMethod,
+            recap: { lines: snapshot, subtotalMillimes: subtotal, totalMillimes: total, address: addressLine },
           })
           clear()
+          setIdempotencyKey(newIdempotencyKey())
           window.scrollTo({ top: 0 })
         },
       },
@@ -289,7 +378,7 @@ export default function OrderPage() {
     return (
       <div className="min-h-screen bg-[#faf6f3]">
         <TopBar title="Commande" />
-        <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-24 text-center md:py-32">
+        <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-20 text-center md:py-28">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#b8912e]/15 text-accent">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 12.5l5 5L20 6.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -300,12 +389,34 @@ export default function OrderPage() {
           </h1>
           <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
             {placed.paymentMethod === 'd17'
-              ? "Votre preuve de paiement D17 a bien été reçue et est en attente de vérification. Nous vous appelons très vite pour confirmer votre commande."
+              ? "Votre capture d'écran D17 a bien été reçue — elle est en attente de vérification par notre équipe (le paiement n'est pas encore confirmé). Nous vous appelons très vite pour confirmer votre commande."
               : 'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'}
           </p>
-          <p className="mt-3 max-w-md text-sm font-light text-ink/50">
-            Livraison {DELIVERY_REGION.toLowerCase()}, sous {DELIVERY_TIME_LABEL}.
-          </p>
+
+          <div className="mt-10 w-full rounded-2xl border border-sand/70 bg-white p-6 text-left shadow-sm">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-accent">Récapitulatif</p>
+            <ul className="mt-4 space-y-2 text-[15px] font-light">
+              {placed.recap.lines.map((l) => (
+                <li key={l.key} className="flex items-baseline">
+                  <span>{l.label}</span>
+                  <span className="mx-3 flex-1 border-b border-dotted border-ink/15" aria-hidden="true" />
+                  <span className="font-display text-accent">{formatTND(l.totalMillimes)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 space-y-1 border-t border-sand/60 pt-3 text-sm font-light text-ink/60">
+              <div className="flex justify-between"><span>Sous-total</span><span>{formatTND(placed.recap.subtotalMillimes)} TND</span></div>
+              <div className="flex justify-between"><span>Livraison</span><span>{formatTND(DELIVERY_FEE_MILLIMES)} TND</span></div>
+            </div>
+            <div className="mt-2 flex justify-between border-t border-sand/60 pt-3">
+              <span className="text-xs uppercase tracking-[0.2em] text-ink/50">Total</span>
+              <span className="font-display text-xl text-accent">{formatTND(placed.recap.totalMillimes)} TND</span>
+            </div>
+            <p className="mt-4 text-sm font-light text-ink/60">
+              Livraison à : {placed.recap.address} — {DELIVERY_REGION.toLowerCase()}, sous {DELIVERY_TIME_LABEL}.
+            </p>
+          </div>
+
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <a
               href={placed.waUrl}
@@ -327,6 +438,8 @@ export default function OrderPage() {
     )
   }
 
+  const catalog = (products ?? []) as DbProduct[]
+
   return (
     <div className="min-h-screen bg-[#faf6f3]">
       <TopBar title="Commande en ligne" />
@@ -338,6 +451,9 @@ export default function OrderPage() {
           src="/images/box.webp"
           alt="Coffret de Makroudh Chez Laziz, pâtisserie traditionnelle tunisienne de Kairouan"
           className="h-full w-full object-cover"
+          width="1536"
+          height="942"
+          fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#2e2a27]/85 via-[#2e2a27]/35 to-[#2e2a27]/10" />
         <div className="absolute inset-0 flex flex-col justify-end px-5 pb-8 md:px-10 md:pb-10">
@@ -355,7 +471,7 @@ export default function OrderPage() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl px-5 py-14 md:px-10 md:py-20">
+      <main className={`mx-auto max-w-6xl px-5 py-12 md:px-10 md:py-20 ${items.length > 0 ? 'pb-28 lg:pb-20' : ''}`}>
         <div className="max-w-2xl">
           <p className="text-[15px] font-light leading-relaxed text-ink/70">
             Choisissez vos makroudh et leur poids, laissez vos coordonnées de
@@ -380,38 +496,65 @@ export default function OrderPage() {
             </div>
           ))}
         </div>
+        <p className="mt-3 text-xs font-light text-ink/50">
+          <Link to="/livraison" className="text-accent underline underline-offset-2">Détails livraison</Link>
+          {' · '}
+          <Link to="/faq" className="text-accent underline underline-offset-2">Questions fréquentes</Link>
+        </p>
 
-        <form onSubmit={submit} className="mt-12 grid gap-10 lg:grid-cols-12">
+        <form onSubmit={submit} className="mt-10 grid gap-10 lg:grid-cols-12">
           {/* Products */}
           <div className="space-y-4 lg:col-span-7">
-            {isLoading && (
-              <p className="text-sm text-ink/50">Chargement du catalogue…</p>
+            {isLoading &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="animate-pulse rounded-xl border border-sand bg-white p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 rounded-lg bg-sand/40" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-1/2 rounded bg-sand/50" />
+                      <div className="h-3 w-3/4 rounded bg-sand/40" />
+                      <div className="h-4 w-1/4 rounded bg-sand/50" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            {!isLoading && catalog.length === 0 && (
+              <p className="rounded-xl border border-sand bg-white p-8 text-center text-sm text-ink/55">
+                Le catalogue est en cours de mise à jour — appelez-nous au{' '}
+                <a href={PHONE_TEL} className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a>{' '}
+                pour commander.
+              </p>
             )}
-            {(products ?? []).map((p) => (
-              <ProductRow key={p.id} product={p as DbProduct} />
+            {catalog.map((p) => (
+              <ProductRow key={p.id} product={p} />
             ))}
           </div>
 
           {/* Summary + form */}
           <div className="lg:col-span-5">
-            <div className="bg-ink-deep p-7 text-[#faf6f3] lg:sticky lg:top-8 md:p-9">
+            <div id="recap" className="scroll-mt-6 bg-ink-deep p-6 text-[#faf6f3] md:p-9 lg:sticky lg:top-8">
               <h2 className="font-display text-2xl">Récapitulatif</h2>
 
               <ul className="mt-6 space-y-3 border-t border-[#faf6f3]/15 pt-6">
                 {items.length === 0 && (
                   <li className="text-sm font-light text-[#faf6f3]/50">
-                    Aucun produit sélectionné pour l'instant.
+                    Aucun produit sélectionné pour l'instant — choisissez vos makroudh dans la liste.
                   </li>
                 )}
                 {items.map((p) => (
-                  <li key={`${p.id}:${p.weightKg}`} className="flex items-baseline text-[15px] font-light">
-                    <span>
+                  <li key={`${p.id}:${p.weightKg}`} className="flex items-center gap-2 text-[15px] font-light">
+                    <span className="min-w-0 flex-1">
                       {p.qty} × {p.name} <span className="text-[#faf6f3]/50">({formatWeight(p.weightKg)})</span>
                     </span>
-                    <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
-                    <span className="font-display text-[#b8912e]">
-                      {formatTND(p.qty * p.unitPriceMillimes)}
-                    </span>
+                    <span className="font-display text-[#b8912e]">{formatTND(p.qty * p.unitPriceMillimes)}</span>
+                    <button
+                      type="button"
+                      aria-label={`Retirer ${p.name} (${formatWeight(p.weightKg)})`}
+                      onClick={() => remove(p.id, p.weightKg)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#faf6f3]/45 transition-colors hover:bg-[#faf6f3]/10 hover:text-[#faf6f3]"
+                    >
+                      ×
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -445,7 +588,10 @@ export default function OrderPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  onFocus={onCheckoutStart}
                   placeholder="Votre nom"
+                  aria-label="Votre nom"
+                  autoComplete="name"
                   className={inputCls}
                 />
                 <div>
@@ -453,19 +599,26 @@ export default function OrderPage() {
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    onFocus={onCheckoutStart}
                     placeholder="Téléphone (ex : 23 691 039)"
+                    aria-label="Téléphone"
+                    aria-invalid={phone.length > 0 && !phoneValid}
                     type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
                     className={inputCls}
                   />
                   {phone.length > 0 && !phoneValid && (
-                    <p className="mt-1.5 text-xs text-red-300">Numéro tunisien invalide (8 chiffres).</p>
+                    <p className="mt-1.5 text-xs text-red-300" role="alert">Numéro tunisien invalide (8 chiffres).</p>
                   )}
                 </div>
                 <select
                   required
                   value={governorate}
                   onChange={(e) => setGovernorate(e.target.value)}
-                  className={`${inputCls} ${governorate ? '' : 'text-ink/35'}`}
+                  aria-label="Gouvernorat"
+                  autoComplete="address-level1"
+                  className={`${inputCls} h-[50px] ${governorate ? '' : 'text-ink/35'}`}
                 >
                   <option value="" disabled>
                     Gouvernorat
@@ -482,13 +635,17 @@ export default function OrderPage() {
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Ville / délégation"
+                    aria-label="Ville ou délégation"
+                    autoComplete="address-level2"
                     className={inputCls}
                   />
                   <input
                     value={postalCode}
                     onChange={(e) => setPostalCode(digitsOnly(e.target.value).slice(0, 4))}
                     placeholder="Code postal"
+                    aria-label="Code postal (facultatif)"
                     inputMode="numeric"
+                    autoComplete="postal-code"
                     className={inputCls}
                   />
                 </div>
@@ -496,7 +653,9 @@ export default function OrderPage() {
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Adresse complète (rue, numéro, repère...)"
+                  placeholder="Adresse complète (rue, numéro, repère…)"
+                  aria-label="Adresse complète"
+                  autoComplete="street-address"
                   rows={2}
                   className={`${inputCls} resize-none`}
                 />
@@ -504,37 +663,38 @@ export default function OrderPage() {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Précision ? (date souhaitée, occasion…)"
+                  aria-label="Précision (facultatif)"
                   rows={2}
                   className={`${inputCls} resize-none`}
                 />
               </div>
 
               {/* Paiement */}
-              <div className="mt-6 border-t border-[#faf6f3]/15 pt-6">
-                <p className={labelCls.replace('text-ink/45', 'text-[#faf6f3]/50')}>Paiement</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('cod')}
-                    className={`rounded-lg border px-4 py-3 text-sm font-semibold transition-colors ${
-                      paymentMethod === 'cod'
-                        ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#b8912e]'
-                        : 'border-[#faf6f3]/20 text-[#faf6f3]/70 hover:border-[#faf6f3]/40'
-                    }`}
-                  >
-                    À la livraison
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('d17')}
-                    className={`rounded-lg border px-4 py-3 text-sm font-semibold transition-colors ${
-                      paymentMethod === 'd17'
-                        ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#b8912e]'
-                        : 'border-[#faf6f3]/20 text-[#faf6f3]/70 hover:border-[#faf6f3]/40'
-                    }`}
-                  >
-                    D17
-                  </button>
+              <fieldset className="mt-6 border-t border-[#faf6f3]/15 pt-6">
+                <legend className="sr-only">Moyen de paiement</legend>
+                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-[#faf6f3]/50">Paiement</p>
+                <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Moyen de paiement">
+                  {(
+                    [
+                      ['cod', 'À la livraison'],
+                      ['d17', 'D17'],
+                    ] as const
+                  ).map(([method, label]) => (
+                    <button
+                      key={method}
+                      type="button"
+                      role="radio"
+                      aria-checked={paymentMethod === method}
+                      onClick={() => choosePayment(method)}
+                      className={`min-h-11 rounded-lg border px-4 py-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 ${
+                        paymentMethod === method
+                          ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#b8912e]'
+                          : 'border-[#faf6f3]/20 text-[#faf6f3]/70 hover:border-[#faf6f3]/40'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
 
                 {paymentMethod === 'd17' && (
@@ -543,15 +703,17 @@ export default function OrderPage() {
                       Envoyez <strong className="font-semibold text-[#b8912e]">{formatTND(total)} TND</strong> au
                       numéro D17&nbsp;:
                     </p>
-                    <p className="mt-1 font-display text-2xl tracking-wide text-[#b8912e]">{D17_NUMBER_DISPLAY}</p>
+                    <p className="mt-1 select-all font-display text-2xl tracking-wide text-[#b8912e]">{D17_NUMBER_DISPLAY}</p>
                     <p className="mt-2 text-xs font-light text-[#faf6f3]/60">
                       Puis joignez ci-dessous la capture d'écran du paiement (obligatoire).
                     </p>
-                    <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#faf6f3]/30 bg-[#faf6f3]/5 px-4 py-4 text-sm text-[#faf6f3]/70 transition-colors hover:border-[#b8912e]">
+                    <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#faf6f3]/30 bg-[#faf6f3]/5 px-4 py-4 text-sm text-[#faf6f3]/70 transition-colors hover:border-[#b8912e] focus-within:border-[#b8912e] focus-within:ring-2 focus-within:ring-[#b8912e]/40">
+                      {/* sr-only (et non hidden) : le champ reste accessible au clavier */}
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
+                        className="sr-only"
+                        aria-describedby="proof-help"
                         onChange={(e) => handleProofChange(e.target.files?.[0] ?? null)}
                       />
                       {proofUploading
@@ -560,24 +722,34 @@ export default function OrderPage() {
                           ? '✓ Capture envoyée — cliquez pour la remplacer'
                           : 'Joindre la capture d’écran du paiement'}
                     </label>
+                    <p id="proof-help" className="sr-only">Image JPG, PNG ou WEBP, 8 Mo maximum.</p>
                     {proofPreview && (
-                      <img src={proofPreview} alt="Capture du paiement D17" className="mt-3 max-h-40 rounded-lg border border-[#faf6f3]/20 object-contain" />
+                      <img src={proofPreview} alt="Aperçu de votre capture d'écran D17" className="mt-3 max-h-40 rounded-lg border border-[#faf6f3]/20 object-contain" />
                     )}
-                    {proofError && <p className="mt-2 text-xs text-red-300">{proofError}</p>}
+                    {proofError && <p className="mt-2 text-xs text-red-300" role="alert">{proofError}</p>}
                   </div>
                 )}
-              </div>
+              </fieldset>
 
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="gold-cta mt-6 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
+                className="gold-cta mt-6 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {createOrder.isPending ? 'Envoi…' : 'Envoyer la commande'}
               </button>
+              {!canSubmit && items.length > 0 && !createOrder.isPending && (
+                <p className="mt-3 text-center text-xs font-light text-[#faf6f3]/50">
+                  {!addressValid
+                    ? 'Complétez vos coordonnées et votre adresse de livraison.'
+                    : paymentMethod === 'd17' && !proofKey
+                      ? "Joignez votre capture d'écran de paiement D17 pour continuer."
+                      : ''}
+                </p>
+              )}
               {createOrder.isError && (
-                <p className="mt-3 text-center text-sm text-red-300">
-                  {createOrder.error.message || `Une erreur est survenue — réessayez ou appelez le ${PHONE_DISPLAY}.`}
+                <p className="mt-3 text-center text-sm text-red-300" role="alert">
+                  {friendlyError(createOrder.error.message)}
                 </p>
               )}
               <p className="mt-5 text-center text-xs font-light tracking-wide text-[#faf6f3]/50">
@@ -620,13 +792,17 @@ export default function OrderPage() {
                     value={msgName}
                     onChange={(e) => setMsgName(e.target.value)}
                     placeholder="Votre nom"
+                    aria-label="Votre nom"
+                    autoComplete="name"
                     className={inputCls}
                   />
                   <input
                     value={msgPhone}
                     onChange={(e) => setMsgPhone(e.target.value)}
                     placeholder="Téléphone (facultatif)"
+                    aria-label="Téléphone (facultatif)"
                     type="tel"
+                    autoComplete="tel"
                     className={inputCls}
                   />
                 </div>
@@ -635,9 +811,13 @@ export default function OrderPage() {
                   value={msgText}
                   onChange={(e) => setMsgText(e.target.value)}
                   placeholder="Votre message…"
+                  aria-label="Votre message"
                   rows={5}
                   className={`${inputCls} resize-none`}
                 />
+                {sendMessage.isError && (
+                  <p className="text-sm text-red-600" role="alert">{friendlyError(sendMessage.error.message)}</p>
+                )}
                 <button
                   type="submit"
                   disabled={sendMessage.isPending}
@@ -650,6 +830,27 @@ export default function OrderPage() {
           </div>
         </div>
       </main>
+
+      {/* Barre mobile : total toujours visible + raccourci vers le récapitulatif,
+          sinon avec 17 produits le formulaire est loin sous la liste. */}
+      {items.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-[#faf6f3]/95 px-5 py-3 backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-ink/50">
+                {count} article{count > 1 ? 's' : ''} · livraison incluse
+              </p>
+              <p className="font-display text-lg text-accent">{formatTND(total)} TND</p>
+            </div>
+            <a
+              href="#recap"
+              className="gold-cta rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+            >
+              Finaliser
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

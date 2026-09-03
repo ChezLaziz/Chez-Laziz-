@@ -16,6 +16,7 @@ vi.mock("./queries/orders", () => ({
 }));
 vi.mock("./lib/r2", () => ({ paymentProofExists }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
+vi.mock("./lib/email", () => ({ notifyAdminNewOrder: vi.fn(async () => undefined) }));
 
 const { ordersRouter } = await import("./ordersRouter");
 
@@ -151,6 +152,62 @@ describe("orders.create — D17 payment proof is mandatory", () => {
     expect(createOrder).toHaveBeenCalledWith(
       expect.objectContaining({ paymentMethod: "cod", paymentStatus: "pending", paymentProofKey: undefined }),
     );
+  });
+});
+
+describe("orders.create — quantity edge cases", () => {
+  it("rejects quantity 0", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 0 }] }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a negative quantity", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: -3 }] }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects an absurd quantity", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 100000 }] }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a non-integer quantity", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 1.5 }] }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects an empty cart", async () => {
+    await expect(caller.create({ ...baseInput, items: [] })).rejects.toThrow();
+  });
+
+  it("handles multiple lines and weights with exact integer arithmetic", async () => {
+    await caller.create({
+      ...baseInput,
+      items: [
+        { productId: 1, weightKg: 0.5, qty: 3 }, // 3 × 4.000
+        { productId: 2, weightKg: 2.5, qty: 1 }, // 1 × 100.000
+      ],
+    });
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ subtotalMillimes: 112000, totalMillimes: 120000 }),
+    );
+  });
+});
+
+describe("orders.create — idempotency", () => {
+  it("forwards the client idempotency key to the order", async () => {
+    await caller.create({ ...baseInput, idempotencyKey: "11111111-2222-3333-4444-555555555555" });
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: "11111111-2222-3333-4444-555555555555" }),
+    );
+  });
+
+  it("rejects a key that is too short to be meaningful", async () => {
+    await expect(caller.create({ ...baseInput, idempotencyKey: "abc" })).rejects.toThrow();
   });
 });
 

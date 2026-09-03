@@ -45,7 +45,7 @@ export default function Footer() {
     <footer className="bg-ink-deep text-[#faf6f3]">
       {/* Continuous auto-scrolling image strip */}
       <div className="overflow-hidden border-t border-[#faf6f3]/10" aria-hidden="true">
-        <div className="marquee-track marquee-slow py-6">
+        <div className="marquee-track marquee-slow py-4">
           {[0, 1].map((half) => (
             <div key={half} className="flex shrink-0">
               {STRIP.map((src, i) => (
@@ -54,7 +54,9 @@ export default function Footer() {
                   src={src}
                   alt=""
                   loading="lazy"
-                  className="mx-3 h-36 w-56 rounded-sm object-cover opacity-80 transition-opacity duration-300 hover:opacity-100 md:h-44 md:w-72"
+                  width="288"
+                  height="176"
+                  className="mx-3 h-28 w-44 rounded-sm object-cover opacity-80 transition-opacity duration-300 hover:opacity-100 md:h-36 md:w-56"
                 />
               ))}
             </div>
@@ -63,8 +65,8 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-[#faf6f3]/10">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-8 px-5 py-14 text-center md:px-10">
-          <img src="/images/logo.webp" alt="Chez Laziz — عند لعزيز" className="h-24 w-24 md:h-28 md:w-28" loading="lazy" />
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-5 py-10 text-center md:px-10">
+          <img src="/images/logo.webp" alt="Chez Laziz — عند لعزيز" className="h-16 w-16 md:h-20 md:w-20" loading="lazy" width="80" height="80" />
           <p className="max-w-md text-sm font-light leading-relaxed text-[#faf6f3]/60">
             {data?.tagline || DEFAULT_TAGLINE}
           </p>

@@ -30,17 +30,19 @@ export default function Order() {
                 Commander
               </p>
               <h2 className="font-display text-3xl leading-tight md:text-5xl">
-                Un coup de fil,
+                Commandez en ligne,
                 <br />
-                et c’est prêt
+                livré chez vous
               </h2>
               <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-[#faf6f3]/80">
-                Appelez ou écrivez-nous sur WhatsApp, dites-nous la quantité et
-                le parfum — vos makroudh vous attendent en boutique, frais du
-                jour. Commandes spéciales pour mariages, fêtes et Aïd bienvenues.
+                Choisissez vos makroudh et leur poids, indiquez votre adresse —
+                livraison partout en Tunisie sous 24h (8.000 TND), paiement à
+                la livraison ou par D17. Vous préférez parler à quelqu'un ?
+                Appelez ou écrivez-nous sur WhatsApp. Commandes spéciales pour
+                mariages, fêtes et Aïd bienvenues.
               </p>
 
-              {/* Quick price recap */}
+              {/* Quick price recap — prix pour 1 kg */}
               <ul className="mt-8 space-y-3 border-t border-[#faf6f3]/15 pt-8">
                 {quick.map((q) => (
                   <li key={q.id} className="flex items-baseline text-[15px] font-light">
@@ -50,11 +52,16 @@ export default function Order() {
                       aria-hidden="true"
                     />
                     <span className="font-display text-[#b8912e]">
-                      {formatTND(q.priceMillimes)} <span className="text-xs">TND</span>
+                      {formatTND(q.priceMillimes)} <span className="text-xs">TND / kg</span>
                     </span>
                   </li>
                 ))}
               </ul>
+              {quick.length > 0 && (
+                <p className="mt-3 text-xs font-light tracking-wide text-[#faf6f3]/50">
+                  Prix pour 1 kg — poids au choix de 500 g à 2,5 kg à la commande.
+                </p>
+              )}
 
               {/* Big CTAs */}
               <div className="mt-10 flex flex-col gap-4">
