@@ -150,8 +150,8 @@ export default function OrderPage() {
           simple titre sur fond blanc (page destinée aussi au trafic publicitaire). */}
       <div className="relative h-[220px] overflow-hidden md:h-[300px]">
         <img
-          src="/images/makroudh.webp"
-          alt="Makroudh Chez Laziz, façonnés à la main à Kairouan"
+          src="/images/hands.webp"
+          alt="Makroudh Chez Laziz façonné à la main au moule traditionnel, à Kairouan"
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#2e2a27]/85 via-[#2e2a27]/35 to-[#2e2a27]/10" />
