@@ -73,7 +73,7 @@ export default function Header() {
             to="/"
             className="flex items-center gap-2.5"
           >
-            <img src="/images/logo.png" alt="Chez Laziz" className="h-10 w-10 md:h-12 md:w-12" />
+            <img src="/images/logo.webp" alt="Chez Laziz" className="h-10 w-10 md:h-12 md:w-12" />
             <span
               className={`font-display text-xl tracking-[0.14em] md:text-2xl ${
                 scrolled || open ? 'text-ink' : 'text-[#faf6f3]'

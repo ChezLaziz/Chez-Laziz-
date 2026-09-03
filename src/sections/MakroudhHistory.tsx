@@ -3,19 +3,19 @@ const STEPS = [
     n: '01',
     title: 'La semoule',
     text: 'Une pâte de semoule fine, pétrie avec de l\'huile d\'olive — le mariage des céréales du nord et de l\'huile du Sahel qui a toujours fait la richesse de la cuisine tunisienne.',
-    img: '/images/hands.jpg',
+    img: '/images/hands.webp',
   },
   {
     n: '02',
     title: 'Le façonnage',
     text: 'La pâte est roulée, garnie de pâte de dattes, puis façonnée à la main dans un moule en bois sculpté — un geste transmis de génération en génération, jamais mécanisé.',
-    img: '/images/makroudh.jpg',
+    img: '/images/makroudh.webp',
   },
   {
     n: '03',
     title: 'Le miel',
     text: 'Après la friture, chaque pièce est plongée dans un sirop de miel encore tiède, qui lui donne son brillant doré et sa texture fondante caractéristique.',
-    img: '/images/display.jpg',
+    img: '/images/display.webp',
   },
 ]
 
@@ -58,7 +58,7 @@ export default function MakroudhHistory() {
           {STEPS.map((s) => (
             <div key={s.n} data-reveal className="flex flex-col">
               <div className="mask-reveal aspect-[4/5]">
-                <img src={s.img} alt={s.title} className="h-full w-full object-cover" />
+                <img src={s.img} alt={s.title} className="h-full w-full object-cover" loading="lazy" />
               </div>
               <p className="mt-5 font-display text-3xl text-[#b8912e]/50">{s.n}</p>
               <h3 className="mt-1 font-display text-xl">{s.title}</h3>
