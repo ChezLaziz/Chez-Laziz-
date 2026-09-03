@@ -36,8 +36,8 @@ export default function TermsPage() {
             <h2 className="mb-2 font-display text-xl text-ink">Commandes</h2>
             <p>
               Une commande passée via ce site (page « Commander ») ou par téléphone /
-              WhatsApp est une demande de réservation. Elle est confirmée par notre
-              équipe par téléphone ou WhatsApp avant préparation. Les prix affichés
+              Messenger est une demande de réservation. Elle est confirmée par notre
+              équipe par téléphone ou Messenger avant préparation. Les prix affichés
               sont en dinars tunisiens (TND) et peuvent évoluer sans préavis selon la
               saison et la disponibilité des ingrédients.
             </p>

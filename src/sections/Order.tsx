@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
-import { formatTND, WA_LINK, PHONE_TEL, PHONE_DISPLAY } from '@/lib/shop'
+import { formatTND, MESSENGER_URL, PHONE_TEL, PHONE_DISPLAY } from '@/lib/shop'
 
 export default function Order() {
   const { data: products } = trpc.products.list.useQuery()
@@ -38,8 +38,8 @@ export default function Order() {
                 Choisissez vos makroudh et leur poids, indiquez votre adresse —
                 livraison partout en Tunisie sous 24h (8.000 TND), paiement à
                 la livraison ou par D17. Vous préférez parler à quelqu'un ?
-                Appelez ou écrivez-nous sur WhatsApp. Commandes spéciales pour
-                mariages, fêtes et Aïd bienvenues.
+                Appelez-nous ou écrivez-nous sur Messenger. Commandes spéciales
+                pour mariages, fêtes et Aïd bienvenues.
               </p>
 
               {/* Quick price recap — prix pour 1 kg */}
@@ -78,15 +78,16 @@ export default function Order() {
                 </Link>
                 <div className="flex flex-col gap-4 sm:flex-row">
                 <a
-                  href={WA_LINK}
+                  href={MESSENGER_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex flex-1 items-center justify-center gap-3 rounded-full bg-[#25D366] px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-[#12351f] transition-transform duration-300 hover:scale-[1.03]"
+                  className="flex flex-1 items-center justify-center gap-3 rounded-full bg-[#0084FF] px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.03]"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 2a9.9 9.9 0 0 0-8.5 15L2 22l5.2-1.4A9.9 9.9 0 1 0 12 2Zm5.7 14.1c-.2.7-1.4 1.3-1.9 1.3-.5.1-1.1.2-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5-.4.8-.8 1-.6 1.3.8 1.3 1.8 2.2 3.1 2.8.3.2.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.6.4 0 .1 0 .7-.2 1.9Z" />
+                    <path d="M12 2.5c-5.5 0-9.5 4-9.5 9.2 0 3 1.4 5.6 3.6 7.4v3l3.3-1.8c.8.2 1.7.3 2.6.3 5.5 0 9.5-4 9.5-9.2S17.5 2.5 12 2.5Z" />
+                    <path d="M7 12.8l3.3-3.5 2.2 2.3 3.5-3.6-3.3 5.2-2.2-2.3-3.5 3.9Z" fill="#0084FF" stroke="none" />
                   </svg>
-                  WhatsApp
+                  Messenger
                 </a>
                 <a
                   href={PHONE_TEL}

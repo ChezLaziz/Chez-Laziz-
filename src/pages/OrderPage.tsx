@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
-import { PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
+import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL } from '@/lib/shop'
 import { track } from '@/lib/analytics'
 import { trackMeta, type MetaContentItem } from '@/lib/metaPixel'
 import { buildDisplayLines, kgLabel, type CatalogProduct, type DisplayLine } from '@/lib/orderLines'
@@ -138,7 +138,7 @@ function tabFromHash(hash: string): Tab {
 
 type Placed = {
   id: number
-  waUrl: string
+  recapText: string
   paymentMethod: PaymentMethod
   recap: {
     lines: { key: string; label: string; contents: string[]; totalMillimes: number }[]
@@ -196,6 +196,7 @@ export default function OrderPage() {
   const [proofError, setProofError] = useState<string | null>(null)
   const [idempotencyKey, setIdempotencyKey] = useState(() => newIdempotencyKey())
   const [placed, setPlaced] = useState<Placed | null>(null)
+  const [recapCopied, setRecapCopied] = useState(false)
   const checkoutStartedRef = useRef(false)
   const cartViewedRef = useRef(false)
 
@@ -410,7 +411,7 @@ export default function OrderPage() {
           // et maybeReportMetaPurchase dans api/ordersRouter.ts.
           setPlaced({
             id: order?.id ?? 0,
-            waUrl: 'https://wa.me/21623691039?text=' + encodeURIComponent(text),
+            recapText: text,
             paymentMethod,
             recap: { lines: snapshot, subtotalMillimes: subtotal, totalMillimes: total, address: addressLine },
           })
@@ -420,6 +421,18 @@ export default function OrderPage() {
         },
       },
     )
+  }
+
+  const copyRecap = async () => {
+    if (!placed) return
+    try {
+      await navigator.clipboard.writeText(placed.recapText)
+      setRecapCopied(true)
+      setTimeout(() => setRecapCopied(false), 2000)
+    } catch {
+      // Presse-papiers indisponible (permissions navigateur) — le client
+      // peut toujours écrire son message lui-même sur Messenger.
+    }
   }
 
   const submitMessage = (e: React.FormEvent) => {
@@ -491,12 +504,12 @@ export default function OrderPage() {
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <a
-              href={placed.waUrl}
+              href={MESSENGER_URL}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-3 rounded-full bg-[#25D366] px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-[#12351f] transition-transform duration-300 hover:scale-[1.03]"
+              className="flex items-center justify-center gap-3 rounded-full bg-[#0084FF] px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.03]"
             >
-              Confirmer sur WhatsApp
+              Nous écrire sur Messenger
             </a>
             <Link
               to="/"
@@ -505,6 +518,13 @@ export default function OrderPage() {
               Retour au site
             </Link>
           </div>
+          <button
+            type="button"
+            onClick={copyRecap}
+            className="mt-4 text-xs uppercase tracking-[0.15em] text-ink/50 underline underline-offset-2 transition-colors hover:text-ink"
+          >
+            {recapCopied ? 'Récapitulatif copié ✓' : 'Copier le récapitulatif pour le coller sur Messenger'}
+          </button>
         </main>
       </div>
     )
