@@ -1,7 +1,7 @@
 import { randomBytes, scryptSync, createHmac, timingSafeEqual } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./connection";
-import { settings } from "@db/schema";
+import { settings, adminUsers } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
@@ -47,6 +47,16 @@ function sign(payload: string, secret: string) {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+async function findUserByEmail(email: string) {
+  return getDb().query.adminUsers.findFirst({
+    where: eq(adminUsers.email, normalizeEmail(email)),
+  });
+}
+
 // ---- Anti brute-force : limite simple en mémoire (par process) ----
 const LOGIN_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const LOGIN_MAX_ATTEMPTS = 8;
@@ -75,71 +85,125 @@ export async function loginAdmin(
   ip = "unknown",
 ): Promise<string> {
   checkLoginRateLimit(ip);
-  const [storedEmail, storedHash, secret] = await Promise.all([
-    getSetting("admin_email"),
-    getSetting("admin_password_hash"),
+  const [user, secret] = await Promise.all([
+    findUserByEmail(email),
     getSetting("admin_token_secret"),
   ]);
-  const emailOk = safeEqual(email.trim().toLowerCase(), storedEmail.trim().toLowerCase());
-  const passwordOk = verifyPassword(password.trim(), storedHash);
-  if (!emailOk || !passwordOk) {
+  if (!user || !verifyPassword(password.trim(), user.passwordHash)) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Adresse ou mot de passe incorrect",
     });
   }
   const exp = String(Date.now() + TOKEN_TTL_MS);
-  return `${exp}.${sign(exp, secret)}`;
+  const emailPart = Buffer.from(user.email).toString("base64url");
+  const sig = sign(`${exp}:${user.email}`, secret);
+  return `${exp}.${emailPart}.${sig}`;
 }
 
-/** Lève une erreur si le token est absent, invalide ou expiré. */
-export async function assertAdmin(token: string): Promise<void> {
+/** Lève une erreur si le token est absent, invalide ou expiré. Retourne l'email du compte. */
+export async function assertAdmin(token: string): Promise<string> {
   if (!token) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Non connecté" });
   }
-  const dot = token.lastIndexOf(".");
-  const exp = dot > 0 ? token.slice(0, dot) : "";
-  const sig = dot > 0 ? token.slice(dot + 1) : "";
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalide" });
+  }
+  const [exp, emailPart, sig] = parts;
+  let email: string;
+  try {
+    email = Buffer.from(emailPart, "base64url").toString("utf8");
+  } catch {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalide" });
+  }
   const secret = await getSetting("admin_token_secret");
-  if (!exp || !safeEqual(sig, sign(exp, secret))) {
+  if (!exp || !safeEqual(sig, sign(`${exp}:${email}`, secret))) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalide" });
   }
   if (Number(exp) < Date.now()) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Session expirée" });
   }
+  return email;
 }
 
-export async function changeAdminPassword(
+export async function changeMyPassword(
+  email: string,
   currentPassword: string,
   newPassword: string,
 ): Promise<void> {
-  const storedHash = await getSetting("admin_password_hash");
-  if (!verifyPassword(currentPassword.trim(), storedHash)) {
+  const user = await findUserByEmail(email);
+  if (!user || !verifyPassword(currentPassword.trim(), user.passwordHash)) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Mot de passe actuel incorrect",
     });
   }
-  await setSetting("admin_password_hash", hashPassword(newPassword.trim()));
+  await getDb()
+    .update(adminUsers)
+    .set({ passwordHash: hashPassword(newPassword.trim()) })
+    .where(eq(adminUsers.id, user.id));
   // Rotation du secret de signature : invalide immédiatement toutes les
   // sessions actives (anciens tokens), y compris celles volées.
   await setSetting("admin_token_secret", randomBytes(32).toString("hex"));
 }
 
-export async function getAdminEmail(): Promise<string> {
-  return getSetting("admin_email");
-}
-
-export async function changeAdminEmail(
+export async function changeMyEmail(
+  currentEmail: string,
   currentPassword: string,
   newEmail: string,
 ): Promise<void> {
-  const storedHash = await getSetting("admin_password_hash");
-  if (!verifyPassword(currentPassword.trim(), storedHash)) {
+  const user = await findUserByEmail(currentEmail);
+  if (!user || !verifyPassword(currentPassword.trim(), user.passwordHash)) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Mot de passe actuel incorrect",
     });
   }
-  await setSetting("admin_email", newEmail.trim().toLowerCase());
+  const normalized = normalizeEmail(newEmail);
+  const existing = await findUserByEmail(normalized);
+  if (existing && existing.id !== user.id) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Cette adresse est déjà utilisée" });
+  }
+  await getDb().update(adminUsers).set({ email: normalized }).where(eq(adminUsers.id, user.id));
+}
+
+export async function listAdminUsers() {
+  const users = await getDb().query.adminUsers.findMany({
+    orderBy: (u, { asc }) => [asc(u.createdAt)],
+  });
+  return users.map((u) => ({ id: u.id, email: u.email, createdAt: u.createdAt }));
+}
+
+export async function addAdminUser(email: string, password: string): Promise<void> {
+  const normalized = normalizeEmail(email);
+  const existing = await findUserByEmail(normalized);
+  if (existing) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Cette adresse est déjà utilisée" });
+  }
+  await getDb().insert(adminUsers).values({
+    email: normalized,
+    passwordHash: hashPassword(password.trim()),
+  });
+}
+
+export async function removeAdminUser(requestingEmail: string, id: number): Promise<void> {
+  const [users, target] = await Promise.all([
+    getDb().query.adminUsers.findMany(),
+    getDb().query.adminUsers.findFirst({ where: eq(adminUsers.id, id) }),
+  ]);
+  if (!target) return;
+  if (users.length <= 1) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Impossible de supprimer le dernier compte admin",
+    });
+  }
+  if (normalizeEmail(requestingEmail) === target.email) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Vous ne pouvez pas supprimer votre propre compte",
+    });
+  }
+  await getDb().delete(adminUsers).where(eq(adminUsers.id, id));
 }

@@ -47,11 +47,13 @@ app.post("/api/uploads", bodyLimit({ maxSize: 8 * 1024 * 1024 }), async (c) => {
   }
   const form = await c.req.formData();
   const file = form.get("file");
+  const folderRaw = form.get("folder");
+  const folder = folderRaw === "gallery" ? "gallery" : "products";
   if (!(file instanceof File)) {
     return c.json({ error: "Fichier manquant" }, 400);
   }
   try {
-    const key = await uploadProductImage(file);
+    const key = await uploadProductImage(file, folder);
     return c.json({ url: `/api/uploads/${key}` });
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Erreur d'upload" }, 400);
@@ -61,7 +63,7 @@ app.post("/api/uploads", bodyLimit({ maxSize: 8 * 1024 * 1024 }), async (c) => {
 // Sert les photos uploadées (lecture publique, comme les images statiques).
 app.get("/api/uploads/*", async (c) => {
   const key = c.req.path.replace(/^\/api\/uploads\//, "");
-  if (!/^products\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(key)) {
+  if (!/^(products|gallery)\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(key)) {
     return c.json({ error: "Not Found" }, 404);
   }
   const result = await getUploadedImage(key);

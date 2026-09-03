@@ -25,7 +25,10 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/webp": "webp",
 };
 
-export async function uploadProductImage(file: File): Promise<string> {
+export async function uploadProductImage(
+  file: File,
+  folder: "products" | "gallery" = "products",
+): Promise<string> {
   const ext = ALLOWED_TYPES[file.type];
   if (!ext) {
     throw new Error("Format d'image non supporté (jpg, png ou webp uniquement).");
@@ -34,7 +37,7 @@ export async function uploadProductImage(file: File): Promise<string> {
     throw new Error("Image trop lourde (8 Mo maximum).");
   }
   const { client, bucket } = getClient();
-  const key = `products/${Date.now()}-${randomBytes(6).toString("hex")}.${ext}`;
+  const key = `${folder}/${Date.now()}-${randomBytes(6).toString("hex")}.${ext}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
   await client.send(
     new PutObjectCommand({
