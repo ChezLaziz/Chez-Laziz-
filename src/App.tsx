@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router'
 import Home from './pages/Home'
 import { useTrackVisit } from './hooks/useTrackVisit'
+import CookieConsent from './components/CookieConsent'
 
 // Chargées à la demande seulement — évite d'alourdir le premier
 // chargement de la page d'accueil (et surtout recharts, utilisé
@@ -67,6 +68,7 @@ export default function App() {
       <Route path="/journal/comment-est-prepare-le-makroudh" element={<Lazy Component={CommentEstPreparePage} />} />
       <Route path="*" element={<Lazy Component={NotFoundPage} />} />
       </Routes>
+      <CookieConsent />
     </>
   )
 }

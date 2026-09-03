@@ -3,6 +3,7 @@ import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import { useSEO } from '../hooks/useSEO'
 import { analyticsEnabled } from '@/lib/analytics'
+import { metaPixelEnabled } from '@/lib/metaPixel'
 
 export default function PrivacyPage() {
   useSEO({
@@ -68,24 +69,43 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 font-display text-xl text-ink">Statistiques de visite</h2>
-            {analyticsEnabled ? (
-              <p>
-                Nous mesurons le nombre de pages vues de deux façons : un compteur
-                anonyme sur notre propre serveur, et Google Analytics (adresse IP
-                anonymisée) pour comprendre d'où viennent les visiteurs et quelles
-                pages ils consultent. Aucune donnée saisie dans les formulaires
-                (nom, téléphone, adresse, capture d'écran) n'est transmise à Google —
-                seuls les produits consultés ou commandés et les montants le sont.
-                Pas de pixel publicitaire.
-              </p>
-            ) : (
-              <p>
-                Nous mesurons de façon anonyme le nombre de pages vues sur notre propre
-                serveur, sans cookies publicitaires ni outil de suivi tiers (pas de
-                Google Analytics, pas de pixel Meta). Ces chiffres nous aident
-                uniquement à comprendre la fréquentation du site.
-              </p>
+            <h2 className="mb-2 font-display text-xl text-ink">Cookies et mesure d'audience</h2>
+            <p>
+              Nous mesurons le nombre de pages vues avec un compteur anonyme sur notre
+              propre serveur, actif en permanence et sans cookie.
+            </p>
+            {(analyticsEnabled || metaPixelEnabled) && (
+              <>
+                <p className="mt-2">
+                  En plus de ce compteur, et uniquement si vous cliquez sur « Accepter »
+                  dans le bandeau de cookies :
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {analyticsEnabled && (
+                    <li>
+                      Google Analytics (adresse IP anonymisée) nous indique d'où
+                      viennent les visiteurs et quelles pages ils consultent.
+                    </li>
+                  )}
+                  {metaPixelEnabled && (
+                    <li>
+                      Le Pixel Meta (Facebook/Instagram) nous permet de mesurer
+                      l'efficacité de nos publicités et de ne plus vous montrer une
+                      publicité déjà vue. Lorsqu'une commande est confirmée, votre
+                      numéro de téléphone est haché (rendu illisible, irréversible)
+                      avant d'être transmis à Meta pour associer l'achat à la
+                      campagne publicitaire — jamais en clair, jamais votre nom ni
+                      votre adresse.
+                    </li>
+                  )}
+                </ul>
+                <p className="mt-2">
+                  Dans les deux cas, seuls les produits consultés ou commandés et les
+                  montants sont transmis — jamais le contenu des formulaires (nom,
+                  adresse, capture d'écran). Si vous cliquez sur « Refuser », aucun de
+                  ces deux outils ne se charge ; seul le compteur interne reste actif.
+                </p>
+              </>
             )}
           </section>
 
