@@ -14,6 +14,8 @@ const GaleriePage = lazy(() => import('./pages/GaleriePage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
+const LivraisonPage = lazy(() => import('./pages/LivraisonPage'))
+const FAQPage = lazy(() => import('./pages/FAQPage'))
 const MakroudhTunisienPage = lazy(() => import('./pages/MakroudhTunisienPage'))
 const MakroudhKairouanPage = lazy(() => import('./pages/MakroudhKairouanPage'))
 const MakroudhDattesPage = lazy(() => import('./pages/MakroudhDattesPage'))
@@ -53,6 +55,8 @@ export default function App() {
       <Route path="/admin" element={<Lazy Component={AdminPage} />} />
       <Route path="/politique-de-confidentialite" element={<Lazy Component={PrivacyPage} />} />
       <Route path="/conditions-generales" element={<Lazy Component={TermsPage} />} />
+      <Route path="/livraison" element={<Lazy Component={LivraisonPage} />} />
+      <Route path="/faq" element={<Lazy Component={FAQPage} />} />
       <Route path="/makroudh-tunisien" element={<Lazy Component={MakroudhTunisienPage} />} />
       <Route path="/makroudh-kairouan" element={<Lazy Component={MakroudhKairouanPage} />} />
       <Route path="/makroudh-aux-dattes" element={<Lazy Component={MakroudhDattesPage} />} />

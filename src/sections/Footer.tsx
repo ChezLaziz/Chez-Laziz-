@@ -101,6 +101,8 @@ export default function Footer() {
             <Link to="/makroudh-kairouan" className="transition-colors hover:text-[#b8912e]">Makroudh de Kairouan</Link>
             <Link to="/makroudh-aux-dattes" className="transition-colors hover:text-[#b8912e]">Makroudh aux dattes</Link>
             <Link to="/journal" className="transition-colors hover:text-[#b8912e]">Journal</Link>
+            <Link to="/livraison" className="transition-colors hover:text-[#b8912e]">Livraison</Link>
+            <Link to="/faq" className="transition-colors hover:text-[#b8912e]">FAQ</Link>
           </nav>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em] text-[#faf6f3]/45">
             <Link to="/politique-de-confidentialite" className="transition-colors hover:text-[#b8912e]">Politique de confidentialité</Link>

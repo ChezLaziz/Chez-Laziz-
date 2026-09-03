@@ -4,6 +4,21 @@ import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
 import { formatTND, PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
+import {
+  ALLOWED_WEIGHTS_KG,
+  DELIVERY_FEE_MILLIMES,
+  DELIVERY_METHOD_LABEL,
+  DELIVERY_REGION,
+  DELIVERY_TIME_LABEL,
+  D17_NUMBER_DISPLAY,
+  PAYMENT_PROOF_ALLOWED_MIME,
+  PAYMENT_PROOF_MAX_SIZE_BYTES,
+  TUNISIA_GOVERNORATES,
+  formatWeight,
+  priceForWeight,
+  type PaymentMethod,
+  type WeightKg,
+} from '@contracts/shop'
 
 function TopBar({ title }: { title: string }) {
   return (
@@ -37,12 +52,122 @@ function TopBar({ title }: { title: string }) {
 
 const inputCls =
   'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e]'
+const labelCls = 'mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] text-ink/45'
+
+type DbProduct = {
+  id: number
+  name: string
+  description: string | null
+  priceMillimes: number
+  category: string
+  badge: string | null
+  imageUrl: string | null
+  available: boolean
+}
+
+/** Une ligne produit : sélecteur de poids (500 g à 2,5 kg, prix recalculé en
+ * direct depuis le prix pour 1 kg) + quantité. Le poids affiché suit la
+ * ligne déjà présente dans le panier ; le changer déplace la quantité vers
+ * le nouveau poids plutôt que d'ajouter une ligne séparée. */
+function ProductRow({ product }: { product: DbProduct }) {
+  const { qtyFor, add, setQty, setWeight } = useCart()
+  const [weight, setLocalWeight] = useState<WeightKg>(1)
+  const qty = qtyFor(product.id, weight)
+  const unitPrice = priceForWeight(product.priceMillimes, weight)
+
+  return (
+    <div
+      className={`rounded-xl border p-5 shadow-sm transition-colors ${
+        qty > 0 ? 'border-[#b8912e] bg-[#f5ece5]' : 'border-sand bg-white'
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-[9px] text-ink/30">Chez Laziz</span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="font-medium">{product.name}</span>
+            {product.badge && (
+              <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
+                {product.badge}
+              </span>
+            )}
+          </div>
+          {product.description && (
+            <p className="mt-1 line-clamp-2 text-sm font-light text-ink/55">{product.description}</p>
+          )}
+          <span className="mt-1 block font-display text-accent">
+            {formatTND(unitPrice)} <span className="text-xs">TND</span>
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-sand/60 pt-4">
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-ink/50">Poids</span>
+          <select
+            value={weight}
+            onChange={(e) => {
+              const next = Number(e.target.value) as WeightKg
+              if (qty > 0) setWeight(product.id, weight, next)
+              setLocalWeight(next)
+            }}
+            className="rounded-lg border border-sand bg-white px-3 py-1.5 text-sm outline-none focus:border-[#b8912e]"
+          >
+            {ALLOWED_WEIGHTS_KG.map((w) => (
+              <option key={w} value={w}>
+                {formatWeight(w)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            aria-label="Moins"
+            onClick={() => setQty(product.id, weight, qty - 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-30"
+            disabled={qty === 0}
+          >
+            −
+          </button>
+          <span className="w-6 text-center font-display text-lg">{qty}</span>
+          <button
+            type="button"
+            aria-label="Plus"
+            onClick={() => (qty === 0 ? add(product.id, weight) : setQty(product.id, weight, qty + 1))}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function digitsOnly(s: string) {
+  return s.replace(/\D/g, '')
+}
+
+/** Numéro tunisien : 8 chiffres (fixe/mobile), avec ou sans indicatif +216. */
+function isValidTunisianPhone(phone: string): boolean {
+  const digits = digitsOnly(phone)
+  const local = digits.startsWith('216') ? digits.slice(3) : digits
+  return local.length === 8
+}
 
 export default function OrderPage() {
   useSEO({
-    title: 'Commander — Chez Laziz | Commande en ligne de makroudh',
+    title: 'Commander — Chez Laziz | Livraison de makroudh partout en Tunisie',
     description:
-      'Composez votre commande de makroudh Chez Laziz en ligne — retrait en boutique à Kairouan, confirmation par téléphone ou WhatsApp.',
+      'Composez votre commande de makroudh Chez Laziz — livraison à domicile partout en Tunisie sous 24h (8.000 TND), paiement à la livraison ou par D17.',
     path: '/commande',
     breadcrumb: 'Commander',
   })
@@ -50,11 +175,20 @@ export default function OrderPage() {
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
 
-  const { cart, setQty, clear } = useCart()
+  const { lines, clear } = useCart()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [governorate, setGovernorate] = useState('')
+  const [city, setCity] = useState('')
+  const [address, setAddress] = useState('')
+  const [postalCode, setPostalCode] = useState('')
   const [note, setNote] = useState('')
-  const [placed, setPlaced] = useState<{ id: number; waUrl: string } | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
+  const [proofKey, setProofKey] = useState<string | null>(null)
+  const [proofPreview, setProofPreview] = useState<string | null>(null)
+  const [proofUploading, setProofUploading] = useState(false)
+  const [proofError, setProofError] = useState<string | null>(null)
+  const [placed, setPlaced] = useState<{ id: number; waUrl: string; paymentMethod: PaymentMethod } | null>(null)
 
   const [msgName, setMsgName] = useState('')
   const [msgPhone, setMsgPhone] = useState('')
@@ -63,31 +197,79 @@ export default function OrderPage() {
 
   const items = useMemo(
     () =>
-      (products ?? [])
-        .filter((p) => (cart[p.id] ?? 0) > 0)
-        .map((p) => ({ ...p, qty: cart[p.id] })),
-    [products, cart],
+      lines
+        .map((l) => {
+          const p = (products ?? []).find((pr) => pr.id === l.productId)
+          if (!p) return null
+          return { ...p, weightKg: l.weightKg, qty: l.qty, unitPriceMillimes: priceForWeight(p.priceMillimes, l.weightKg) }
+        })
+        .filter((x): x is NonNullable<typeof x> => x != null),
+    [products, lines],
   )
-  const total = items.reduce((s, p) => s + p.qty * p.priceMillimes, 0)
+  const subtotal = items.reduce((s, p) => s + p.qty * p.unitPriceMillimes, 0)
+  const total = subtotal + DELIVERY_FEE_MILLIMES
+
+  const phoneValid = isValidTunisianPhone(phone)
+  const addressValid = name.trim().length >= 2 && phoneValid && !!governorate && city.trim().length > 0 && address.trim().length >= 5
+  const paymentValid = paymentMethod === 'cod' || !!proofKey
+  const canSubmit = items.length > 0 && addressValid && paymentValid && !createOrder.isPending
+
+  const handleProofChange = async (file: File | null) => {
+    setProofError(null)
+    setProofKey(null)
+    if (proofPreview) URL.revokeObjectURL(proofPreview)
+    setProofPreview(null)
+    if (!file) return
+    if (!PAYMENT_PROOF_ALLOWED_MIME.has(file.type)) {
+      setProofError('Format non supporté — utilisez une image JPG, PNG ou WEBP.')
+      return
+    }
+    if (file.size > PAYMENT_PROOF_MAX_SIZE_BYTES) {
+      setProofError('Image trop lourde (8 Mo maximum).')
+      return
+    }
+    setProofPreview(URL.createObjectURL(file))
+    setProofUploading(true)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const res = await fetch('/api/uploads/payment-proof', { method: 'POST', body })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Échec de l'envoi de la capture")
+      setProofKey(data.key)
+    } catch (e) {
+      setProofError(e instanceof Error ? e.message : "Échec de l'envoi de la capture")
+    } finally {
+      setProofUploading(false)
+    }
+  }
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!canSubmit) return
     createOrder.mutate(
       {
         customerName: name.trim(),
         phone: phone.trim(),
+        governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number],
+        city: city.trim(),
+        address: address.trim(),
+        postalCode: postalCode.trim() || undefined,
         note: note.trim() || undefined,
-        items: items.map((p) => ({ productId: p.id, qty: p.qty })),
+        items: items.map((p) => ({ productId: p.id, weightKg: p.weightKg, qty: p.qty })),
+        paymentMethod,
+        paymentProofKey: paymentMethod === 'd17' ? (proofKey ?? undefined) : undefined,
       },
       {
         onSuccess: (order) => {
           const lines = items
-            .map((p) => `• ${p.qty} × ${p.name}`)
+            .map((p) => `• ${p.qty} × ${p.name} (${formatWeight(p.weightKg)})`)
             .join('\n')
-          const text = `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${lines}\nTotal : ${formatTND(total)} TND`
+          const text = `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${lines}\nLivraison : ${city.trim()}, ${governorate}\nTotal (livraison incluse) : ${formatTND(total)} TND\nPaiement : ${paymentMethod === 'd17' ? 'D17 (capture envoyée)' : 'À la livraison'}`
           setPlaced({
             id: order?.id ?? 0,
             waUrl: 'https://wa.me/21623691039?text=' + encodeURIComponent(text),
+            paymentMethod,
           })
           clear()
           window.scrollTo({ top: 0 })
@@ -118,8 +300,12 @@ export default function OrderPage() {
             Merci, commande n°{placed.id} reçue&nbsp;!
           </h1>
           <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
-            Nous préparons votre commande. Pour une confirmation immédiate,
-            envoyez-la nous aussi sur WhatsApp ou appelez-nous au {PHONE_DISPLAY}.
+            {placed.paymentMethod === 'd17'
+              ? "Votre preuve de paiement D17 a bien été reçue et est en attente de vérification. Nous vous appelons très vite pour confirmer votre commande."
+              : 'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'}
+          </p>
+          <p className="mt-3 max-w-md text-sm font-light text-ink/50">
+            Livraison {DELIVERY_REGION.toLowerCase()}, sous {DELIVERY_TIME_LABEL}.
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <a
@@ -173,21 +359,22 @@ export default function OrderPage() {
       <main className="mx-auto max-w-6xl px-5 py-14 md:px-10 md:py-20">
         <div className="max-w-2xl">
           <p className="text-[15px] font-light leading-relaxed text-ink/70">
-            Choisissez vos makroudh, laissez vos coordonnées — nous vous
-            rappelons pour confirmer. Paiement à la boutique, au retrait.
+            Choisissez vos makroudh et leur poids, laissez vos coordonnées de
+            livraison — nous vous rappelons pour confirmer.
           </p>
         </div>
 
-        {/* Repères de confiance — utiles pour un visiteur qui arrive
-            directement ici (publicité), sans être passé par l'accueil. */}
-        <div className="mt-8 grid grid-cols-3 gap-4 rounded-2xl border border-sand/70 bg-white py-6 text-center shadow-sm">
+        {/* Repères de confiance + livraison — utiles pour un visiteur qui
+            arrive directement ici (publicité), sans être passé par l'accueil. */}
+        <div className="mt-8 grid grid-cols-2 gap-4 rounded-2xl border border-sand/70 bg-white py-6 text-center shadow-sm sm:grid-cols-4">
           {[
             ['100%', 'Fait main'],
-            ['5,0', 'Note Google'],
-            ['7j/7', 'Ouvert'],
+            [formatTND(DELIVERY_FEE_MILLIMES), 'TND livraison'],
+            [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
+            ['COD / D17', 'Paiement'],
           ].map(([n, label]) => (
             <div key={label}>
-              <div className="font-display text-2xl text-[#b8912e] md:text-3xl">{n}</div>
+              <div className="font-display text-xl text-[#b8912e] md:text-2xl">{n}</div>
               <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink/50 md:text-[11px]">
                 {label}
               </div>
@@ -201,63 +388,9 @@ export default function OrderPage() {
             {isLoading && (
               <p className="text-sm text-ink/50">Chargement du catalogue…</p>
             )}
-            {(products ?? []).map((p) => {
-              const qty = cart[p.id] ?? 0
-              return (
-                <div
-                  key={p.id}
-                  className={`flex items-center gap-4 rounded-xl border p-5 shadow-sm transition-colors ${
-                    qty > 0 ? 'border-[#b8912e] bg-[#f5ece5]' : 'border-sand bg-white'
-                  }`}
-                >
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
-                    {p.imageUrl ? (
-                      <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-[9px] text-ink/30">Chez Laziz</span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="font-medium">{p.name}</span>
-                      {p.badge && (
-                        <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
-                          {p.badge}
-                        </span>
-                      )}
-                    </div>
-                    {p.description && (
-                      <p className="mt-1 line-clamp-2 text-sm font-light text-ink/55">
-                        {p.description}
-                      </p>
-                    )}
-                    <span className="mt-1 block font-display text-accent">
-                      {formatTND(p.priceMillimes)} <span className="text-xs">TND</span>
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <button
-                      type="button"
-                      aria-label="Moins"
-                      onClick={() => setQty(p.id, qty - 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-30"
-                      disabled={qty === 0}
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center font-display text-lg">{qty}</span>
-                    <button
-                      type="button"
-                      aria-label="Plus"
-                      onClick={() => setQty(p.id, qty + 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-sand text-lg transition-colors hover:border-[#b8912e] hover:text-accent"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+            {(products ?? []).map((p) => (
+              <ProductRow key={p.id} product={p as DbProduct} />
+            ))}
           </div>
 
           {/* Summary + form */}
@@ -272,19 +405,34 @@ export default function OrderPage() {
                   </li>
                 )}
                 {items.map((p) => (
-                  <li key={p.id} className="flex items-baseline text-[15px] font-light">
+                  <li key={`${p.id}:${p.weightKg}`} className="flex items-baseline text-[15px] font-light">
                     <span>
-                      {p.qty} × {p.name}
+                      {p.qty} × {p.name} <span className="text-[#faf6f3]/50">({formatWeight(p.weightKg)})</span>
                     </span>
                     <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
                     <span className="font-display text-[#b8912e]">
-                      {formatTND(p.qty * p.priceMillimes)}
+                      {formatTND(p.qty * p.unitPriceMillimes)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-6 flex items-baseline border-t border-[#faf6f3]/15 pt-5">
+              {items.length > 0 && (
+                <div className="mt-4 space-y-1.5 border-t border-[#faf6f3]/15 pt-4 text-sm font-light text-[#faf6f3]/70">
+                  <div className="flex items-baseline">
+                    <span>Sous-total</span>
+                    <span className="mx-3 flex-1" />
+                    <span>{formatTND(subtotal)} TND</span>
+                  </div>
+                  <div className="flex items-baseline">
+                    <span>Livraison ({DELIVERY_METHOD_LABEL.toLowerCase()})</span>
+                    <span className="mx-3 flex-1" />
+                    <span>{formatTND(DELIVERY_FEE_MILLIMES)} TND</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 flex items-baseline border-t border-[#faf6f3]/15 pt-5">
                 <span className="text-sm uppercase tracking-[0.2em]">Total</span>
                 <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
                 <span className="font-display text-2xl text-[#b8912e]">
@@ -292,6 +440,7 @@ export default function OrderPage() {
                 </span>
               </div>
 
+              {/* Coordonnées + livraison */}
               <div className="mt-8 space-y-4">
                 <input
                   required
@@ -300,33 +449,136 @@ export default function OrderPage() {
                   placeholder="Votre nom"
                   className={inputCls}
                 />
-                <input
+                <div>
+                  <input
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Téléphone (ex : 23 691 039)"
+                    type="tel"
+                    className={inputCls}
+                  />
+                  {phone.length > 0 && !phoneValid && (
+                    <p className="mt-1.5 text-xs text-red-300">Numéro tunisien invalide (8 chiffres).</p>
+                  )}
+                </div>
+                <select
                   required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Téléphone (ex : 23 691 039)"
-                  type="tel"
-                  className={inputCls}
+                  value={governorate}
+                  onChange={(e) => setGovernorate(e.target.value)}
+                  className={`${inputCls} ${governorate ? '' : 'text-ink/35'}`}
+                >
+                  <option value="" disabled>
+                    Gouvernorat
+                  </option>
+                  {TUNISIA_GOVERNORATES.map((g) => (
+                    <option key={g} value={g} className="text-ink">
+                      {g}
+                    </option>
+                  ))}
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    required
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Ville / délégation"
+                    className={inputCls}
+                  />
+                  <input
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(digitsOnly(e.target.value).slice(0, 4))}
+                    placeholder="Code postal"
+                    inputMode="numeric"
+                    className={inputCls}
+                  />
+                </div>
+                <textarea
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Adresse complète (rue, numéro, repère...)"
+                  rows={2}
+                  className={`${inputCls} resize-none`}
                 />
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Précision ? (date de retrait, occasion…)"
-                  rows={3}
+                  placeholder="Précision ? (date souhaitée, occasion…)"
+                  rows={2}
                   className={`${inputCls} resize-none`}
                 />
               </div>
 
+              {/* Paiement */}
+              <div className="mt-6 border-t border-[#faf6f3]/15 pt-6">
+                <p className={labelCls.replace('text-ink/45', 'text-[#faf6f3]/50')}>Paiement</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cod')}
+                    className={`rounded-lg border px-4 py-3 text-sm font-semibold transition-colors ${
+                      paymentMethod === 'cod'
+                        ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#b8912e]'
+                        : 'border-[#faf6f3]/20 text-[#faf6f3]/70 hover:border-[#faf6f3]/40'
+                    }`}
+                  >
+                    À la livraison
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('d17')}
+                    className={`rounded-lg border px-4 py-3 text-sm font-semibold transition-colors ${
+                      paymentMethod === 'd17'
+                        ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#b8912e]'
+                        : 'border-[#faf6f3]/20 text-[#faf6f3]/70 hover:border-[#faf6f3]/40'
+                    }`}
+                  >
+                    D17
+                  </button>
+                </div>
+
+                {paymentMethod === 'd17' && (
+                  <div className="mt-4 rounded-lg border border-[#b8912e]/40 bg-[#b8912e]/10 p-4">
+                    <p className="text-sm font-light text-[#faf6f3]/85">
+                      Envoyez <strong className="font-semibold text-[#b8912e]">{formatTND(total)} TND</strong> au
+                      numéro D17&nbsp;:
+                    </p>
+                    <p className="mt-1 font-display text-2xl tracking-wide text-[#b8912e]">{D17_NUMBER_DISPLAY}</p>
+                    <p className="mt-2 text-xs font-light text-[#faf6f3]/60">
+                      Puis joignez ci-dessous la capture d'écran du paiement (obligatoire).
+                    </p>
+                    <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#faf6f3]/30 bg-[#faf6f3]/5 px-4 py-4 text-sm text-[#faf6f3]/70 transition-colors hover:border-[#b8912e]">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => handleProofChange(e.target.files?.[0] ?? null)}
+                      />
+                      {proofUploading
+                        ? 'Envoi de la capture…'
+                        : proofKey
+                          ? '✓ Capture envoyée — cliquez pour la remplacer'
+                          : 'Joindre la capture d’écran du paiement'}
+                    </label>
+                    {proofPreview && (
+                      <img src={proofPreview} alt="Capture du paiement D17" className="mt-3 max-h-40 rounded-lg border border-[#faf6f3]/20 object-contain" />
+                    )}
+                    {proofError && <p className="mt-2 text-xs text-red-300">{proofError}</p>}
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
-                disabled={items.length === 0 || createOrder.isPending}
+                disabled={!canSubmit}
                 className="gold-cta mt-6 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {createOrder.isPending ? 'Envoi…' : 'Envoyer la commande'}
               </button>
               {createOrder.isError && (
                 <p className="mt-3 text-center text-sm text-red-300">
-                  Une erreur est survenue — réessayez ou appelez le {PHONE_DISPLAY}.
+                  {createOrder.error.message || `Une erreur est survenue — réessayez ou appelez le ${PHONE_DISPLAY}.`}
                 </p>
               )}
               <p className="mt-5 text-center text-xs font-light tracking-wide text-[#faf6f3]/50">

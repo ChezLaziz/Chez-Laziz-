@@ -8,3 +8,5 @@ export const WA_LINK =
 export function formatTND(millimes: number): string {
   return (millimes / 1000).toFixed(3)
 }
+
+export * from '@contracts/shop'

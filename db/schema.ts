@@ -17,6 +17,20 @@ export const orderStatusEnum = pgEnum("order_status", [
   "annulee",
 ]);
 
+// Deux moyens de paiement seulement : espèces à la livraison, ou virement D17
+// (preuve manuelle par capture d'écran, vérifiée par l'admin).
+export const paymentMethodEnum = pgEnum("payment_method", ["cod", "d17"]);
+
+// COD : "pending" jusqu'à la livraison (pas de vérification de paiement).
+// D17 : "pending_verification" à la création (capture reçue, pas encore
+// vérifiée) puis "approved"/"rejected" décidé par l'admin.
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "pending_verification",
+  "approved",
+  "rejected",
+]);
+
 // Catalogue des produits (géré depuis l'admin, affiché sur le site)
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -37,12 +51,24 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   customerName: varchar("customer_name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 50 }).notNull(),
-  // JSON : [{ productId, name, qty, priceMillimes }]
+  // Livraison — obligatoire (toute la Tunisie, porte-à-porte, voir src/lib/shop.ts)
+  governorate: varchar("governorate", { length: 100 }).notNull(),
+  city: varchar("city", { length: 150 }).notNull(),
+  address: text("address").notNull(),
+  postalCode: varchar("postal_code", { length: 10 }),
+  // JSON : [{ productId, name, weightKg, qty, unitPriceMillimes }]
   items: text("items").notNull(),
+  subtotalMillimes: integer("subtotal_millimes").notNull(),
+  deliveryFeeMillimes: integer("delivery_fee_millimes").notNull().default(8000),
   totalMillimes: integer("total_millimes").notNull(),
+  paymentMethod: paymentMethodEnum("payment_method").notNull().default("cod"),
+  paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending"),
+  // Clé de stockage R2 de la capture d'écran D17 (jamais une URL publique — voir api/lib/r2.ts)
+  paymentProofKey: varchar("payment_proof_key", { length: 255 }),
   note: text("note"),
   status: orderStatusEnum("status").notNull().default("nouvelle"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Messages du formulaire de contact

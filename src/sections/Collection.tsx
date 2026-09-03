@@ -81,9 +81,10 @@ function ProductCard({
           </p>
         )}
 
-        {/* Prix — sous le titre/description */}
+        {/* Prix — sous le titre/description. Prix pour 1 kg ; le poids
+            (500 g à 2,5 kg) se choisit à l'étape de la commande. */}
         <p className="mt-3 font-display text-xl text-accent">
-          {formatTND(product.priceMillimes)} <span className="text-xs">TND</span>
+          {formatTND(product.priceMillimes)} <span className="text-xs">TND / kg</span>
         </p>
 
         {/* Action */}
@@ -132,7 +133,7 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
   const Heading = headingLevel
   const { data: products, isLoading } = trpc.products.list.useQuery()
   const { data: pages } = trpc.content.pages.useQuery()
-  const { cart, add, setQty } = useCart()
+  const { qtyFor, add, setQty } = useCart()
   const groups = products ? groupByCategory(products as DbProduct[]) : []
 
   // Schema.org ItemList/Product — aide Google à comprendre le catalogue
@@ -241,9 +242,9 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
                   key={p.id}
                   product={p}
                   image={p.imageUrl || cat.image}
-                  qty={cart[p.id] ?? 0}
-                  onAdd={() => add(p.id, 1)}
-                  onSetQty={(q) => setQty(p.id, q)}
+                  qty={qtyFor(p.id)}
+                  onAdd={() => add(p.id)}
+                  onSetQty={(q) => setQty(p.id, 1, q)}
                 />
               ))}
             </div>
