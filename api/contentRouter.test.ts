@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const setFooterContent = vi.fn(async () => undefined);
+const setPagesContent = vi.fn(async () => undefined);
 const assertAdmin = vi.fn(async () => undefined);
 
 vi.mock("./queries/content", () => ({
   getFooterContent: vi.fn(),
   setFooterContent,
   getPagesContent: vi.fn(),
-  setPagesContent: vi.fn(),
+  setPagesContent,
 }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
 
@@ -58,5 +59,58 @@ describe("content.updateFooter — photo du bandeau", () => {
     assertAdmin.mockRejectedValueOnce(new Error("UNAUTHORIZED"));
     await expect(caller.updateFooter({ ...base, bannerImage: "" })).rejects.toThrow();
     expect(setFooterContent).not.toHaveBeenCalled();
+  });
+});
+
+const pagesBase = {
+  token: "admin-token",
+  homeEyebrow: "",
+  homeTitle: "",
+  homeSubtitleAr: "",
+  homeSubtitleFr: "",
+  maisonEyebrow: "",
+  maisonTitle: "",
+  maisonP1: "",
+  maisonP2: "",
+  collectionEyebrow: "",
+  collectionTitle: "",
+  collectionSubtitle: "",
+  galerieEyebrow: "",
+  galerieTitle: "",
+  contactEyebrow: "",
+  contactTitle: "",
+};
+
+describe("content.updatePages — photo de la page Contact", () => {
+  it("accepte une image passée par notre upload (dossier site/)", async () => {
+    await caller.updatePages({ ...pagesBase, contactImage: "/api/uploads/site/abcdef123456.jpg" });
+    expect(setPagesContent).toHaveBeenCalledWith(
+      expect.objectContaining({ contactImage: "/api/uploads/site/abcdef123456.jpg" }),
+    );
+  });
+
+  it("accepte une valeur vide (retour à la photo par défaut du thème)", async () => {
+    await caller.updatePages({ ...pagesBase, contactImage: "" });
+    expect(setPagesContent).toHaveBeenCalledWith(expect.objectContaining({ contactImage: "" }));
+  });
+
+  it("refuse une URL externe arbitraire", async () => {
+    await expect(
+      caller.updatePages({ ...pagesBase, contactImage: "https://evil.example/x.jpg" }),
+    ).rejects.toThrow();
+    expect(setPagesContent).not.toHaveBeenCalled();
+  });
+
+  it("refuse une clé d'un autre dossier (ex. preuve de paiement D17)", async () => {
+    await expect(
+      caller.updatePages({ ...pagesBase, contactImage: "/api/uploads/payment-proof/secret.jpg" }),
+    ).rejects.toThrow();
+    expect(setPagesContent).not.toHaveBeenCalled();
+  });
+
+  it("exige un token admin valide", async () => {
+    assertAdmin.mockRejectedValueOnce(new Error("UNAUTHORIZED"));
+    await expect(caller.updatePages({ ...pagesBase, contactImage: "" })).rejects.toThrow();
+    expect(setPagesContent).not.toHaveBeenCalled();
   });
 });

@@ -64,6 +64,9 @@ const PAGE_KEYS = {
   galerieTitle: "page_galerie_title",
   contactEyebrow: "page_contact_eyebrow",
   contactTitle: "page_contact_title",
+  // Photo de la page Contact (clé d'image uploadée depuis l'admin, dossier
+  // site/). Vide = photo par défaut du thème (visit-lifestyle.webp).
+  contactImage: "page_contact_image",
 } as const;
 
 export const PAGES_DEFAULTS = {
@@ -86,6 +89,7 @@ export const PAGES_DEFAULTS = {
   galerieTitle: "La semoule, les dattes, le miel",
   contactEyebrow: "Nous trouver",
   contactTitle: "La boutique vous attend à Kairouan",
+  contactImage: "",
 };
 
 export type PagesContent = typeof PAGES_DEFAULTS;
