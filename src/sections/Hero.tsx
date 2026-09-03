@@ -95,7 +95,7 @@ export default function Hero() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(20,17,14,0.55) 0%, rgba(20,17,14,0.15) 60%, transparent 100%)',
+            'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(20,17,14,0.68) 0%, rgba(20,17,14,0.22) 60%, transparent 100%)',
         }}
       />
 
@@ -104,6 +104,7 @@ export default function Hero() {
         <p
           className="mb-6 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[0.35em] text-[#faf6f3]/85 md:text-xs"
           style={{
+            textShadow: '0 1px 2px rgba(0,0,0,0.75), 0 2px 10px rgba(0,0,0,0.45)',
             opacity: on ? 1 : 0,
             transform: on ? 'none' : 'translateY(14px)',
             transition: 'opacity 0.9s ease 0.15s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.15s',
@@ -120,7 +121,8 @@ export default function Hero() {
           style={{
             fontSize: 'clamp(3.4rem, 13vw, 11rem)',
             letterSpacing: '0.02em',
-            textShadow: '0 2px 24px rgba(0,0,0,0.35)',
+            textShadow:
+              '0 1px 2px rgba(0,0,0,0.85), 0 4px 14px rgba(0,0,0,0.6), 0 2px 40px rgba(0,0,0,0.4)',
           }}
         >
           {titleWords}
@@ -131,6 +133,7 @@ export default function Hero() {
           className="mt-4 text-2xl text-[#dec9b8] md:text-3xl"
           style={{
             fontFamily: "'Marcellus', 'Traditional Arabic', serif",
+            textShadow: '0 1px 2px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.5)',
             opacity: on ? 1 : 0,
             transform: on ? 'none' : 'translateY(14px)',
             transition: 'opacity 0.9s ease 0.75s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.75s',
@@ -142,6 +145,7 @@ export default function Hero() {
         <p
           className="mt-5 max-w-xl text-base font-light leading-relaxed text-[#faf6f3]/85 md:text-lg"
           style={{
+            textShadow: '0 1px 2px rgba(0,0,0,0.75), 0 3px 12px rgba(0,0,0,0.45)',
             opacity: on ? 1 : 0,
             transform: on ? 'none' : 'translateY(14px)',
             transition: 'opacity 0.9s ease 0.95s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.95s',
