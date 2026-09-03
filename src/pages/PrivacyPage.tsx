@@ -1,8 +1,14 @@
 import { Link } from 'react-router'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
+import { useSEO } from '../hooks/useSEO'
 
 export default function PrivacyPage() {
+  useSEO({
+    title: 'Politique de confidentialité — Chez Laziz',
+    description: 'Politique de confidentialité de Chez Laziz — Kairouan, Tunisie.',
+    path: '/politique-de-confidentialite',
+  })
   return (
     <div className="min-h-screen bg-[#faf6f3]">
       <Header />

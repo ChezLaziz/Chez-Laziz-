@@ -1,8 +1,14 @@
 import { Link } from 'react-router'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
+import { useSEO } from '../hooks/useSEO'
 
 export default function TermsPage() {
+  useSEO({
+    title: 'Conditions générales — Chez Laziz',
+    description: 'Conditions générales de vente de Chez Laziz — Kairouan, Tunisie.',
+    path: '/conditions-generales',
+  })
   return (
     <div className="min-h-screen bg-[#faf6f3]">
       <Header />

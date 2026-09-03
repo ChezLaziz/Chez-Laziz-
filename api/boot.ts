@@ -8,6 +8,7 @@ import { env } from "./lib/env";
 import { rateLimit } from "./lib/rateLimit";
 import { assertAdmin } from "./queries/admin";
 import { getUploadedImage, uploadProductImage } from "./lib/r2";
+import { getFullExport } from "./queries/backup";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -72,6 +73,25 @@ app.get("/api/uploads/*", async (c) => {
     headers: {
       "Content-Type": result.contentType,
       "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
+});
+
+// Export complet des données (bouton "Exporter" dans Paramètres) — protégé
+// par le même token admin que le reste, servi en téléchargement direct.
+app.get("/api/admin/export", async (c) => {
+  const token = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  try {
+    await assertAdmin(token);
+  } catch {
+    return c.json({ error: "Non autorisé" }, 401);
+  }
+  const data = await getFullExport();
+  const date = new Date().toISOString().slice(0, 10);
+  return new Response(JSON.stringify(data, null, 2), {
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Disposition": `attachment; filename="chez-laziz-export-${date}.json"`,
     },
   });
 });
