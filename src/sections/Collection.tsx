@@ -19,9 +19,9 @@ const CATEGORY_NOTES: Record<string, string> = {
 // Une photo réelle représentative par catégorie (pas de visuel par produit
 // pour l'instant — on ne met pas d'image générique là où on n'a pas la vraie).
 const CATEGORY_IMAGE: Record<string, string> = {
-  'Les classiques': '/images/makroudh.jpg',
-  'Les signatures': '/images/display.jpg',
-  'Les nouveautés': '/images/hands.jpg',
+  'Les classiques': '/images/makroudh.webp',
+  'Les signatures': '/images/display.webp',
+  'Les nouveautés': '/images/hands.webp',
 }
 
 function groupByCategory(products: DbProduct[]) {
@@ -34,7 +34,7 @@ function groupByCategory(products: DbProduct[]) {
   return categories.map((title) => ({
     title,
     note: CATEGORY_NOTES[title],
-    image: CATEGORY_IMAGE[title] ?? '/images/makroudh.jpg',
+    image: CATEGORY_IMAGE[title] ?? '/images/makroudh.webp',
     products: products.filter((p) => p.category === title),
   }))
 }

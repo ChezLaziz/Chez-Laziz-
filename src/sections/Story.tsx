@@ -23,9 +23,10 @@ export default function Story() {
           <div className="lg:col-span-7">
             <div className="mask-reveal aspect-[2/3] max-h-[760px] w-full lg:w-[92%]">
               <img
-                src="/images/hands.jpg"
+                src="/images/hands.webp"
                 alt="Façonnage à la main du makroudh : semoule, pâte de dattes et moule en bois sculpté"
                 className="h-full w-full object-cover"
+                loading="lazy"
               />
             </div>
           </div>

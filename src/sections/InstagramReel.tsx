@@ -47,7 +47,7 @@ export default function InstagramReel() {
                 <video
                   ref={videoRef}
                   className="h-full w-full object-cover"
-                  poster="/images/reel-poster.jpg"
+                  poster="/images/reel-poster.webp"
                   muted={muted}
                   loop
                   playsInline
@@ -67,7 +67,7 @@ export default function InstagramReel() {
                 </video>
               ) : (
                 <img
-                  src="/images/reel-poster.jpg"
+                  src="/images/reel-poster.webp"
                   alt="Aperçu de notre dernière vidéo Instagram — Chez Laziz"
                   className="h-full w-full object-cover"
                   loading="lazy"

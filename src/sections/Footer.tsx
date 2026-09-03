@@ -2,12 +2,12 @@ import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 
 const STRIP = [
-  '/images/hero.jpg',
-  '/images/makroudh.jpg',
-  '/images/hands.jpg',
-  '/images/display.jpg',
-  '/images/tea.jpg',
-  '/images/box.jpg',
+  '/images/hero.webp',
+  '/images/makroudh.webp',
+  '/images/hands.webp',
+  '/images/display.webp',
+  '/images/tea.webp',
+  '/images/box.webp',
 ]
 
 const DEFAULT_TAGLINE =
@@ -61,7 +61,7 @@ export default function Footer() {
 
       <div className="border-t border-[#faf6f3]/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-8 px-5 py-14 text-center md:px-10">
-          <img src="/images/logo.png" alt="Chez Laziz — عند لعزيز" className="h-24 w-24 md:h-28 md:w-28" />
+          <img src="/images/logo.webp" alt="Chez Laziz — عند لعزيز" className="h-24 w-24 md:h-28 md:w-28" loading="lazy" />
           <p className="max-w-md text-sm font-light leading-relaxed text-[#faf6f3]/60">
             {data?.tagline || DEFAULT_TAGLINE}
           </p>

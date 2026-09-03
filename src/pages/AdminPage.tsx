@@ -137,7 +137,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
-          backgroundImage: 'url(/images/hero.jpg)',
+          backgroundImage: 'url(/images/hero.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.1,
@@ -160,7 +160,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         }}
         className="relative w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl border border-white/10 bg-[#faf6f3] p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.65)] duration-700 md:p-10"
       >
-        <img src="/images/logo.png" alt="Chez Laziz" className="mx-auto h-14 w-14" />
+        <img src="/images/logo.webp" alt="Chez Laziz" className="mx-auto h-14 w-14" />
         <p className="mt-4 text-center font-display text-2xl tracking-[0.14em] text-ink">
           CHEZ&nbsp;LAZIZ
         </p>
@@ -518,31 +518,33 @@ function ProductsTab({ token }: { token: string }) {
       {isLoading && <p className="text-sm text-ink/50">Chargement…</p>}
       <div className="space-y-3">
         {(products ?? []).map((p) => (
-          <div key={p.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-4 md:p-5">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
-              {p.imageUrl ? (
-                <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-[9px] text-ink/30">Sans photo</span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{p.name}</span>
-                {p.badge && (
-                  <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
-                    {p.badge}
-                  </span>
-                )}
-                {!p.available && (
-                  <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-ink/50">
-                    Masqué
-                  </span>
+          <div key={p.id} className="flex flex-col gap-3 rounded-2xl border border-sand/70 bg-white shadow-sm p-4 sm:flex-row sm:items-center sm:gap-4 md:p-5">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
+                {p.imageUrl ? (
+                  <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-[9px] text-ink/30">Sans photo</span>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-ink/45">
-                {p.category} · <span className="font-display text-accent">{formatTND(p.priceMillimes)} TND</span>
-              </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{p.name}</span>
+                  {p.badge && (
+                    <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
+                      {p.badge}
+                    </span>
+                  )}
+                  {!p.available && (
+                    <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-ink/50">
+                      Masqué
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-ink/45">
+                  {p.category} · <span className="font-display text-accent">{formatTND(p.priceMillimes)} TND</span>
+                </p>
+              </div>
             </div>
             <div className="flex shrink-0 gap-2">
               <button onClick={() => startEdit(p)} className="rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
@@ -1440,7 +1442,7 @@ function OverviewTab({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
           style={{
-            backgroundImage: 'url(/images/makroudh.jpg)',
+            backgroundImage: 'url(/images/makroudh.webp)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             opacity: 0.16,
@@ -1773,18 +1775,18 @@ export default function AdminPage() {
       <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
 
       <header className="sticky top-0 z-30 border-b border-sand/60 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-[70px] max-w-6xl items-center justify-between px-5 md:px-8">
-          <div className="flex items-center gap-3">
-            <img src="/images/logo.png" alt="Chez Laziz" className="h-9 w-9" />
+        <div className="mx-auto flex min-h-[64px] max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-3 md:h-[70px] md:flex-nowrap md:py-0 md:px-8">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <img src="/images/logo.webp" alt="Chez Laziz" className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" />
             <div className="leading-tight">
-              <p className="font-display text-lg tracking-[0.1em] text-ink">CHEZ&nbsp;LAZIZ</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-accent">Espace admin</p>
+              <p className="font-display text-base tracking-[0.08em] text-ink sm:text-lg sm:tracking-[0.1em]">CHEZ&nbsp;LAZIZ</p>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-accent sm:text-[10px] sm:tracking-[0.3em]">Espace admin</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Link
               to="/"
-              className="rounded-full border border-ink/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent"
+              className="rounded-full border border-ink/20 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent sm:px-4 sm:text-xs"
             >
               Voir le site
             </Link>
@@ -1793,31 +1795,34 @@ export default function AdminPage() {
                 localStorage.removeItem(TOKEN_KEY)
                 setToken(null)
               }}
-              className="rounded-full border border-ink/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-red-300 hover:text-red-600"
+              className="rounded-full border border-ink/20 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-red-300 hover:text-red-600 sm:px-4 sm:text-xs"
             >
               Déconnexion
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-5 pb-3 md:px-8">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                setOrderFilter(null)
-                setTab(t.id)
-              }}
-              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                tab === t.id
-                  ? 'bg-ink text-[#faf6f3] shadow-sm'
-                  : 'text-ink/55 hover:bg-ink/5 hover:text-ink'
-              }`}
-            >
-              <span className={tab === t.id ? 'text-[#b8912e]' : 'text-ink/35'}>{TAB_ICONS[t.id]}</span>
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        <div className="relative">
+          <nav className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-5 pb-3 md:px-8">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setOrderFilter(null)
+                  setTab(t.id)
+                }}
+                className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  tab === t.id
+                    ? 'bg-ink text-[#faf6f3] shadow-sm'
+                    : 'text-ink/55 hover:bg-ink/5 hover:text-ink'
+                }`}
+              >
+                <span className={tab === t.id ? 'text-[#b8912e]' : 'text-ink/35'}>{TAB_ICONS[t.id]}</span>
+                {t.label}
+              </button>
+            ))}
+          </nav>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white/95 to-transparent md:hidden" />
+        </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-5 py-10 md:px-8">

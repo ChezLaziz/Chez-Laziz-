@@ -75,9 +75,11 @@ export default function Hero() {
       {/* Photograph with load-settle + scroll parallax */}
       <img
         ref={imgRef}
-        src="/images/hero.jpg"
+        src="/images/hero.webp"
         alt="Makroudh de Kairouan dorés au miel, dressés sur un plateau de cuivre"
         className="absolute inset-0 h-full w-full object-cover"
+        fetchPriority="high"
+        decoding="async"
         style={{
           transform: 'scale(1.12)',
           opacity: on ? 1 : 0,

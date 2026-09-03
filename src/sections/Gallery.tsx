@@ -2,10 +2,10 @@ import Ornament from '../components/Ornament'
 import { trpc } from '@/providers/trpc'
 
 const FALLBACK_PHOTOS = [
-  { id: 1, imageUrl: '/images/display.jpg', alt: 'Pyramides de makroudh dorés dans la vitrine de la boutique' },
-  { id: 2, imageUrl: '/images/makroudh.jpg', alt: 'Makroudh aux dattes saupoudré de sucre, servi avec du thé à la menthe' },
-  { id: 3, imageUrl: '/images/hands.jpg', alt: 'Façonnage à la main du makroudh dans l’atelier' },
-  { id: 4, imageUrl: '/images/tea.jpg', alt: 'Thé à la menthe versé de haut, le compagnon du makroudh' },
+  { id: 1, imageUrl: '/images/display.webp', alt: 'Pyramides de makroudh dorés dans la vitrine de la boutique' },
+  { id: 2, imageUrl: '/images/makroudh.webp', alt: 'Makroudh aux dattes saupoudré de sucre, servi avec du thé à la menthe' },
+  { id: 3, imageUrl: '/images/hands.webp', alt: 'Façonnage à la main du makroudh dans l’atelier' },
+  { id: 4, imageUrl: '/images/tea.webp', alt: 'Thé à la menthe versé de haut, le compagnon du makroudh' },
 ]
 
 const DEFAULT_EYEBROW = 'La Boutique'

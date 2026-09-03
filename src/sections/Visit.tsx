@@ -23,9 +23,10 @@ export default function Visit() {
           </div>
           <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">
             <img
-              src="/images/box.jpg"
+              src="/images/box.webp"
               alt="Coffret de makroudh Chez Laziz, prêt à offrir"
               className="h-full w-full object-cover"
+              loading="lazy"
             />
           </div>
         </div>

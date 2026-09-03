@@ -13,9 +13,10 @@ export default function Order() {
           <div className="lg:col-span-6">
             <div className="mask-reveal aspect-[3/2]">
               <img
-                src="/images/box.jpg"
+                src="/images/box.webp"
                 alt="Coffret de makroudh Chez Laziz prêt à offrir ou à emporter"
                 className="h-full w-full object-cover"
+                loading="lazy"
               />
             </div>
           </div>
