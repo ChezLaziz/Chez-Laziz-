@@ -7,10 +7,12 @@ import {
 } from "./queries/orders";
 import {
   assertAdmin,
-  changeAdminEmail,
-  changeAdminPassword,
-  getAdminEmail,
+  changeMyEmail,
+  changeMyPassword,
   loginAdmin,
+  listAdminUsers,
+  addAdminUser,
+  removeAdminUser,
 } from "./queries/admin";
 
 export const contactRouter = createRouter({
@@ -70,8 +72,8 @@ export const adminRouter = createRouter({
   me: publicQuery
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
-      await assertAdmin(input.token);
-      return { email: await getAdminEmail() };
+      const email = await assertAdmin(input.token);
+      return { email };
     }),
 
   changePassword: publicQuery
@@ -83,8 +85,8 @@ export const adminRouter = createRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      await assertAdmin(input.token);
-      await changeAdminPassword(input.currentPassword, input.newPassword);
+      const email = await assertAdmin(input.token);
+      await changeMyPassword(email, input.currentPassword, input.newPassword);
       return { ok: true };
     }),
 
@@ -97,8 +99,38 @@ export const adminRouter = createRouter({
       }),
     )
     .mutation(async ({ input }) => {
+      const email = await assertAdmin(input.token);
+      await changeMyEmail(email, input.currentPassword, input.newEmail);
+      return { ok: true };
+    }),
+
+  /** Liste des comptes admin (gestion des accès depuis Paramètres) */
+  listUsers: publicQuery
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
       await assertAdmin(input.token);
-      await changeAdminEmail(input.currentPassword, input.newEmail);
+      return listAdminUsers();
+    }),
+
+  addUser: publicQuery
+    .input(
+      z.object({
+        token: z.string(),
+        email: z.string().email().max(255),
+        password: z.string().min(6).max(100),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+      await addAdminUser(input.email, input.password);
+      return { ok: true };
+    }),
+
+  removeUser: publicQuery
+    .input(z.object({ token: z.string(), id: z.number().int() }))
+    .mutation(async ({ input }) => {
+      const email = await assertAdmin(input.token);
+      await removeAdminUser(email, input.id);
       return { ok: true };
     }),
 });

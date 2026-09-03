@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
@@ -652,11 +652,90 @@ function ChangePasswordCard({ token }: { token: string }) {
   )
 }
 
+function UsersCard({ token }: { token: string }) {
+  const utils = trpc.useUtils()
+  const { data: me } = trpc.admin.me.useQuery({ token })
+  const { data: users, isLoading } = trpc.admin.listUsers.useQuery({ token })
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showForm, setShowForm] = useState(false)
+
+  const addUser = trpc.admin.addUser.useMutation({
+    onSuccess: () => {
+      utils.admin.listUsers.invalidate()
+      setEmail('')
+      setPassword('')
+      setShowForm(false)
+    },
+  })
+  const removeUser = trpc.admin.removeUser.useMutation({
+    onSuccess: () => utils.admin.listUsers.invalidate(),
+  })
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    addUser.mutate({ token, email, password })
+  }
+
+  return (
+    <div className="w-full max-w-2xl rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="font-display text-xl">Comptes admin</p>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="rounded-full border border-ink/25 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent"
+        >
+          {showForm ? 'Annuler' : '+ Ajouter un accès'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={submit} className="mb-5 space-y-3 rounded-xl border border-[#b8912e]/40 bg-[#f5ece5] p-4">
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Adresse e-mail" className={inputCls} />
+          <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe (min. 6 caractères)" className={inputCls} />
+          {addUser.isError && <p className="text-sm text-red-600">{addUser.error.message || 'Erreur'}</p>}
+          <button type="submit" disabled={addUser.isPending} className="gold-cta rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50">
+            {addUser.isPending ? 'Ajout…' : 'Créer le compte'}
+          </button>
+        </form>
+      )}
+
+      {isLoading && <p className="text-sm text-ink/50">Chargement…</p>}
+      <ul className="divide-y divide-sand/60">
+        {(users ?? []).map((u) => (
+          <li key={u.id} className="flex items-center justify-between gap-3 py-3">
+            <div>
+              <p className="text-sm font-medium text-ink">
+                {u.email}
+                {me?.email === u.email && <span className="ml-2 text-[10px] uppercase tracking-wide text-accent">(vous)</span>}
+              </p>
+              <p className="text-xs text-ink/40">
+                Depuis le {new Date(u.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+            {me?.email !== u.email && (users?.length ?? 0) > 1 && (
+              <button
+                onClick={() => {
+                  if (window.confirm(`Retirer l'accès de ${u.email} ?`)) removeUser.mutate({ token, id: u.id })
+                }}
+                className="text-xs font-semibold uppercase tracking-wide text-red-500 underline underline-offset-4 hover:text-red-600"
+              >
+                Retirer
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function SettingsTab({ token }: { token: string }) {
   return (
     <div className="flex flex-wrap gap-6">
       <ChangeEmailCard token={token} />
       <ChangePasswordCard token={token} />
+      <UsersCard token={token} />
     </div>
   )
 }
@@ -946,6 +1025,147 @@ function MarketingTab({ token }: { token: string }) {
   )
 }
 
+/* ------------------------------ Contenu (galerie + pied de page) ------------------------------ */
+
+function GalleryManager({ token }: { token: string }) {
+  const utils = trpc.useUtils()
+  const { data: photos, isLoading } = trpc.gallery.list.useQuery()
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const addPhoto = trpc.gallery.add.useMutation({
+    onSuccess: () => utils.gallery.list.invalidate(),
+  })
+  const removePhoto = trpc.gallery.delete.useMutation({
+    onSuccess: () => utils.gallery.list.invalidate(),
+  })
+
+  const uploadAndAdd = async (file: File) => {
+    setUploading(true)
+    setError(null)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('folder', 'gallery')
+      const res = await fetch('/api/uploads', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Échec de l'envoi")
+      addPhoto.mutate({ token, imageUrl: data.url, alt: '' })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Échec de l'envoi")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="font-display text-xl">Photos de la galerie</p>
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
+          {uploading ? 'Envoi…' : '+ Ajouter une photo'}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) uploadAndAdd(file)
+              e.target.value = ''
+            }}
+            className="hidden"
+          />
+        </label>
+      </div>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {isLoading && <p className="text-sm text-ink/50">Chargement…</p>}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        {(photos ?? []).map((p) => (
+          <div key={p.id} className="group relative aspect-square overflow-hidden rounded-xl border border-sand">
+            <img src={p.imageUrl} alt={p.alt} className="h-full w-full object-cover" />
+            <button
+              onClick={() => {
+                if (window.confirm('Retirer cette photo de la galerie ?')) removePhoto.mutate({ token, id: p.id })
+              }}
+              className="absolute inset-x-0 bottom-0 bg-ink-deep/80 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100"
+            >
+              Supprimer
+            </button>
+          </div>
+        ))}
+        {!isLoading && !photos?.length && (
+          <p className="col-span-full text-sm text-ink/50">Aucune photo pour l'instant.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function FooterEditor({ token }: { token: string }) {
+  const { data } = trpc.content.footer.useQuery()
+  const update = trpc.content.updateFooter.useMutation()
+  const [form, setForm] = useState({ tagline: '', instagram: '', facebook: '', tiktok: '', copyright: '' })
+  const [done, setDone] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (data && !loaded) {
+      setForm(data)
+      setLoaded(true)
+    }
+  }, [data, loaded])
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    update.mutate({ token, ...form }, { onSuccess: () => setDone(true) })
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+      <p className="font-display text-xl">Pied de page</p>
+      <div>
+        <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de présentation</label>
+        <textarea value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} rows={2} className={`${inputCls} resize-none`} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Instagram</label>
+          <input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} className={inputCls} />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Facebook</label>
+          <input value={form.facebook} onChange={(e) => setForm({ ...form, facebook: e.target.value })} className={inputCls} />
+        </div>
+        <div>
+          <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">TikTok</label>
+          <input value={form.tiktok} onChange={(e) => setForm({ ...form, tiktok: e.target.value })} className={inputCls} />
+        </div>
+      </div>
+      <div>
+        <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de copyright</label>
+        <input value={form.copyright} onChange={(e) => setForm({ ...form, copyright: e.target.value })} className={inputCls} />
+      </div>
+      {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
+      <button type="submit" disabled={update.isPending} className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
+        {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
+      </button>
+    </form>
+  )
+}
+
+function ContenuTab({ token }: { token: string }) {
+  return (
+    <div>
+      <GalleryManager token={token} />
+      <FooterEditor token={token} />
+    </div>
+  )
+}
+
 /* ------------------------------ Vue d'ensemble ------------------------------ */
 
 function OverviewTab({
@@ -1231,6 +1451,7 @@ const TABS = [
   { id: 'messages', label: 'Messages' },
   { id: 'visiteurs', label: 'Visiteurs' },
   { id: 'marketing', label: 'Marketing' },
+  { id: 'contenu', label: 'Contenu' },
   { id: 'parametres', label: 'Paramètres' },
 ] as const
 
@@ -1279,6 +1500,13 @@ const TAB_ICONS: Record<(typeof TABS)[number]['id'], React.ReactNode> = {
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.5a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  contenu: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="4" width="18" height="14" rx="2" />
+      <path d="m3 15 5-5 4 4 3-3 6 6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="8.5" cy="8.5" r="1.4" />
     </svg>
   ),
 }
@@ -1389,6 +1617,7 @@ export default function AdminPage() {
           {tab === 'messages' && <MessagesTab token={token} />}
           {tab === 'visiteurs' && <StatsTab token={token} />}
           {tab === 'marketing' && <MarketingTab token={token} />}
+          {tab === 'contenu' && <ContenuTab token={token} />}
           {tab === 'parametres' && <SettingsTab token={token} />}
         </div>
       </main>

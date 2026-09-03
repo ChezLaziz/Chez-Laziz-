@@ -5,6 +5,8 @@ import { contactRouter, adminRouter } from "./contactRouter";
 import { statsRouter } from "./statsRouter";
 import { socialRouter } from "./socialRouter";
 import { dashboardRouter } from "./dashboardRouter";
+import { galleryRouter } from "./galleryRouter";
+import { contentRouter } from "./contentRouter";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -15,6 +17,8 @@ export const appRouter = createRouter({
   stats: statsRouter,
   social: socialRouter,
   dashboard: dashboardRouter,
+  gallery: galleryRouter,
+  content: contentRouter,
 });
 
 export type AppRouter = typeof appRouter;

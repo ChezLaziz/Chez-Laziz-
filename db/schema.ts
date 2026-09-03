@@ -68,6 +68,24 @@ export const pageViews = pgTable("page_views", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Comptes admin (email + mot de passe) — plusieurs personnes peuvent
+// gérer le site, chacune avec ses propres identifiants.
+export const adminUsers = pgTable("admin_users", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Photos de la page Galerie, gérées depuis l'admin (upload + suppression)
+export const galleryImages = pgTable("gallery_images", {
+  id: serial("id").primaryKey(),
+  imageUrl: varchar("image_url", { length: 500 }).notNull(),
+  alt: varchar("alt", { length: 255 }).notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Relevés réseaux sociaux : un enregistrement par mise à jour (historique)
 export const socialStats = pgTable("social_stats", {
   id: serial("id").primaryKey(),
