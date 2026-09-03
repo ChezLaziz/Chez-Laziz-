@@ -787,12 +787,60 @@ function UsersCard({ token }: { token: string }) {
   )
 }
 
+function ExportCard({ token }: { token: string }) {
+  const [downloading, setDownloading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const download = async () => {
+    setDownloading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/export', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error("Échec de l'export")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `chez-laziz-export-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Échec de l'export")
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <div className="w-full max-w-md rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+      <p className="font-display text-xl">Sauvegarde des données</p>
+      <p className="mt-2 text-sm font-light text-ink/60">
+        Télécharge un fichier avec tous vos produits, commandes, messages, photos de galerie
+        et statistiques réseaux sociaux — à garder en lieu sûr.
+      </p>
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      <button
+        onClick={download}
+        disabled={downloading}
+        className="mt-4 rounded-full border border-ink/25 px-6 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-50"
+      >
+        {downloading ? 'Préparation…' : 'Exporter les données'}
+      </button>
+    </div>
+  )
+}
+
 function SettingsTab({ token }: { token: string }) {
   return (
     <div className="flex flex-wrap gap-6">
       <ChangeEmailCard token={token} />
       <ChangePasswordCard token={token} />
       <UsersCard token={token} />
+      <ExportCard token={token} />
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
+import { useSEO } from '@/hooks/useSEO'
 import { formatTND, PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
 
 function TopBar({ title }: { title: string }) {
@@ -23,6 +24,12 @@ const inputCls =
   'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e]'
 
 export default function OrderPage() {
+  useSEO({
+    title: 'Commander — Chez Laziz | Commande en ligne de makroudh',
+    description:
+      'Composez votre commande de makroudh Chez Laziz en ligne — retrait en boutique à Kairouan, confirmation par téléphone ou WhatsApp.',
+    path: '/commande',
+  })
   const { data: products, isLoading } = trpc.products.list.useQuery()
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
