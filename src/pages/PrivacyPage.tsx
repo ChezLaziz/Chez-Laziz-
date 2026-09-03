@@ -61,7 +61,7 @@ export default function PrivacyPage() {
             <p>
               Ces informations servent uniquement à préparer, livrer et confirmer
               votre commande, à vérifier un paiement D17, ou à répondre à votre
-              message (par téléphone ou WhatsApp). Elles sont conservées dans notre
+              message (par téléphone ou Messenger). Elles sont conservées dans notre
               base de données pour le suivi des commandes et ne sont ni vendues, ni
               partagées avec des tiers à des fins commerciales. La capture d'écran
               D17 n'est accessible qu'à notre équipe, jamais publiée ni partagée.

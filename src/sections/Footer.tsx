@@ -7,7 +7,7 @@ const MAPS_URL =
   'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
 const PHONE_DISPLAY = '+216 23 691 039'
 const PHONE_TEL = 'tel:+21623691039'
-const WHATSAPP_URL = 'https://wa.me/21623691039'
+const MESSENGER_URL = 'https://m.me/61573444418563'
 const EMAIL = 'contact@chezlaziz.com'
 
 const DEFAULT_TAGLINE =
@@ -61,11 +61,11 @@ const ICONS: Record<string, React.ReactNode> = {
       stroke="none"
     />
   ),
-  WhatsApp: (
+  Messenger: (
     <>
-      <path d="M12 2.6a9.4 9.4 0 0 0-8.1 14.1L2.6 21.4l4.8-1.3A9.4 9.4 0 1 0 12 2.6Z" />
+      <path d="M12 2.6c-5.4 0-9.4 4-9.4 9.2 0 3 1.4 5.6 3.6 7.3v3l3.2-1.8c.8.2 1.7.3 2.6.3 5.4 0 9.4-4 9.4-9.2s-4-9.2-9.4-9.2Z" />
       <path
-        d="M8.9 7.7c.2-.4.5-.5.8-.5h.5c.2 0 .4.1.5.4l.8 1.8c.1.2 0 .4-.1.6l-.5.6c-.1.2-.1.3 0 .5a6.4 6.4 0 0 0 3.1 3c.2.1.4.1.5-.1l.6-.7c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.3.4.5 0 .9-.5 1.6-1.3 1.9-.7.3-1.5.3-2.2 0a9.7 9.7 0 0 1-5.3-5.2c-.3-.8-.3-1.6 0-2.3.1-.5.3-.9.8-1.3Z"
+        d="M7.2 13l3.2-3.4 2.2 2.2 3.4-3.5-3.2 5-2.2-2.2-3.4 3.8Z"
         fill="currentColor"
         stroke="none"
       />
@@ -233,7 +233,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
       icon: 'TikTok',
       href: data?.tiktok || 'https://www.tiktok.com/search?q=chez%20laziz%20kairouan',
     },
-    { name: 'WhatsApp', icon: 'WhatsApp', href: WHATSAPP_URL },
+    { name: 'Messenger', icon: 'Messenger', href: MESSENGER_URL },
     { name: 'Google Maps', icon: 'Maps', href: MAPS_URL },
   ]
 
@@ -325,8 +325,8 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                       {EMAIL}
                     </a>
                   </p>
-                  <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="arrow-link mt-5">
-                    Écrire sur WhatsApp
+                  <a href={MESSENGER_URL} target="_blank" rel="noreferrer" className="arrow-link mt-5">
+                    Écrire sur Messenger
                     <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
                       <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
@@ -408,13 +408,13 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               </li>
               <li>
                 <a
-                  href={WHATSAPP_URL}
+                  href={MESSENGER_URL}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
                 >
-                  <Icon name="WhatsApp" size={16} />
-                  WhatsApp
+                  <Icon name="Messenger" size={16} />
+                  Messenger
                 </a>
               </li>
               <li>
