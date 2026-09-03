@@ -8,6 +8,13 @@ import {
 } from "./queries/content";
 import { assertAdmin } from "./queries/admin";
 
+// Seule une image passée par notre propre upload (dossier site/) est
+// acceptée pour une photo de contenu — jamais une URL externe arbitraire.
+const siteImageInput = z
+  .string()
+  .max(300)
+  .regex(/^$|^\/api\/uploads\/site\/[a-zA-Z0-9_-]+\.jpg$/, "Image invalide");
+
 const pagesInput = z.object({
   homeEyebrow: z.string().max(200),
   homeTitle: z.string().max(100),
@@ -24,14 +31,8 @@ const pagesInput = z.object({
   galerieTitle: z.string().max(200),
   contactEyebrow: z.string().max(200),
   contactTitle: z.string().max(200),
+  contactImage: siteImageInput.default(""),
 });
-
-// Seule une image passée par notre propre upload (dossier site/) est
-// acceptée comme bandeau — jamais une URL externe arbitraire.
-const bannerImageInput = z
-  .string()
-  .max(300)
-  .regex(/^$|^\/api\/uploads\/site\/[a-zA-Z0-9_-]+\.jpg$/, "Image de bandeau invalide");
 
 export const contentRouter = createRouter({
   /** Contenu du pied de page (public) */
@@ -46,7 +47,7 @@ export const contentRouter = createRouter({
         facebook: z.string().max(300),
         tiktok: z.string().max(300),
         copyright: z.string().max(300),
-        bannerImage: bannerImageInput.default(""),
+        bannerImage: siteImageInput.default(""),
       }),
     )
     .mutation(async ({ input }) => {
@@ -85,6 +86,7 @@ export const contentRouter = createRouter({
         galerieTitle: input.galerieTitle,
         contactEyebrow: input.contactEyebrow,
         contactTitle: input.contactTitle,
+        contactImage: input.contactImage,
       });
       return { ok: true };
     }),

@@ -6,9 +6,12 @@ const MAPS_URL =
 const DEFAULT_EYEBROW = 'Nous trouver'
 const DEFAULT_TITLE = 'La boutique vous attend à Kairouan'
 
+const DEFAULT_IMAGE = '/images/visit-lifestyle.webp'
+
 export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | 'h2' }) {
   const Heading = headingLevel
   const { data } = trpc.content.pages.useQuery()
+  const image = data?.contactImage || DEFAULT_IMAGE
 
   return (
     <section id="visite" className="bg-ink-deep py-24 text-[#faf6f3] md:py-36">
@@ -24,8 +27,8 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
           </div>
           <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">
             <img
-              src="/images/visit-lifestyle.webp"
-              alt="Makroudh Chez Laziz dégusté en terrasse avec un thé, à Kairouan"
+              src={image}
+              alt="Chez Laziz — l'atelier et la boutique à Kairouan"
               className="h-full w-full object-cover"
               loading="lazy"
             />

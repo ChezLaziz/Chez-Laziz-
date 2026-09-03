@@ -1406,6 +1406,93 @@ function GalleryManager({ token }: { token: string }) {
   )
 }
 
+/** Champ photo réutilisable pour le dossier d'upload site/ (bandeau du pied
+ * de page, photo de la page Contact…) : aperçu, upload, retrait. Le fichier
+ * réel est envoyé sur R2 via /api/uploads ; seul son URL est stocké dans le
+ * formulaire parent. */
+function SiteImageField({
+  token,
+  label,
+  hint,
+  value,
+  dirty,
+  onChange,
+}: {
+  token: string
+  label: string
+  hint: string
+  value: string
+  /** Affiche un rappel « pensez à enregistrer » tant que la photo diffère de la valeur publiée. */
+  dirty: boolean
+  onChange: (url: string) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const upload = async (file: File) => {
+    setUploading(true)
+    setError(null)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('folder', 'site')
+      const res = await fetch('/api/uploads', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Échec de l'envoi")
+      onChange(data.url)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Échec de l'envoi")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">{label}</label>
+      <p className="mb-3 text-xs text-ink/55">{hint}</p>
+      <div className="flex flex-wrap items-center gap-4">
+        {value ? (
+          <img src={value} alt="" className="h-24 w-44 rounded-lg border border-sand object-cover" />
+        ) : (
+          <div className="flex h-24 w-44 items-center justify-center rounded-lg border border-dashed border-sand text-[10px] uppercase tracking-[0.18em] text-ink/40">
+            Aucune photo
+          </div>
+        )}
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
+          {uploading ? 'Envoi…' : value ? 'Remplacer la photo' : '+ Ajouter une photo'}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) upload(file)
+              e.target.value = ''
+            }}
+            className="hidden"
+          />
+        </label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="text-xs font-semibold uppercase tracking-wide text-red-600 hover:underline"
+          >
+            Retirer
+          </button>
+        )}
+      </div>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {dirty && <p className="mt-2 text-xs text-[#8a6a1c]">Pensez à cliquer sur « Enregistrer » pour publier la photo.</p>}
+    </div>
+  )
+}
+
 type FooterForm = {
   tagline: string
   instagram: string
@@ -1428,8 +1515,6 @@ function FooterEditorForm({ token, initial }: { token: string; initial: FooterFo
   const utils = trpc.useUtils()
   const [form, setForm] = useState<FooterForm>(initial)
   const [done, setDone] = useState(false)
-  const [bannerUploading, setBannerUploading] = useState(false)
-  const [bannerError, setBannerError] = useState<string | null>(null)
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -1445,86 +1530,21 @@ function FooterEditorForm({ token, initial }: { token: string; initial: FooterFo
     )
   }
 
-  const uploadBanner = async (file: File) => {
-    setBannerUploading(true)
-    setBannerError(null)
-    try {
-      const body = new FormData()
-      body.append('file', file)
-      body.append('folder', 'site')
-      const res = await fetch('/api/uploads', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body,
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Échec de l'envoi")
-      setForm((f) => ({ ...f, bannerImage: data.url }))
-      setDone(false)
-    } catch (e) {
-      setBannerError(e instanceof Error ? e.message : "Échec de l'envoi")
-    } finally {
-      setBannerUploading(false)
-    }
-  }
-
-  const uploadBtnCls =
-    'inline-flex cursor-pointer items-center gap-2 rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent'
-
   return (
     <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
       <p className="font-display text-xl">Pied de page</p>
 
-      <div>
-        <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">
-          Photo du bandeau « Nous trouver »
-        </label>
-        <p className="mb-3 text-xs text-ink/55">
-          Idéal : une photo de Kairouan (Grande Mosquée, médina…) en format paysage, 2 400 px de large ou
-          plus — elle est optimisée automatiquement. Sans photo, le site affiche une illustration dorée de
-          la Grande Mosquée.
-        </p>
-        <div className="flex flex-wrap items-center gap-4">
-          {form.bannerImage ? (
-            <img
-              src={form.bannerImage}
-              alt="Aperçu du bandeau du pied de page"
-              className="h-24 w-44 rounded-lg border border-sand object-cover"
-            />
-          ) : (
-            <div className="flex h-24 w-44 items-center justify-center rounded-lg border border-dashed border-sand text-[10px] uppercase tracking-[0.18em] text-ink/40">
-              Aucune photo
-            </div>
-          )}
-          <label className={uploadBtnCls}>
-            {bannerUploading ? 'Envoi…' : form.bannerImage ? 'Remplacer la photo' : '+ Ajouter une photo'}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              disabled={bannerUploading}
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) uploadBanner(file)
-                e.target.value = ''
-              }}
-              className="hidden"
-            />
-          </label>
-          {form.bannerImage && (
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, bannerImage: '' }))}
-              className="text-xs font-semibold uppercase tracking-wide text-red-600 hover:underline"
-            >
-              Retirer
-            </button>
-          )}
-        </div>
-        {bannerError && <p className="mt-2 text-sm text-red-600">{bannerError}</p>}
-        {form.bannerImage !== initial.bannerImage && (
-          <p className="mt-2 text-xs text-[#8a6a1c]">Pensez à cliquer sur « Enregistrer » pour publier la photo.</p>
-        )}
-      </div>
+      <SiteImageField
+        token={token}
+        label="Photo du bandeau « Nous trouver »"
+        hint="Idéal : une photo de Kairouan (Grande Mosquée, médina…) en format paysage, 2 400 px de large ou plus — elle est optimisée automatiquement. Sans photo, le site affiche une illustration dorée de la Grande Mosquée."
+        value={form.bannerImage}
+        dirty={form.bannerImage !== initial.bannerImage}
+        onChange={(url) => {
+          setForm((f) => ({ ...f, bannerImage: url }))
+          setDone(false)
+        }}
+      />
 
       <div>
         <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de présentation</label>
@@ -1572,6 +1592,7 @@ type PagesForm = {
   galerieTitle: string
   contactEyebrow: string
   contactTitle: string
+  contactImage: string
 }
 
 const EMPTY_PAGES_FORM: PagesForm = {
@@ -1590,6 +1611,7 @@ const EMPTY_PAGES_FORM: PagesForm = {
   galerieTitle: '',
   contactEyebrow: '',
   contactTitle: '',
+  contactImage: '',
 }
 
 function PagesEditor({ token }: { token: string }) {
@@ -1663,6 +1685,14 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
         <div className="space-y-4">
           <input {...field('contactEyebrow')} placeholder="Sur-titre" className={inputCls} />
           <input {...field('contactTitle')} placeholder="Titre" className={inputCls} />
+          <SiteImageField
+            token={token}
+            label="Photo (page Nous trouver)"
+            hint="Format paysage 16:9 conseillé (ex. l'équipe à l'atelier, la boutique…), 2 400 px de large ou plus. Sans photo, l'image par défaut du thème est utilisée."
+            value={form.contactImage}
+            dirty={form.contactImage !== initial.contactImage}
+            onChange={(url) => setForm({ ...form, contactImage: url })}
+          />
         </div>
       </div>
 
