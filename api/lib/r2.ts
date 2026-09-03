@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "node:crypto";
+import sharp from "sharp";
 
 function getClient(): { client: S3Client; bucket: string } {
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -19,32 +20,45 @@ function getClient(): { client: S3Client; bucket: string } {
   return { client, bucket };
 }
 
-const ALLOWED_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+// Grande photo de téléphone (souvent 3000-4000px de large, 5-20 Mo) →
+// recadrée à une taille d'affichage réelle et réencodée en JPEG. Sans ça,
+// une photo trop lourde ralentit le site pour chaque visiteur, exactement
+// le problème déjà réglé pour les images du thème (voir hero.webp).
+const MAX_DIMENSION = 1600;
+const JPEG_QUALITY = 82;
 
 export async function uploadProductImage(
   file: File,
   folder: "products" | "gallery" = "products",
 ): Promise<string> {
-  const ext = ALLOWED_TYPES[file.type];
-  if (!ext) {
+  if (!ALLOWED_TYPES.has(file.type)) {
     throw new Error("Format d'image non supporté (jpg, png ou webp uniquement).");
   }
-  if (file.size > 8 * 1024 * 1024) {
-    throw new Error("Image trop lourde (8 Mo maximum).");
+  if (file.size > 20 * 1024 * 1024) {
+    throw new Error("Image trop lourde (20 Mo maximum).");
+  }
+  const inputBytes = new Uint8Array(await file.arrayBuffer());
+  let outputBytes: Buffer;
+  try {
+    outputBytes = await sharp(inputBytes)
+      .rotate() // applique l'orientation EXIF (photos de téléphone) avant le resize
+      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" }) // PNG transparent -> fond blanc (le JPEG n'a pas de canal alpha)
+      .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+      .toBuffer();
+  } catch {
+    throw new Error("Image illisible — essayez une autre photo.");
   }
   const { client, bucket } = getClient();
-  const key = `${folder}/${Date.now()}-${randomBytes(6).toString("hex")}.${ext}`;
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const key = `${folder}/${Date.now()}-${randomBytes(6).toString("hex")}.jpg`;
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
-      Body: bytes,
-      ContentType: file.type,
+      Body: outputBytes,
+      ContentType: "image/jpeg",
     }),
   );
   return key;

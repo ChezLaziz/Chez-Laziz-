@@ -37,29 +37,39 @@ app.get("/", async (c, next) => {
 });
 
 // Upload des photos produits vers R2 (Cloudflare) — limite propre à cette
-// route (poids réel d'une photo), en dehors de la limite générale 1 Mo
-// appliquée juste après au reste de l'API.
-app.post("/api/uploads", bodyLimit({ maxSize: 8 * 1024 * 1024 }), async (c) => {
-  const token = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  try {
-    await assertAdmin(token);
-  } catch {
-    return c.json({ error: "Non autorisé" }, 401);
-  }
-  const form = await c.req.formData();
-  const file = form.get("file");
-  const folderRaw = form.get("folder");
-  const folder = folderRaw === "gallery" ? "gallery" : "products";
-  if (!(file instanceof File)) {
-    return c.json({ error: "Fichier manquant" }, 400);
-  }
-  try {
-    const key = await uploadProductImage(file, folder);
-    return c.json({ url: `/api/uploads/${key}` });
-  } catch (e) {
-    return c.json({ error: e instanceof Error ? e.message : "Erreur d'upload" }, 400);
-  }
-});
+// route (poids réel d'une photo prise au téléphone, souvent 10-20 Mo avant
+// compression côté serveur), en dehors de la limite générale 1 Mo appliquée
+// juste après au reste de l'API. onError personnalisé : la réponse HTML/texte
+// par défaut de Hono sur dépassement fait planter le "res.json()" côté
+// client (erreur incompréhensible affichée à l'admin) — on répond en JSON.
+app.post(
+  "/api/uploads",
+  bodyLimit({
+    maxSize: 20 * 1024 * 1024,
+    onError: (c) => c.json({ error: "Image trop lourde (20 Mo maximum)." }, 413),
+  }),
+  async (c) => {
+    const token = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
+    try {
+      await assertAdmin(token);
+    } catch {
+      return c.json({ error: "Non autorisé" }, 401);
+    }
+    const form = await c.req.formData();
+    const file = form.get("file");
+    const folderRaw = form.get("folder");
+    const folder = folderRaw === "gallery" ? "gallery" : "products";
+    if (!(file instanceof File)) {
+      return c.json({ error: "Fichier manquant" }, 400);
+    }
+    try {
+      const key = await uploadProductImage(file, folder);
+      return c.json({ url: `/api/uploads/${key}` });
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : "Erreur d'upload" }, 400);
+    }
+  },
+);
 
 // Sert les photos uploadées (lecture publique, comme les images statiques).
 app.get("/api/uploads/*", async (c) => {
