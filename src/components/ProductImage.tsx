@@ -1,33 +1,6 @@
-/** Photo d'un produit, ou un emplacement neutre s'il n'en a pas encore.
- *
- * On ne montre jamais la photo d'un autre produit (ou une photo générique
- * de makroudh) à la place : un client qui commande "Makroudh au blé" en
- * voyant une photo de makroudh aux dattes est induit en erreur. Un
- * emplacement sobre est plus honnête — et la vraie photo peut être ajoutée
- * à tout moment depuis l'admin. */
-export default function ProductImage({
-  src,
-  alt,
-  className = '',
-  compact = false,
-}: {
-  src: string | null | undefined
-  alt: string
-  className?: string
-  /** Version miniature (liste de commande) : logo seul, sans légende. */
-  compact?: boolean
-}) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        className={`h-full w-full object-cover ${className}`}
-      />
-    )
-  }
+import { useState } from 'react'
+
+function Placeholder({ alt, className, compact }: { alt: string; className: string; compact: boolean }) {
   return (
     <div
       role="img"
@@ -46,4 +19,50 @@ export default function ProductImage({
       )}
     </div>
   )
+}
+
+/** Photo d'un produit, ou un emplacement neutre s'il n'en a pas encore —
+ * ou si le fichier existe mais ne s'affiche pas (upload corrompu, objet
+ * supprimé du stockage, erreur réseau passagère).
+ *
+ * On ne montre jamais la photo d'un autre produit (ou une photo générique
+ * de makroudh) à la place : un client qui commande "Makroudh au blé" en
+ * voyant une photo de makroudh aux dattes est induit en erreur. Un
+ * emplacement sobre est plus honnête — et la vraie photo peut être ajoutée
+ * (ou remplacée) à tout moment depuis l'admin. */
+export default function ProductImage({
+  src,
+  alt,
+  className = '',
+  compact = false,
+}: {
+  src: string | null | undefined
+  alt: string
+  className?: string
+  /** Version miniature (liste de commande) : logo seul, sans légende. */
+  compact?: boolean
+}) {
+  const [failed, setFailed] = useState(false)
+  // Un changement de produit (nouvelle src) mérite un nouvel essai — l'échec
+  // précédent ne doit pas s'appliquer à une autre photo. Ajusté pendant le
+  // rendu plutôt que dans un effet (pas de rendu supplémentaire inutile).
+  const [prevSrc, setPrevSrc] = useState(src)
+  if (src !== prevSrc) {
+    setPrevSrc(src)
+    if (failed) setFailed(false)
+  }
+
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+        className={`h-full w-full object-cover ${className}`}
+      />
+    )
+  }
+  return <Placeholder alt={alt} className={className} compact={compact} />
 }
