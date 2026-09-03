@@ -240,7 +240,7 @@ describe("orders.create — packs prêts (prix fixes)", () => {
             weightKg: 2,
             unitPriceMillimes: 69900,
             contents: [
-              { name: "Makroudh Laziz", weightKg: 0.5 },
+              { name: "Makroudh Laziz – Fruits Secs", weightKg: 0.5 },
               { name: "Makroudh Blanc à la Pistache", weightKg: 0.5 },
               { name: "Makroudh Blanc au Fraise", weightKg: 0.5 },
               { name: "Makroudh Zgougou", weightKg: 0.5 },

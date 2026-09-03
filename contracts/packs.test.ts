@@ -53,10 +53,12 @@ describe("packs prêts — données de vente (source de vérité)", () => {
     }
   });
 
-  it("le premier produit du VIP est exactement « Makroudh Laziz » (pas renommé)", () => {
-    expect(byId.vip.contents[0]).toBe("Makroudh Laziz");
+  it("le premier produit du VIP est exactement « Makroudh Laziz – Fruits Secs » (produit réel du catalogue)", () => {
+    // « Makroudh Laziz » seul n'est pas un produit du catalogue — remplacé
+    // par le vrai produit du même nom de famille, sur demande du client.
+    expect(byId.vip.contents[0]).toBe("Makroudh Laziz – Fruits Secs");
     expect(byId.vip.contents).toEqual([
-      "Makroudh Laziz",
+      "Makroudh Laziz – Fruits Secs",
       "Makroudh Blanc à la Pistache",
       "Makroudh Blanc au Fraise",
       "Makroudh Zgougou",
