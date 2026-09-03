@@ -287,6 +287,29 @@ function ProductsTab({ token }: { token: string }) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM)
   const [showForm, setShowForm] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const uploadImage = async (file: File) => {
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const res = await fetch('/api/uploads', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Échec de l'envoi")
+      setForm((f) => ({ ...f, imageUrl: data.url }))
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Échec de l'envoi")
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const invalidate = () => {
     utils.products.listAll.invalidate()
@@ -362,7 +385,34 @@ function ProductsTab({ token }: { token: string }) {
             <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix en TND (ex : 8.000)" inputMode="decimal" className={inputCls} />
           </div>
           <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (facultative)" rows={2} className={`${inputCls} resize-none`} />
-          <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="Photo — chemin ou URL (ex : /images/products/makroudh-dattes.jpg)" className={inputCls} />
+
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-white">
+              {form.imageUrl ? (
+                <img src={form.imageUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-[10px] text-ink/30">Aucune photo</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-[220px] space-y-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
+                {uploading ? 'Envoi…' : '📷 Choisir une photo'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) uploadImage(file)
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                />
+              </label>
+              <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="ou collez un lien d'image" className={`${inputCls} text-xs`} />
+              {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputCls}>
               <option>Les classiques</option>
@@ -390,6 +440,13 @@ function ProductsTab({ token }: { token: string }) {
       <div className="space-y-3">
         {(products ?? []).map((p) => (
           <div key={p.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-4 md:p-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
+              {p.imageUrl ? (
+                <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-[9px] text-ink/30">Sans photo</span>
+              )}
+            </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{p.name}</span>

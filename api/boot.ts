@@ -6,6 +6,8 @@ import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { rateLimit } from "./lib/rateLimit";
+import { assertAdmin } from "./queries/admin";
+import { getUploadedImage, uploadProductImage } from "./lib/r2";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -31,6 +33,45 @@ app.get("/", async (c, next) => {
     return c.redirect("/admin", 302);
   }
   await next();
+});
+
+// Upload des photos produits vers R2 (Cloudflare) — limite propre à cette
+// route (poids réel d'une photo), en dehors de la limite générale 1 Mo
+// appliquée juste après au reste de l'API.
+app.post("/api/uploads", bodyLimit({ maxSize: 8 * 1024 * 1024 }), async (c) => {
+  const token = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  try {
+    await assertAdmin(token);
+  } catch {
+    return c.json({ error: "Non autorisé" }, 401);
+  }
+  const form = await c.req.formData();
+  const file = form.get("file");
+  if (!(file instanceof File)) {
+    return c.json({ error: "Fichier manquant" }, 400);
+  }
+  try {
+    const key = await uploadProductImage(file);
+    return c.json({ url: `/api/uploads/${key}` });
+  } catch (e) {
+    return c.json({ error: e instanceof Error ? e.message : "Erreur d'upload" }, 400);
+  }
+});
+
+// Sert les photos uploadées (lecture publique, comme les images statiques).
+app.get("/api/uploads/*", async (c) => {
+  const key = c.req.path.replace(/^\/api\/uploads\//, "");
+  if (!/^products\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(key)) {
+    return c.json({ error: "Not Found" }, 404);
+  }
+  const result = await getUploadedImage(key);
+  if (!result) return c.json({ error: "Not Found" }, 404);
+  return new Response(result.body, {
+    headers: {
+      "Content-Type": result.contentType,
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
 });
 
 // 1 Mo suffit largement pour ce type de requêtes (commandes, messages,
