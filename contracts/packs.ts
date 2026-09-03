@@ -29,7 +29,7 @@ export const FIXED_PACKS: readonly FixedPack[] = [
     priceMillimes: 69900,
     badge: "Premium",
     contents: [
-      "Makroudh Laziz",
+      "Makroudh Laziz – Fruits Secs",
       "Makroudh Blanc à la Pistache",
       "Makroudh Blanc au Fraise",
       "Makroudh Zgougou",
