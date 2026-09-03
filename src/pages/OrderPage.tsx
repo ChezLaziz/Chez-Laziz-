@@ -8,6 +8,7 @@ import { track } from '@/lib/analytics'
 import { buildDisplayLines, kgLabel, type CatalogProduct, type DisplayLine } from '@/lib/orderLines'
 import PackCard from '@/components/order/PackCard'
 import CustomPackComposer from '@/components/order/CustomPackComposer'
+import ProductOrderCard from '@/components/order/ProductOrderCard'
 import {
   DELIVERY_FEE_MILLIMES,
   DELIVERY_REGION,
@@ -16,7 +17,9 @@ import {
   PAYMENT_PROOF_ALLOWED_MIME,
   PAYMENT_PROOF_MAX_SIZE_BYTES,
   TUNISIA_GOVERNORATES,
+  priceForWeight,
   type PaymentMethod,
+  type WeightKg,
 } from '@contracts/shop'
 import {
   CUSTOM_PACK_PACKAGING_LABEL,
@@ -124,7 +127,13 @@ function Divider() {
   )
 }
 
-type Tab = 'packs' | 'custom'
+type Tab = 'produits' | 'packs' | 'custom'
+const TAB_HASH: Record<Tab, string> = { produits: '#produits', packs: '#packs', custom: '#custom' }
+function tabFromHash(hash: string): Tab {
+  if (hash === '#packs') return 'packs'
+  if (hash === '#custom') return 'custom'
+  return 'produits'
+}
 
 type Placed = {
   id: number
@@ -140,9 +149,9 @@ type Placed = {
 
 export default function OrderPage() {
   useSEO({
-    title: 'Commander — Chez Laziz | Packs de makroudh livrés partout en Tunisie',
+    title: 'Commander — Chez Laziz | Makroudh au poids, packs et pack sur mesure',
     description:
-      'Commandez vos makroudh Chez Laziz : packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement à la livraison ou D17.',
+      'Commandez vos makroudh Chez Laziz : à la carte (500 g à 2,5 kg), packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement à la livraison ou D17.',
     path: '/commande',
     breadcrumb: 'Commander',
   })
@@ -151,15 +160,15 @@ export default function OrderPage() {
   const sendMessage = trpc.contact.send.useMutation()
   const catalog = useMemo(() => (products ?? []) as CatalogProduct[], [products])
 
-  const { lines, count, packQty, addPack, addCustom, setLineQty, removeLine, clear } = useCart()
+  const { lines, count, add, setQty, packQty, addPack, addCustom, setLineQty, removeLine, clear } = useCart()
 
   const [tab, setTab] = useState<Tab>(() =>
-    typeof window !== 'undefined' && window.location.hash === '#custom' ? 'custom' : 'packs',
+    typeof window !== 'undefined' ? tabFromHash(window.location.hash) : 'produits',
   )
   const switchTab = (next: Tab) => {
     setTab(next)
     try {
-      window.history.replaceState(null, '', next === 'custom' ? '#custom' : '#packs')
+      window.history.replaceState(null, '', TAB_HASH[next])
     } catch {
       // sans importance
     }
@@ -241,6 +250,26 @@ export default function OrderPage() {
       items: [{ item_id: `pack:${packId}`, item_name: pack.name, price: pack.priceMillimes / 1000, quantity: 1 }],
     })
   }
+
+  /** Quantités déjà commandées d'un produit, par poids (cartes à la carte). */
+  const qtyByWeightFor = (productId: number): Partial<Record<WeightKg, number>> => {
+    const out: Partial<Record<WeightKg, number>> = {}
+    for (const l of lines) if (l.kind === 'product' && l.productId === productId) out[l.weightKg] = l.qty
+    return out
+  }
+  const handleAddProduct = (product: CatalogProduct, weightKg: WeightKg) => {
+    add(product.id, weightKg, 1)
+    track('add_to_cart', {
+      value: priceForWeight(product.priceMillimes, weightKg) / 1000,
+      items: [{ item_id: String(product.id), item_name: product.name, item_variant: `${weightKg} kg`, price: priceForWeight(product.priceMillimes, weightKg) / 1000, quantity: 1 }],
+    })
+  }
+  const categories = useMemo(() => {
+    const order = ['Les classiques', 'Les signatures', 'Les nouveautés']
+    const groups = new Map<string, CatalogProduct[]>()
+    for (const p of catalog) groups.set(p.category, [...(groups.get(p.category) ?? []), p])
+    return [...groups.entries()].sort(([a], [b]) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)))
+  }, [catalog])
 
   const handleAddCustom = () => {
     if (selected.length !== CUSTOM_PACK_SIZE) return
@@ -472,62 +501,41 @@ export default function OrderPage() {
       <TopBar />
 
       {/* ── En-tête ── */}
-      <section className="border-b border-sand/60">
-        <div className="mx-auto grid max-w-7xl items-center gap-6 px-5 pb-10 pt-12 md:px-10 md:pt-16 lg:grid-cols-[1fr_minmax(0,2fr)_1fr] lg:gap-10">
-          <div className="hidden lg:block">
-            <img
-              src="/images/display.webp"
-              alt="Plateau de makroudh kairouanais dorés"
-              width="774"
-              height="1018"
-              className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-md"
-              loading="eager"
-              fetchPriority="high"
-            />
-          </div>
-          <div className="text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Commande en ligne</p>
-            <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">Commandez vos makroudh</h1>
-            <Divider />
-            <p className="mx-auto mt-5 max-w-lg text-[15px] font-light leading-relaxed text-ink/70 md:text-base">
-              Quatre packs prêts à offrir, ou votre pack sur mesure — façonnés à la main à Kairouan et livrés
-              partout en Tunisie sous {DELIVERY_TIME_LABEL}.
-            </p>
-            <div className="mx-auto mt-8 grid max-w-xl grid-cols-2 gap-3 rounded-2xl border border-sand/70 bg-white py-5 text-center shadow-sm sm:grid-cols-4">
-              {[
-                ['100%', 'Fait main'],
-                [formatPriceDT(DELIVERY_FEE_MILLIMES).replace(' DT', ''), 'DT livraison'],
-                [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
-                ['COD / D17', 'Paiement'],
-              ].map(([n, label]) => (
-                <div key={label}>
-                  <div className="font-display text-xl text-[#b8912e] md:text-2xl">{n}</div>
-                  <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink/50 md:text-[11px]">{label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="hidden lg:block">
-            <img
-              src="/images/makroudh.webp"
-              alt="Makroudh nappés de miel"
-              width="1536"
-              height="933"
-              className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-md"
-              loading="eager"
-            />
+      <section className="relative border-b border-sand/60">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[#f3e9dc] to-transparent" />
+        <div className="relative mx-auto max-w-3xl px-5 pb-10 pt-14 text-center md:px-10 md:pt-20">
+          <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Commande en ligne</p>
+          <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">Commandez vos makroudh</h1>
+          <Divider />
+          <p className="mx-auto mt-5 max-w-xl text-[15px] font-light leading-relaxed text-ink/70 md:text-base">
+            Nos makroudh au poids, quatre packs prêts à offrir, ou votre pack sur mesure — façonnés à la main
+            à Kairouan et livrés partout en Tunisie sous {DELIVERY_TIME_LABEL}.
+          </p>
+          <div className="mx-auto mt-8 grid max-w-xl grid-cols-2 gap-3 rounded-2xl border border-sand/70 bg-white py-5 text-center shadow-sm sm:grid-cols-4">
+            {[
+              ['100%', 'Fait main'],
+              [formatPriceDT(DELIVERY_FEE_MILLIMES).replace(' DT', ''), 'DT livraison'],
+              [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
+              ['COD / D17', 'Paiement'],
+            ].map(([n, label]) => (
+              <div key={label}>
+                <div className="font-display text-xl text-[#b8912e] md:text-2xl">{n}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink/50 md:text-[11px]">{label}</div>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Onglets */}
         <div className="mx-auto max-w-7xl px-5 pb-8 md:px-10">
-          <div role="tablist" aria-label="Mode de commande" className="mx-auto grid max-w-2xl grid-cols-2 gap-1 rounded-2xl border border-sand bg-white p-1.5 shadow-sm">
+          <div role="tablist" aria-label="Mode de commande" className="mx-auto grid max-w-3xl grid-cols-3 gap-1 rounded-2xl border border-sand bg-white p-1.5 shadow-sm">
             {(
               [
-                ['packs', 'Packs prêts', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
-                ['custom', 'Composez votre Pack', 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18M4 7.5l8 4.5 8-4.5'],
+                ['produits', 'Nos produits', 'Produits', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
+                ['packs', 'Packs prêts', 'Packs', 'M3 8l9-4 9 4-9 4-9-4zm0 0v9l9 4 9-4V8M12 12v9'],
+                ['custom', 'Composez votre Pack', 'Sur mesure', 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18M4 7.5l8 4.5 8-4.5'],
               ] as const
-            ).map(([id, label, icon]) => (
+            ).map(([id, label, shortLabel, icon]) => (
               <button
                 key={id}
                 type="button"
@@ -536,14 +544,15 @@ export default function OrderPage() {
                 aria-selected={tab === id}
                 aria-controls={`panel-${id}`}
                 onClick={() => switchTab(id)}
-                className={`flex min-h-12 items-center justify-center gap-2.5 rounded-xl px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 md:text-[15px] ${
+                className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-2 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 sm:px-3 sm:text-sm md:text-[15px] ${
                   tab === id ? 'bg-[#2e2a27] text-[#faf6f3] shadow' : 'text-ink/70 hover:text-ink'
                 }`}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true" className="hidden shrink-0 sm:block">
                   <path d={icon} />
                 </svg>
-                {label}
+                <span className="sm:hidden">{shortLabel}</span>
+                <span className="hidden sm:inline">{label}</span>
               </button>
             ))}
           </div>
@@ -551,6 +560,67 @@ export default function OrderPage() {
       </section>
 
       <main className={`mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16 ${showBar ? 'pb-32' : ''}`}>
+        {/* ── Nos produits (à la carte, au poids) ── */}
+        <section id="panel-produits" role="tabpanel" aria-labelledby="tab-produits" hidden={tab !== 'produits'}>
+          <div className="text-center">
+            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">À la carte</p>
+            <h2 className="mt-3 font-display text-3xl md:text-4xl">Nos produits</h2>
+            <p className="mx-auto mt-3 max-w-md text-[15px] font-light leading-relaxed text-ink/65">
+              Choisissez le poids (500 g à 2,5 kg) et la quantité de chaque makroudh. Prix affichés pour 1 kg.
+            </p>
+          </div>
+          {isLoading ? (
+            <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-white">
+                  <div className="aspect-square bg-sand/40" />
+                  <div className="space-y-2 p-4">
+                    <div className="h-4 w-3/4 rounded bg-sand/50" />
+                    <div className="h-3 w-1/3 rounded bg-sand/40" />
+                    <div className="h-11 rounded bg-sand/30" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : catalog.length === 0 ? (
+            <p className="mt-10 text-center text-sm font-light text-ink/60">
+              Le catalogue est momentanément indisponible — appelez-nous au{' '}
+              <a href={PHONE_TEL} className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a>.
+            </p>
+          ) : (
+            categories.map(([category, items]) => (
+              <div key={category} className="mt-10">
+                <h3 className="mb-4 flex items-center gap-4 font-display text-2xl">
+                  {category}
+                  <span className="h-px flex-1 bg-sand" aria-hidden="true" />
+                </h3>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+                  {items.map((p) => (
+                    <ProductOrderCard
+                      key={p.id}
+                      product={p}
+                      qtyByWeight={qtyByWeightFor(p.id)}
+                      onAdd={(w) => handleAddProduct(p, w)}
+                      onSetQty={(w, q) => setQty(p.id, w, q)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+          <p className="mt-10 text-center text-sm font-light text-ink/60">
+            Pour offrir :{' '}
+            <button type="button" onClick={() => switchTab('packs')} className="text-accent underline underline-offset-4">
+              découvrez nos packs
+            </button>{' '}
+            ou{' '}
+            <button type="button" onClick={() => switchTab('custom')} className="text-accent underline underline-offset-4">
+              composez le vôtre
+            </button>
+            .
+          </p>
+        </section>
+
         {/* ── A. Packs prêts ── */}
         <section id="panel-packs" role="tabpanel" aria-labelledby="tab-packs" hidden={tab !== 'packs'}>
           <div className="text-center">
@@ -607,15 +677,25 @@ export default function OrderPage() {
           {items.length === 0 ? (
             <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-sand bg-white p-8 text-center">
               <p className="font-display text-xl">Votre commande est vide</p>
-              <p className="mt-2 text-sm font-light text-ink/60">Choisissez un pack prêt ou composez le vôtre.</p>
+              <p className="mt-2 text-sm font-light text-ink/60">Choisissez vos makroudh au poids, un pack prêt, ou composez le vôtre.</p>
               <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    switchTab('produits')
+                    scrollToId('panel-produits')
+                  }}
+                  className="gold-cta rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+                >
+                  Voir les produits
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     switchTab('packs')
                     scrollToId('panel-packs')
                   }}
-                  className="gold-cta rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+                  className="rounded-full border border-ink/25 px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-ink hover:text-[#faf6f3]"
                 >
                   Voir les packs
                 </button>
