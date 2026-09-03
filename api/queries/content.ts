@@ -42,3 +42,67 @@ export async function setFooterContent(data: FooterContent): Promise<void> {
       .onConflictDoUpdate({ target: settings.key, set: { value: data[field] } });
   }
 }
+
+const PAGE_KEYS = {
+  homeEyebrow: "page_home_eyebrow",
+  homeTitle: "page_home_title",
+  homeSubtitleAr: "page_home_subtitle_ar",
+  homeSubtitleFr: "page_home_subtitle_fr",
+  maisonEyebrow: "page_maison_eyebrow",
+  maisonTitle: "page_maison_title",
+  maisonP1: "page_maison_p1",
+  maisonP2: "page_maison_p2",
+  collectionEyebrow: "page_collection_eyebrow",
+  collectionTitle: "page_collection_title",
+  collectionSubtitle: "page_collection_subtitle",
+  galerieEyebrow: "page_galerie_eyebrow",
+  galerieTitle: "page_galerie_title",
+  contactEyebrow: "page_contact_eyebrow",
+  contactTitle: "page_contact_title",
+} as const;
+
+export const PAGES_DEFAULTS = {
+  homeEyebrow: "Pâtisserie artisanale — Kairouan",
+  homeTitle: "CHEZ LAZIZ",
+  homeSubtitleAr: "عند لعزيز — مقروض قيرواني أصيل",
+  homeSubtitleFr:
+    "L'art du makroudh kairouanais authentique — fait main chaque jour, au goût traditionnel qui ne change jamais.",
+  maisonEyebrow: "La Maison",
+  maisonTitle: "L'art du makroudh kairouanais authentique",
+  maisonP1:
+    "Enraciné dans l'héritage intemporel de Kairouan, notre makroudh est une célébration du savoir-faire tunisien, raffiné pour les palais d'aujourd'hui.",
+  maisonP2:
+    "Chaque losange est façonné à la main avec des ingrédients soigneusement choisis : semoule dorée, pâte de dattes fondante, miel — et un goût traditionnel qui ne change jamais.",
+  collectionEyebrow: "La Collection",
+  collectionTitle: "Le makroudh, dans tous ses états",
+  collectionSubtitle:
+    "Des classiques aux créations de saison — chaque pièce est façonnée à la main, chaque jour. Prix en dinars tunisiens (TND).",
+  galerieEyebrow: "La Boutique",
+  galerieTitle: "La semoule, les dattes, le miel",
+  contactEyebrow: "Nous trouver",
+  contactTitle: "La boutique vous attend à Kairouan",
+};
+
+export type PagesContent = typeof PAGES_DEFAULTS;
+
+export async function getPagesContent(): Promise<PagesContent> {
+  const rows = await getDb().query.settings.findMany();
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  const result = {} as PagesContent;
+  const entries = Object.entries(PAGE_KEYS) as [keyof PagesContent, string][];
+  for (const [field, key] of entries) {
+    result[field] = map.get(key) ?? PAGES_DEFAULTS[field];
+  }
+  return result;
+}
+
+export async function setPagesContent(data: PagesContent): Promise<void> {
+  const db = getDb();
+  const entries = Object.entries(PAGE_KEYS) as [keyof PagesContent, string][];
+  for (const [field, key] of entries) {
+    await db
+      .insert(settings)
+      .values({ key, value: data[field] })
+      .onConflictDoUpdate({ target: settings.key, set: { value: data[field] } });
+  }
+}

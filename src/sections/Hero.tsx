@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { trpc } from '@/providers/trpc'
 
 function StaggerWord({ word, base }: { word: string; base: number }) {
   return (
@@ -13,9 +14,36 @@ function StaggerWord({ word, base }: { word: string; base: number }) {
   )
 }
 
+const DEFAULT_EYEBROW = 'Pâtisserie artisanale — Kairouan'
+const DEFAULT_TITLE = 'CHEZ LAZIZ'
+const DEFAULT_SUBTITLE_AR = 'عند لعزيز — مقروض قيرواني أصيل'
+const DEFAULT_SUBTITLE_FR =
+  'L’art du makroudh kairouanais authentique — fait main chaque jour, au goût traditionnel qui ne change jamais.'
+
 export default function Hero() {
   const [on, setOn] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
+  const { data } = trpc.content.pages.useQuery()
+
+  const eyebrow = data?.homeEyebrow || DEFAULT_EYEBROW
+  const title = data?.homeTitle || DEFAULT_TITLE
+  const subtitleAr = data?.homeSubtitleAr || DEFAULT_SUBTITLE_AR
+  const subtitleFr = data?.homeSubtitleFr || DEFAULT_SUBTITLE_FR
+
+  let cumulativeDelay = 250
+  const titleWords = title
+    .split(' ')
+    .filter(Boolean)
+    .map((word, i) => {
+      const el = (
+        <span key={i}>
+          {i > 0 && <span className="inline-block w-[0.35em]" />}
+          <StaggerWord word={word} base={cumulativeDelay} />
+        </span>
+      )
+      cumulativeDelay += word.length * 38 + 60
+      return el
+    })
 
   // entrance
   useEffect(() => {
@@ -78,22 +106,20 @@ export default function Hero() {
           }}
         >
           <span className="hidden h-px w-10 bg-[#dec9b8] md:inline-block" />
-          Pâtisserie artisanale — Kairouan
+          {eyebrow}
           <span className="hidden h-px w-10 bg-[#dec9b8] md:inline-block" />
         </p>
 
         <h1
           className={`font-display leading-[0.95] text-[#faf6f3] ${on ? 'hero-title-on' : ''}`}
-          aria-label="Chez Laziz"
+          aria-label={title}
           style={{
             fontSize: 'clamp(3.4rem, 13vw, 11rem)',
             letterSpacing: '0.02em',
             textShadow: '0 2px 24px rgba(0,0,0,0.35)',
           }}
         >
-          <StaggerWord word="CHEZ" base={250} />
-          <span className="inline-block w-[0.35em]" />
-          <StaggerWord word="LAZIZ" base={250 + 4 * 38 + 60} />
+          {titleWords}
         </h1>
 
         <p
@@ -106,7 +132,7 @@ export default function Hero() {
             transition: 'opacity 0.9s ease 0.75s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.75s',
           }}
         >
-          عند لعزيز — مقروض قيرواني أصيل
+          {subtitleAr}
         </p>
 
         <p
@@ -117,8 +143,7 @@ export default function Hero() {
             transition: 'opacity 0.9s ease 0.95s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.95s',
           }}
         >
-          L’art du makroudh kairouanais authentique — fait main chaque jour,
-          au goût traditionnel qui ne change jamais.
+          {subtitleFr}
         </p>
 
         <div

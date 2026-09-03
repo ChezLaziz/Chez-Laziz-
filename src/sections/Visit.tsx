@@ -1,17 +1,24 @@
+import { trpc } from '@/providers/trpc'
+
 const MAPS_URL =
   'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
 
+const DEFAULT_EYEBROW = 'Nous trouver'
+const DEFAULT_TITLE = 'La boutique vous attend à Kairouan'
+
 export default function Visit() {
+  const { data } = trpc.content.pages.useQuery()
+
   return (
     <section id="visite" className="bg-ink-deep py-24 text-[#faf6f3] md:py-36">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="grid gap-12 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
             <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
-              Nous trouver
+              {data?.contactEyebrow || DEFAULT_EYEBROW}
             </p>
             <h2 data-reveal className="font-display max-w-3xl text-4xl leading-[1.08] md:text-6xl">
-              La boutique vous attend à Kairouan
+              {data?.contactTitle || DEFAULT_TITLE}
             </h2>
           </div>
           <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">

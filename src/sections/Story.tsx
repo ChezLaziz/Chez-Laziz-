@@ -1,6 +1,20 @@
 import Ornament from '../components/Ornament'
+import { trpc } from '@/providers/trpc'
+
+const DEFAULT_EYEBROW = 'La Maison'
+const DEFAULT_TITLE = 'L’art du makroudh kairouanais authentique'
+const DEFAULT_P1 =
+  'Enraciné dans l’héritage intemporel de Kairouan, notre makroudh est une célébration du savoir-faire tunisien, raffiné pour les palais d’aujourd’hui.'
+const DEFAULT_P2 =
+  'Chaque losange est façonné à la main avec des ingrédients soigneusement choisis : semoule dorée, pâte de dattes fondante, miel — et un goût traditionnel qui ne change jamais.'
 
 export default function Story() {
+  const { data } = trpc.content.pages.useQuery()
+  const eyebrow = data?.maisonEyebrow || DEFAULT_EYEBROW
+  const title = data?.maisonTitle || DEFAULT_TITLE
+  const p1 = data?.maisonP1 || DEFAULT_P1
+  const p2 = data?.maisonP2 || DEFAULT_P2
+
   return (
     <section id="maison" className="relative overflow-hidden py-24 md:py-36">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
@@ -20,23 +34,14 @@ export default function Story() {
           <div className="relative z-10 lg:col-span-5 lg:-ml-24 lg:mt-32">
             <div className="bg-ink-deep p-8 text-[#faf6f3] md:p-12" data-reveal>
               <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
-                La Maison
+                {eyebrow}
               </p>
               <h2 className="font-display text-3xl leading-tight md:text-[2.6rem]">
-                L’art du makroudh kairouanais authentique
+                {title}
               </h2>
               <div className="mt-6 space-y-5 text-[15px] font-light leading-relaxed text-[#faf6f3]/80">
-                <p>
-                  Enraciné dans l’héritage intemporel de Kairouan, notre
-                  makroudh est une célébration du savoir-faire tunisien,
-                  raffiné pour les palais d’aujourd’hui.
-                </p>
-                <p>
-                  Chaque losange est façonné à la main avec des ingrédients
-                  soigneusement choisis : semoule dorée, pâte de dattes
-                  fondante, miel — et un goût traditionnel qui ne change
-                  jamais.
-                </p>
+                <p>{p1}</p>
+                <p>{p2}</p>
               </div>
 
               <div className="mt-10 grid grid-cols-3 gap-4 border-t border-[#faf6f3]/15 pt-8 text-center">
