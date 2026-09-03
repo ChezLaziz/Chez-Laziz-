@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useCart } from '@/providers/cart'
 
+// Navigation volontairement courte : le parcours principal est
+// Accueil → Collection → Commander → Nous trouver. La Maison et la
+// Galerie restent en ligne (liens dans le pied de page) mais n'ont pas
+// besoin d'être dans la navigation principale — elles n'aident pas à
+// décider ou à commander, elles alourdissent juste le choix.
 const LINKS = [
   { href: '/', label: 'Accueil' },
-  { href: '/la-maison', label: 'La Maison' },
   { href: '/collection', label: 'La Collection' },
-  { href: '/galerie', label: 'Galerie' },
   { href: '/commande', label: 'Commander' },
   { href: '/contact', label: 'Nous trouver' },
 ]

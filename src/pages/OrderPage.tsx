@@ -7,7 +7,6 @@ import { formatTND, PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
-  DELIVERY_METHOD_LABEL,
   DELIVERY_REGION,
   DELIVERY_TIME_LABEL,
   D17_NUMBER_DISPLAY,
@@ -425,7 +424,7 @@ export default function OrderPage() {
                     <span>{formatTND(subtotal)} TND</span>
                   </div>
                   <div className="flex items-baseline">
-                    <span>Livraison ({DELIVERY_METHOD_LABEL.toLowerCase()})</span>
+                    <span>Livraison (porte-à-porte)</span>
                     <span className="mx-3 flex-1" />
                     <span>{formatTND(DELIVERY_FEE_MILLIMES)} TND</span>
                   </div>
