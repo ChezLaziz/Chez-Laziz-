@@ -29,11 +29,30 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Chargement non bloquant : le texte s'affiche avec la police de repli
+         (font-display=swap) sans attendre la réponse de Google Fonts. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:wght@300;400;500;600&display=swap"
     />
-    <link rel="preload" as="image" href="/images/hero.webp" fetchpriority="high" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:wght@300;400;500;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <!-- Deux liens plutôt que imagesrcset/imagesizes : le "media" simple
+         évite un double téléchargement (préchargement et <img> qui ne
+         s'accordent pas toujours sur la résolution avec un descripteur "w"). -->
+    <link rel="preload" as="image" href="/images/hero-mobile.webp" media="(max-width: 767px)" fetchpriority="high" />
+    <link rel="preload" as="image" href="/images/hero.webp" media="(min-width: 768px)" fetchpriority="high" />
 
     <!-- Données structurées : identité réelle du commerce uniquement -->
     <script type="application/ld+json">

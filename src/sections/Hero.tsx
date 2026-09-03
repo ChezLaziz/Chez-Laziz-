@@ -76,6 +76,8 @@ export default function Hero() {
       <img
         ref={imgRef}
         src="/images/hero.webp"
+        srcSet="/images/hero-mobile.webp 960w, /images/hero.webp 2048w"
+        sizes="100vw"
         alt="Makroudh de Kairouan dorés au miel, dressés sur un plateau de cuivre"
         className="absolute inset-0 h-full w-full object-cover"
         fetchPriority="high"
