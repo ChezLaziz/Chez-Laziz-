@@ -9,12 +9,13 @@ export default function Order() {
     <section id="commande" className="py-24 md:py-36">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="grid items-center gap-10 lg:grid-cols-12">
-          {/* Gift box photo */}
+          {/* Photo du produit vedette de la liste — plutôt qu'une photo
+              générique sans lien avec les prix affichés juste à côté. */}
           <div className="lg:col-span-6">
             <div className="mask-reveal aspect-[3/2]">
               <img
-                src="/images/box.webp"
-                alt="Coffret de makroudh Chez Laziz prêt à offrir ou à emporter"
+                src={quick[0]?.imageUrl || '/images/box.webp'}
+                alt={quick[0]?.name || 'Coffret de makroudh Chez Laziz'}
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
@@ -39,12 +40,19 @@ export default function Order() {
               </p>
 
               {/* Quick price recap */}
-              <ul className="mt-8 space-y-3 border-t border-[#faf6f3]/15 pt-8">
+              <ul className="mt-8 space-y-4 border-t border-[#faf6f3]/15 pt-8">
                 {quick.map((q) => (
-                  <li key={q.id} className="flex items-baseline text-[15px] font-light">
+                  <li key={q.id} className="flex items-center gap-3 text-[15px] font-light">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#faf6f3]/20 bg-[#faf6f3]/5">
+                      {q.imageUrl ? (
+                        <img src={q.imageUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-[9px] text-[#faf6f3]/30">—</span>
+                      )}
+                    </div>
                     <span>{q.name}</span>
                     <span
-                      className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25"
+                      className="mx-1 flex-1 border-b border-dotted border-[#faf6f3]/25"
                       aria-hidden="true"
                     />
                     <span className="font-display text-[#b8912e]">
