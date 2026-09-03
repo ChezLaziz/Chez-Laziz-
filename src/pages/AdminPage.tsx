@@ -22,6 +22,63 @@ const TOKEN_KEY = 'laziz_admin_token'
 const inputCls =
   'w-full rounded-lg border border-sand bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e]'
 
+/** Champ mot de passe avec bascule afficher/masquer — évite les erreurs de
+ * saisie invisibles (espace en trop, faute de frappe) qui bloquent la connexion. */
+function PasswordField({
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  required,
+  minLength,
+  autoFocus,
+}: {
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  placeholder?: string
+  autoComplete?: string
+  required?: boolean
+  minLength?: number
+  autoFocus?: boolean
+}) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="relative">
+      <input
+        type={visible ? 'text' : 'password'}
+        required={required}
+        minLength={minLength}
+        autoFocus={autoFocus}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`${inputCls} pr-11`}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+        tabIndex={-1}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/35 transition-colors hover:text-accent"
+      >
+        {visible ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="2.6" />
+            <path d="M4 4l16 16" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="2.6" />
+          </svg>
+        )}
+      </button>
+    </div>
+  )
+}
+
 const STATUS_LABELS: Record<string, string> = {
   nouvelle: 'Nouvelle',
   en_preparation: 'En préparation',
@@ -129,15 +186,15 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         <label className="mt-4 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
           Mot de passe
         </label>
-        <input
-          type="password"
-          required
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          className={`${inputCls} mt-2`}
-        />
+        <div className="mt-2">
+          <PasswordField
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </div>
         {login.isError && (
           <p className="mt-3 text-center text-sm text-red-600">
             {login.error.message || 'Mot de passe incorrect'}
@@ -589,7 +646,7 @@ function ChangeEmailCard({ token }: { token: string }) {
         </p>
       )}
       <input type="email" required value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Nouvelle adresse e-mail" className={inputCls} />
-      <input type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Mot de passe actuel (confirmation)" className={inputCls} />
+      <PasswordField required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Mot de passe actuel (confirmation)" />
       {change.isError && (
         <p className="text-sm text-red-600">{change.error.message || 'Erreur'}</p>
       )}
@@ -631,9 +688,9 @@ function ChangePasswordCard({ token }: { token: string }) {
   return (
     <form onSubmit={submit} className="max-w-md space-y-4 rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
       <p className="font-display text-xl">Changer le mot de passe</p>
-      <input type="password" required value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Mot de passe actuel" className={inputCls} />
-      <input type="password" required minLength={6} value={next} onChange={(e) => setNext(e.target.value)} placeholder="Nouveau mot de passe (min. 6 caractères)" className={inputCls} />
-      <input type="password" required minLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirmer le nouveau mot de passe" className={inputCls} />
+      <PasswordField required value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Mot de passe actuel" />
+      <PasswordField required minLength={6} value={next} onChange={(e) => setNext(e.target.value)} placeholder="Nouveau mot de passe (min. 6 caractères)" />
+      <PasswordField required minLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirmer le nouveau mot de passe" />
       {next && confirm && next !== confirm && (
         <p className="text-sm text-red-600">Les deux mots de passe ne correspondent pas.</p>
       )}
@@ -692,7 +749,7 @@ function UsersCard({ token }: { token: string }) {
       {showForm && (
         <form onSubmit={submit} className="mb-5 space-y-3 rounded-xl border border-[#b8912e]/40 bg-[#f5ece5] p-4">
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Adresse e-mail" className={inputCls} />
-          <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe (min. 6 caractères)" className={inputCls} />
+          <PasswordField required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe (min. 6 caractères)" />
           {addUser.isError && <p className="text-sm text-red-600">{addUser.error.message || 'Erreur'}</p>}
           <button type="submit" disabled={addUser.isPending} className="gold-cta rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50">
             {addUser.isPending ? 'Ajout…' : 'Créer le compte'}
