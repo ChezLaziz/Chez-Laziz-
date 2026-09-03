@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import Ornament from '../components/Ornament'
 import { trpc } from '@/providers/trpc'
 
@@ -45,6 +46,16 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
                 <p>{p1}</p>
                 <p>{p2}</p>
               </div>
+
+              <Link
+                to="/makroudh-kairouan"
+                className="arrow-link mt-6 inline-flex text-sm text-[#faf6f3]/85 hover:text-[#b8912e]"
+              >
+                Pourquoi Kairouan est la référence du makroudh
+                <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+                  <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+              </Link>
 
               <div className="mt-10 grid grid-cols-3 gap-4 border-t border-[#faf6f3]/15 pt-8 text-center">
                 {[
