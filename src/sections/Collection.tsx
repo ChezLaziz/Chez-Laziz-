@@ -121,8 +121,14 @@ function ProductCard({
   )
 }
 
+const DEFAULT_EYEBROW = 'La Collection'
+const DEFAULT_TITLE = 'Le makroudh, dans tous ses états'
+const DEFAULT_SUBTITLE =
+  'Des classiques aux créations de saison — chaque pièce est façonnée à la main, chaque jour. Prix en dinars tunisiens (TND).'
+
 export default function Collection() {
   const { data: products, isLoading } = trpc.products.list.useQuery()
+  const { data: pages } = trpc.content.pages.useQuery()
   const { cart, add, setQty } = useCart()
   const groups = products ? groupByCategory(products as DbProduct[]) : []
 
@@ -131,14 +137,13 @@ export default function Collection() {
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="mx-auto max-w-2xl text-center">
           <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
-            La Collection
+            {pages?.collectionEyebrow || DEFAULT_EYEBROW}
           </p>
           <h2 data-reveal className="font-display text-4xl leading-[1.05] md:text-6xl">
-            Le makroudh, dans tous ses états
+            {pages?.collectionTitle || DEFAULT_TITLE}
           </h2>
           <p data-reveal className="mx-auto mt-6 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
-            Des classiques aux créations de saison — chaque pièce est
-            façonnée à la main, chaque jour. Prix en dinars tunisiens (TND).
+            {pages?.collectionSubtitle || DEFAULT_SUBTITLE}
           </p>
           <a data-reveal href={PHONE_TEL} className="arrow-link mt-8 inline-flex">
             Commander par téléphone

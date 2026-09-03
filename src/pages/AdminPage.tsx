@@ -1214,11 +1214,133 @@ function FooterEditor({ token }: { token: string }) {
   )
 }
 
+type PagesForm = {
+  homeEyebrow: string
+  homeTitle: string
+  homeSubtitleAr: string
+  homeSubtitleFr: string
+  maisonEyebrow: string
+  maisonTitle: string
+  maisonP1: string
+  maisonP2: string
+  collectionEyebrow: string
+  collectionTitle: string
+  collectionSubtitle: string
+  galerieEyebrow: string
+  galerieTitle: string
+  contactEyebrow: string
+  contactTitle: string
+}
+
+const EMPTY_PAGES_FORM: PagesForm = {
+  homeEyebrow: '',
+  homeTitle: '',
+  homeSubtitleAr: '',
+  homeSubtitleFr: '',
+  maisonEyebrow: '',
+  maisonTitle: '',
+  maisonP1: '',
+  maisonP2: '',
+  collectionEyebrow: '',
+  collectionTitle: '',
+  collectionSubtitle: '',
+  galerieEyebrow: '',
+  galerieTitle: '',
+  contactEyebrow: '',
+  contactTitle: '',
+}
+
+function PagesEditor({ token }: { token: string }) {
+  const { data } = trpc.content.pages.useQuery()
+  const update = trpc.content.updatePages.useMutation()
+  const [form, setForm] = useState<PagesForm>(EMPTY_PAGES_FORM)
+  const [loaded, setLoaded] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (data && !loaded) {
+      setForm(data)
+      setLoaded(true)
+    }
+  }, [data, loaded])
+
+  const field = (key: keyof PagesForm) => ({
+    value: form[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setForm({ ...form, [key]: e.target.value }),
+  })
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    update.mutate({ token, ...form }, { onSuccess: () => setDone(true) })
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-6 space-y-6">
+      <p className="text-sm font-light text-ink/60">
+        Les titres ci-dessous s'affichent tels quels sur le site public. Laisser vide n'est pas
+        recommandé — remplacez plutôt par le texte souhaité.
+      </p>
+
+      <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+        <p className="mb-4 font-display text-xl">Accueil</p>
+        <div className="space-y-4">
+          <input {...field('homeEyebrow')} placeholder="Sur-titre" className={inputCls} />
+          <input {...field('homeTitle')} placeholder="Titre principal" className={inputCls} />
+          <input {...field('homeSubtitleAr')} placeholder="Sous-titre (arabe)" dir="rtl" className={inputCls} />
+          <textarea {...field('homeSubtitleFr')} placeholder="Sous-titre (français)" rows={2} className={`${inputCls} resize-none`} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+        <p className="mb-4 font-display text-xl">La Maison</p>
+        <div className="space-y-4">
+          <input {...field('maisonEyebrow')} placeholder="Sur-titre" className={inputCls} />
+          <input {...field('maisonTitle')} placeholder="Titre" className={inputCls} />
+          <textarea {...field('maisonP1')} placeholder="Premier paragraphe" rows={2} className={`${inputCls} resize-none`} />
+          <textarea {...field('maisonP2')} placeholder="Deuxième paragraphe" rows={2} className={`${inputCls} resize-none`} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+        <p className="mb-4 font-display text-xl">Collection</p>
+        <div className="space-y-4">
+          <input {...field('collectionEyebrow')} placeholder="Sur-titre" className={inputCls} />
+          <input {...field('collectionTitle')} placeholder="Titre" className={inputCls} />
+          <textarea {...field('collectionSubtitle')} placeholder="Sous-titre" rows={2} className={`${inputCls} resize-none`} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+        <p className="mb-4 font-display text-xl">Galerie</p>
+        <div className="space-y-4">
+          <input {...field('galerieEyebrow')} placeholder="Sur-titre" className={inputCls} />
+          <input {...field('galerieTitle')} placeholder="Titre" className={inputCls} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
+        <p className="mb-4 font-display text-xl">Contact</p>
+        <div className="space-y-4">
+          <input {...field('contactEyebrow')} placeholder="Sur-titre" className={inputCls} />
+          <input {...field('contactTitle')} placeholder="Titre" className={inputCls} />
+        </div>
+      </div>
+
+      {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
+      <button type="submit" disabled={update.isPending} className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
+        {update.isPending ? 'Enregistrement…' : 'Enregistrer les titres'}
+      </button>
+    </form>
+  )
+}
+
 function ContenuTab({ token }: { token: string }) {
   return (
     <div>
       <GalleryManager token={token} />
       <FooterEditor token={token} />
+      <PagesEditor token={token} />
     </div>
   )
 }

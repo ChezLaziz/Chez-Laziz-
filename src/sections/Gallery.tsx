@@ -8,18 +8,22 @@ const FALLBACK_PHOTOS = [
   { id: 4, imageUrl: '/images/tea.jpg', alt: 'Thé à la menthe versé de haut, le compagnon du makroudh' },
 ]
 
+const DEFAULT_EYEBROW = 'La Boutique'
+const DEFAULT_TITLE = 'La semoule, les dattes, le miel'
+
 export default function Gallery() {
   const { data } = trpc.gallery.list.useQuery()
+  const { data: pages } = trpc.content.pages.useQuery()
   const photos = data && data.length ? data : FALLBACK_PHOTOS
 
   return (
     <section id="galerie" className="py-24 md:py-36">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <p data-reveal className="mb-5 text-center text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
-          La Boutique
+          {pages?.galerieEyebrow || DEFAULT_EYEBROW}
         </p>
         <h2 data-reveal className="font-display mx-auto max-w-2xl text-center text-4xl leading-tight md:text-5xl">
-          La semoule, les dattes, le miel
+          {pages?.galerieTitle || DEFAULT_TITLE}
         </h2>
 
         {/* Grille uniforme — même ratio, même alignement pour chaque photo */}
