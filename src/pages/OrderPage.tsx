@@ -8,13 +8,28 @@ import { formatTND, PHONE_DISPLAY, PHONE_TEL } from '@/lib/shop'
 function TopBar({ title }: { title: string }) {
   return (
     <header className="border-b border-sand/60 bg-[#faf6f3]">
+      <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 md:h-20 md:px-10">
-        <Link to="/" className="font-display text-xl tracking-[0.14em] text-ink md:text-2xl">
-          CHEZ&nbsp;LAZIZ
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 md:h-10 md:w-10" />
+          <span className="font-display text-xl tracking-[0.14em] text-ink md:text-2xl">
+            CHEZ&nbsp;LAZIZ
+          </span>
         </Link>
-        <span className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
-          {title}
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="hidden text-[11px] font-medium uppercase tracking-[0.35em] text-accent sm:inline">
+            {title}
+          </span>
+          <a
+            href={PHONE_TEL}
+            className="hidden items-center gap-2 rounded-full border border-ink/15 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent md:flex"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" strokeLinejoin="round" />
+            </svg>
+            {PHONE_DISPLAY}
+          </a>
+        </div>
       </div>
     </header>
   )
@@ -131,15 +146,53 @@ export default function OrderPage() {
     <div className="min-h-screen bg-[#faf6f3]">
       <TopBar title="Commande en ligne" />
 
+      {/* Bandeau photo — pose le décor avant le formulaire, au lieu d'un
+          simple titre sur fond blanc (page destinée aussi au trafic publicitaire). */}
+      <div className="relative h-[220px] overflow-hidden md:h-[300px]">
+        <img
+          src="/images/makroudh.webp"
+          alt="Makroudh Chez Laziz, façonnés à la main à Kairouan"
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#2e2a27]/85 via-[#2e2a27]/35 to-[#2e2a27]/10" />
+        <div className="absolute inset-0 flex flex-col justify-end px-5 pb-8 md:px-10 md:pb-10">
+          <div className="mx-auto w-full max-w-6xl">
+            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
+              Commander
+            </p>
+            <h1
+              className="font-display text-4xl leading-tight text-[#faf6f3] md:text-6xl"
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.45)' }}
+            >
+              Votre commande
+            </h1>
+          </div>
+        </div>
+      </div>
+
       <main className="mx-auto max-w-6xl px-5 py-14 md:px-10 md:py-20">
         <div className="max-w-2xl">
-          <h1 className="font-display text-4xl leading-tight md:text-6xl">
-            Votre commande
-          </h1>
-          <p className="mt-4 text-[15px] font-light leading-relaxed text-ink/70">
+          <p className="text-[15px] font-light leading-relaxed text-ink/70">
             Choisissez vos makroudh, laissez vos coordonnées — nous vous
             rappelons pour confirmer. Paiement à la boutique, au retrait.
           </p>
+        </div>
+
+        {/* Repères de confiance — utiles pour un visiteur qui arrive
+            directement ici (publicité), sans être passé par l'accueil. */}
+        <div className="mt-8 grid grid-cols-3 gap-4 rounded-2xl border border-sand/70 bg-white py-6 text-center shadow-sm">
+          {[
+            ['100%', 'Fait main'],
+            ['5,0', 'Note Google'],
+            ['7j/7', 'Ouvert'],
+          ].map(([n, label]) => (
+            <div key={label}>
+              <div className="font-display text-2xl text-[#b8912e] md:text-3xl">{n}</div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink/50 md:text-[11px]">
+                {label}
+              </div>
+            </div>
+          ))}
         </div>
 
         <form onSubmit={submit} className="mt-12 grid gap-10 lg:grid-cols-12">
@@ -153,10 +206,17 @@ export default function OrderPage() {
               return (
                 <div
                   key={p.id}
-                  className={`flex items-center gap-4 rounded-xl border p-5 transition-colors ${
+                  className={`flex items-center gap-4 rounded-xl border p-5 shadow-sm transition-colors ${
                     qty > 0 ? 'border-[#b8912e] bg-[#f5ece5]' : 'border-sand bg-white'
                   }`}
                 >
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[9px] text-ink/30">Chez Laziz</span>
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-2">
                       <span className="font-medium">{p.name}</span>
