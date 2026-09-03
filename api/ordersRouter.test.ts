@@ -5,18 +5,31 @@ const listAvailableProducts = vi.fn();
 const createOrder = vi.fn();
 const paymentProofExists = vi.fn();
 const assertAdmin = vi.fn();
+const updateOrderStatus = vi.fn();
+const updatePaymentStatus = vi.fn();
+const markMetaPurchaseReported = vi.fn(async () => undefined);
+const sendMetaPurchaseEvent = vi.fn(async () => undefined);
 
 vi.mock("./queries/products", () => ({ listAvailableProducts }));
 vi.mock("./queries/orders", () => ({
   createOrder,
-  updateOrderStatus: vi.fn(),
-  updatePaymentStatus: vi.fn(),
+  updateOrderStatus,
+  updatePaymentStatus,
   deleteOrder: vi.fn(),
   listOrders: vi.fn(),
+  markMetaPurchaseReported,
 }));
 vi.mock("./lib/r2", () => ({ paymentProofExists }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
 vi.mock("./lib/email", () => ({ notifyAdminNewOrder: vi.fn(async () => undefined) }));
+// La logique de décision (shouldReportMetaPurchase) reste réelle — seul
+// l'appel réseau sortant est remplacé, pour tester le câblage bout en bout.
+vi.mock("./lib/metaConversionsApi", async () => {
+  const actual = await vi.importActual<typeof import("./lib/metaConversionsApi")>(
+    "./lib/metaConversionsApi",
+  );
+  return { ...actual, sendMetaPurchaseEvent };
+});
 
 const { ordersRouter } = await import("./ordersRouter");
 
@@ -343,5 +356,90 @@ describe("orders.create — Custom Pack (calcul dynamique)", () => {
     await caller.create(baseInput);
     const [order] = createOrder.mock.calls.at(-1)!;
     expect(order.items[0]).toMatchObject({ kind: "product", productId: 1, weightKg: 1, unitPriceMillimes: 8000 });
+  });
+
+  it("n'envoie JAMAIS l'événement Meta « Achat » à la simple création — ni confirmée, ni payée", async () => {
+    await caller.create(baseInput);
+    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
+  });
+});
+
+function makeOrder(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 42,
+    phone: "23691039",
+    totalMillimes: 24000,
+    items: JSON.stringify([
+      { kind: "product", productId: 1, name: "Makroudh aux Dattes", weightKg: 1, qty: 2, unitPriceMillimes: 8000 },
+    ]),
+    paymentMethod: "cod",
+    paymentStatus: "pending",
+    status: "nouvelle",
+    metaPurchaseReportedAt: null,
+    ...overrides,
+  };
+}
+
+describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
+  // Un test précédent ("admin-only order procedures...") laisse assertAdmin
+  // en échec permanent (vi.clearAllMocks() ne réinitialise pas les valeurs
+  // configurées via mockRejectedValue) — on la rétablit ici explicitement.
+  beforeEach(() => {
+    assertAdmin.mockResolvedValue(undefined);
+  });
+
+  it("signale l'achat dès que l'admin confirme (statut qui avance après « nouvelle »)", async () => {
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
+    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    expect(markMetaPurchaseReported).toHaveBeenCalledWith(42);
+    expect(sendMetaPurchaseEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: 42, phone: "23691039", totalMillimes: 24000, contentIds: ["1"] }),
+    );
+  });
+
+  it("n'envoie rien si la commande est annulée directement", async () => {
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "annulee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "annulee" });
+    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
+    expect(markMetaPurchaseReported).not.toHaveBeenCalled();
+  });
+
+  it("n'envoie jamais deux fois (déjà signalée précédemment)", async () => {
+    updateOrderStatus.mockResolvedValue(
+      makeOrder({ status: "terminee", metaPurchaseReportedAt: new Date() }),
+    );
+    await caller.setStatus({ token: "t", id: 42, status: "terminee" });
+    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("orders.setPaymentStatus — Meta « Achat » (D17)", () => {
+  beforeEach(() => {
+    assertAdmin.mockResolvedValue(undefined);
+  });
+
+  it("signale l'achat seulement une fois le paiement APPROUVÉ par l'admin", async () => {
+    updatePaymentStatus.mockResolvedValue(
+      makeOrder({ paymentMethod: "d17", paymentStatus: "approved" }),
+    );
+    await caller.setPaymentStatus({ token: "t", id: 42, paymentStatus: "approved" });
+    expect(markMetaPurchaseReported).toHaveBeenCalledWith(42);
+    expect(sendMetaPurchaseEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("n'envoie rien si la preuve D17 est rejetée", async () => {
+    updatePaymentStatus.mockResolvedValue(
+      makeOrder({ paymentMethod: "d17", paymentStatus: "rejected" }),
+    );
+    await caller.setPaymentStatus({ token: "t", id: 42, paymentStatus: "rejected" });
+    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
+  });
+
+  it("un D17 encore en attente de vérification ne déclenche rien même si le statut avance", async () => {
+    updateOrderStatus.mockResolvedValue(
+      makeOrder({ paymentMethod: "d17", paymentStatus: "pending_verification", status: "en_preparation" }),
+    );
+    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
   });
 });

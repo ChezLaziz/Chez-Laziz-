@@ -22,6 +22,13 @@
       "when": 1788449537681,
       "tag": "0002_awesome_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788474381461,
+      "tag": "0003_sweet_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }

@@ -72,6 +72,11 @@ export const orders = pgTable("orders", {
   idempotencyKey: varchar("idempotency_key", { length: 64 }).unique(),
   note: text("note"),
   status: orderStatusEnum("status").notNull().default("nouvelle"),
+  // Horodatage de l'envoi de l'événement "Purchase" à Meta (Pixel/Conversions
+  // API) — jamais à la création de la commande, seulement une fois la
+  // commande confirmée réelle (voir shouldReportMetaPurchase). Empêche un
+  // double envoi si le statut change plusieurs fois après confirmation.
+  metaPurchaseReportedAt: timestamp("meta_purchase_reported_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [index("orders_created_at_idx").on(t.createdAt)]);

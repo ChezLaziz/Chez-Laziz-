@@ -1,14 +1,23 @@
 // Meta Conversions API (Facebook/Instagram) — événement "Purchase" envoyé
-// côté serveur, en complément du Pixel navigateur (src/lib/metaPixel.ts).
-// Nécessaire depuis les restrictions iOS 14+ / bloqueurs de pub : le Pixel
-// seul rate une partie des conversions.
+// côté serveur uniquement, une fois la commande confirmée réelle (voir
+// shouldReportMetaPurchase ci-dessous) — jamais à la simple création de la
+// commande, qui ne prouve ni l'intention d'achat ni le paiement :
+//   - "cash on delivery" : aucune vérification de paiement n'existe, donc le
+//     signal le plus fiable est la confirmation manuelle de l'admin (appel
+//     client) — matérialisée par un statut qui avance au-delà de "nouvelle".
+//   - D17 : seule l'approbation de la capture d'écran de paiement par
+//     l'admin (paymentStatus "approved") prouve qu'un paiement a réellement
+//     eu lieu.
+// Envoyer "Purchase" dès la création — comme une première version le
+// faisait — compte des simples intentions (formulaire rempli, jamais
+// livré/payé) comme des ventes auprès de Meta, ce qui dégrade la qualité du
+// ciblage publicitaire et gaspille le budget pub sur des profils similaires
+// à des non-acheteurs.
 //
 // Activé seulement si META_PIXEL_ID et META_CONVERSIONS_API_TOKEN sont
 // définis. Sans configuration, ne fait rien — la commande est quand même
 // enregistrée (même principe que l'e-mail, voir api/lib/email.ts).
 //
-// `eventId` doit être identique à celui envoyé par le Pixel navigateur
-// ("order-<id>") pour que Meta déduplique les deux envois d'un même achat.
 // Le téléphone du client est haché (SHA-256) avant envoi, comme l'exige
 // Meta — jamais transmis en clair.
 
@@ -18,6 +27,23 @@ const GRAPH_API_VERSION = "v21.0";
 
 export function isMetaConversionsApiConfigured(): boolean {
   return Boolean(process.env.META_PIXEL_ID && process.env.META_CONVERSIONS_API_TOKEN);
+}
+
+export type ReportableOrder = {
+  paymentMethod: "cod" | "d17";
+  paymentStatus: "pending" | "pending_verification" | "approved" | "rejected";
+  status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
+  metaPurchaseReportedAt: Date | null;
+};
+
+/** Décide si CETTE commande doit être signalée à Meta maintenant — à
+ * appeler après toute mise à jour de statut ou de paiement, jamais à la
+ * création. Ne renvoie vrai qu'une seule fois par commande. */
+export function shouldReportMetaPurchase(order: ReportableOrder): boolean {
+  if (order.metaPurchaseReportedAt) return false;
+  if (order.status === "annulee") return false;
+  if (order.paymentMethod === "cod") return order.status !== "nouvelle";
+  return order.paymentStatus === "approved";
 }
 
 export function sha256(value: string): string {
