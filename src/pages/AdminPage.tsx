@@ -117,7 +117,15 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-red-50 text-red-600 border-red-200',
 }
 
-type OrderItem = { productId: number; name: string; weightKg: WeightKg; qty: number; unitPriceMillimes: number }
+type OrderItem = {
+  kind?: 'product' | 'pack' | 'custom'
+  productId?: number
+  name: string
+  weightKg: WeightKg
+  qty: number
+  unitPriceMillimes: number
+  contents?: { name: string; weightKg: WeightKg }[]
+}
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -442,12 +450,23 @@ function OrdersTab({
 
             <ul className="mt-4 space-y-1.5 border-t border-sand/60 pt-4 text-sm font-light">
               {items.map((it, i) => (
-                <li key={i} className="flex items-baseline">
-                  <span>
-                    {it.qty} × {it.name} <span className="text-ink/40">({formatWeight(it.weightKg)})</span>
-                  </span>
-                  <span className="mx-3 flex-1 border-b border-dotted border-ink/15" />
-                  <span className="font-display text-accent">{formatTND(it.qty * it.unitPriceMillimes)}</span>
+                <li key={i}>
+                  <div className="flex items-baseline">
+                    <span>
+                      {it.qty} × {it.name} <span className="text-ink/40">({formatWeight(it.weightKg)})</span>
+                    </span>
+                    <span className="mx-3 flex-1 border-b border-dotted border-ink/15" />
+                    <span className="font-display text-accent">{formatTND(it.qty * it.unitPriceMillimes)}</span>
+                  </div>
+                  {it.contents && it.contents.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 pl-4 text-xs text-ink/55">
+                      {it.contents.map((c, j) => (
+                        <li key={j}>
+                          · {c.name} — {formatWeight(c.weightKg)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

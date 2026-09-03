@@ -3,12 +3,22 @@ import { orders, contactMessages, type InsertOrder } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
 import type { PaymentMethod, WeightKg } from "@contracts/shop";
 
+export type OrderItemContent = { name: string; weightKg: WeightKg; productId?: number };
+
+/** Une ligne de commande : produit au poids (kind absent = anciennes
+ * commandes), pack prêt, ou Custom Pack. `contents` détaille les produits
+ * d'un pack pour l'admin et l'e-mail. */
 export type OrderItem = {
-  productId: number;
+  kind?: "product" | "pack" | "custom";
+  productId?: number;
+  packId?: string;
   name: string;
   weightKg: WeightKg;
   qty: number;
   unitPriceMillimes: number;
+  contents?: OrderItemContent[];
+  /** Custom Pack : part « packaging personnalisé » incluse dans unitPriceMillimes. */
+  packagingMillimes?: number;
 };
 
 export async function createOrder(data: {
