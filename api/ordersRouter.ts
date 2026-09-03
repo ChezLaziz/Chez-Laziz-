@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
-import { listOrders, updateOrderStatus, createOrder } from "./queries/orders";
+import { listOrders, updateOrderStatus, createOrder, deleteOrder } from "./queries/orders";
 import { assertAdmin } from "./queries/admin";
 import { listAvailableProducts } from "./queries/products";
 import { TRPCError } from "@trpc/server";
@@ -79,5 +79,13 @@ export const ordersRouter = createRouter({
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
       return updateOrderStatus(input.id, input.status);
+    }),
+
+  delete: publicQuery
+    .input(z.object({ token: z.string(), id: z.number().int() }))
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+      await deleteOrder(input.id);
+      return { ok: true };
     }),
 });
