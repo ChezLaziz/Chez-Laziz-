@@ -8,6 +8,7 @@ export default function TermsPage() {
     title: 'Conditions générales — Chez Laziz',
     description: 'Conditions générales de vente de Chez Laziz — Kairouan, Tunisie.',
     path: '/conditions-generales',
+    breadcrumb: 'Conditions générales',
   })
   return (
     <div className="min-h-screen bg-[#faf6f3]">

@@ -29,6 +29,7 @@ export default function OrderPage() {
     description:
       'Composez votre commande de makroudh Chez Laziz en ligne — retrait en boutique à Kairouan, confirmation par téléphone ou WhatsApp.',
     path: '/commande',
+    breadcrumb: 'Commander',
   })
   const { data: products, isLoading } = trpc.products.list.useQuery()
   const createOrder = trpc.orders.create.useMutation()

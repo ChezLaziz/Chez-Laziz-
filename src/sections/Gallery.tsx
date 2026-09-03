@@ -11,7 +11,8 @@ const FALLBACK_PHOTOS = [
 const DEFAULT_EYEBROW = 'La Boutique'
 const DEFAULT_TITLE = 'La semoule, les dattes, le miel'
 
-export default function Gallery() {
+export default function Gallery({ headingLevel = 'h2' }: { headingLevel?: 'h1' | 'h2' }) {
+  const Heading = headingLevel
   const { data } = trpc.gallery.list.useQuery()
   const { data: pages } = trpc.content.pages.useQuery()
   const photos = data && data.length ? data : FALLBACK_PHOTOS
@@ -22,9 +23,9 @@ export default function Gallery() {
         <p data-reveal className="mb-5 text-center text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
           {pages?.galerieEyebrow || DEFAULT_EYEBROW}
         </p>
-        <h2 data-reveal className="font-display mx-auto max-w-2xl text-center text-4xl leading-tight md:text-5xl">
+        <Heading data-reveal className="font-display mx-auto max-w-2xl text-center text-4xl leading-tight md:text-5xl">
           {pages?.galerieTitle || DEFAULT_TITLE}
-        </h2>
+        </Heading>
 
         {/* Grille uniforme — même ratio, même alignement pour chaque photo */}
         <div className="mt-16 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
