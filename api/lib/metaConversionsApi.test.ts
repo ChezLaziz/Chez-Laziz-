@@ -4,6 +4,8 @@ import {
   normalizeTunisianPhone,
   sendMetaPurchaseEvent,
   sha256,
+  shouldReportMetaPurchase,
+  type ReportableOrder,
 } from "./metaConversionsApi";
 
 const ORIGINAL_ENV = { ...process.env };
@@ -31,6 +33,62 @@ describe("normalizeTunisianPhone", () => {
   it("conserve l'indicatif déjà présent, avec ou sans + ou espaces", () => {
     expect(normalizeTunisianPhone("+216 23 691 039")).toBe("+21623691039");
     expect(normalizeTunisianPhone("216-23-691-039")).toBe("+21623691039");
+  });
+});
+
+function order(overrides: Partial<ReportableOrder> = {}): ReportableOrder {
+  return {
+    paymentMethod: "cod",
+    paymentStatus: "pending",
+    status: "nouvelle",
+    metaPurchaseReportedAt: null,
+    ...overrides,
+  };
+}
+
+describe("shouldReportMetaPurchase — quand une commande devient un « vrai » achat", () => {
+  it("cash on delivery : jamais tant que le statut reste « nouvelle »", () => {
+    expect(shouldReportMetaPurchase(order({ paymentMethod: "cod", status: "nouvelle" }))).toBe(false);
+  });
+
+  it("cash on delivery : dès que l'admin fait avancer le statut (appel de confirmation)", () => {
+    expect(shouldReportMetaPurchase(order({ paymentMethod: "cod", status: "en_preparation" }))).toBe(true);
+    expect(shouldReportMetaPurchase(order({ paymentMethod: "cod", status: "prete" }))).toBe(true);
+    expect(shouldReportMetaPurchase(order({ paymentMethod: "cod", status: "terminee" }))).toBe(true);
+  });
+
+  it("jamais pour une commande annulée, quel que soit le moyen de paiement", () => {
+    expect(shouldReportMetaPurchase(order({ paymentMethod: "cod", status: "annulee" }))).toBe(false);
+    expect(
+      shouldReportMetaPurchase(
+        order({ paymentMethod: "d17", paymentStatus: "approved", status: "annulee" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("D17 : jamais avant que l'admin approuve la preuve de paiement", () => {
+    expect(
+      shouldReportMetaPurchase(order({ paymentMethod: "d17", paymentStatus: "pending_verification" })),
+    ).toBe(false);
+    expect(
+      shouldReportMetaPurchase(order({ paymentMethod: "d17", paymentStatus: "rejected" })),
+    ).toBe(false);
+  });
+
+  it("D17 : dès que l'admin approuve la preuve, même si le statut de préparation n'a pas bougé", () => {
+    expect(
+      shouldReportMetaPurchase(
+        order({ paymentMethod: "d17", paymentStatus: "approved", status: "nouvelle" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("jamais deux fois : une commande déjà signalée reste ignorée", () => {
+    expect(
+      shouldReportMetaPurchase(
+        order({ paymentMethod: "cod", status: "prete", metaPurchaseReportedAt: new Date() }),
+      ),
+    ).toBe(false);
   });
 });
 

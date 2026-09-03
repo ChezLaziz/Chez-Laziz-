@@ -6,13 +6,14 @@ import {
   updatePaymentStatus,
   createOrder,
   deleteOrder,
+  markMetaPurchaseReported,
 } from "./queries/orders";
 import { assertAdmin } from "./queries/admin";
 import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
 import { paymentProofExists } from "./lib/r2";
 import { notifyAdminNewOrder } from "./lib/email";
-import { sendMetaPurchaseEvent } from "./lib/metaConversionsApi";
+import { sendMetaPurchaseEvent, shouldReportMetaPurchase } from "./lib/metaConversionsApi";
 import { TRPCError } from "@trpc/server";
 import {
   ALLOWED_WEIGHTS_KG,
@@ -35,6 +36,43 @@ import {
   packContents,
   packWeightKg,
 } from "@contracts/packs";
+
+/** `pack:<id>` / `custom` / `<productId>` — mêmes identifiants que ceux
+ * envoyés par le Pixel navigateur (src/pages/OrderPage.tsx). */
+function metaContentIds(items: OrderItem[]): string[] {
+  return items.map((i) =>
+    i.kind === "pack" ? `pack:${i.packId}` : i.kind === "custom" ? "custom" : String(i.productId),
+  );
+}
+
+/** Signale l'achat à Meta si (et seulement si) cette commande vient de
+ * franchir le seuil de confirmation réelle — voir shouldReportMetaPurchase.
+ * Ne lève jamais ; appelée après une mise à jour de statut/paiement. */
+async function maybeReportMetaPurchase(order: {
+  id: number;
+  phone: string;
+  totalMillimes: number;
+  items: string;
+  paymentMethod: "cod" | "d17";
+  paymentStatus: "pending" | "pending_verification" | "approved" | "rejected";
+  status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
+  metaPurchaseReportedAt: Date | null;
+}): Promise<void> {
+  if (!shouldReportMetaPurchase(order)) return;
+  await markMetaPurchaseReported(order.id);
+  let items: OrderItem[] = [];
+  try {
+    items = JSON.parse(order.items);
+  } catch {
+    // ignore — contentIds vides plutôt que de bloquer l'envoi
+  }
+  void sendMetaPurchaseEvent({
+    orderId: order.id,
+    phone: order.phone,
+    totalMillimes: order.totalMillimes,
+    contentIds: metaContentIds(items),
+  });
+}
 
 const orderStatusEnum = z.enum([
   "nouvelle",
@@ -193,20 +231,12 @@ export const ordersRouter = createRouter({
         paymentProofKey: input.paymentMethod === "d17" ? input.paymentProofKey : undefined,
         idempotencyKey: input.idempotencyKey,
       });
-      // Notification e-mail + Meta Conversions API : sans attendre, et sans
-      // jamais faire échouer la commande si l'envoi échoue (voir
-      // api/lib/email.ts et api/lib/metaConversionsApi.ts).
-      if (order) {
-        void notifyAdminNewOrder(order);
-        void sendMetaPurchaseEvent({
-          orderId: order.id,
-          phone: order.phone,
-          totalMillimes: order.totalMillimes,
-          contentIds: items.map((i) =>
-            i.kind === "pack" ? `pack:${i.packId}` : i.kind === "custom" ? "custom" : String(i.productId),
-          ),
-        });
-      }
+      // Notification e-mail : sans attendre, et sans jamais faire échouer la
+      // commande si l'envoi échoue (voir api/lib/email.ts). Le Meta
+      // Conversions API n'est PAS déclenché ici : une commande qui vient
+      // d'être créée n'est ni confirmée ni payée — voir maybeReportMetaPurchase,
+      // appelée seulement depuis setStatus/setPaymentStatus.
+      if (order) void notifyAdminNewOrder(order);
       return order;
     }),
 
@@ -227,7 +257,9 @@ export const ordersRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
-      return updateOrderStatus(input.id, input.status);
+      const order = await updateOrderStatus(input.id, input.status);
+      if (order) await maybeReportMetaPurchase(order);
+      return order;
     }),
 
   /** Approuver/rejeter une preuve de paiement D17 (n'a pas d'effet sur une
@@ -242,7 +274,9 @@ export const ordersRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
-      return updatePaymentStatus(input.id, input.paymentStatus);
+      const order = await updatePaymentStatus(input.id, input.paymentStatus);
+      if (order) await maybeReportMetaPurchase(order);
+      return order;
     }),
 
   delete: publicQuery

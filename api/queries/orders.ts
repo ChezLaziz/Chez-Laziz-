@@ -117,6 +117,15 @@ export async function updatePaymentStatus(
   return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
 }
 
+/** Marque la commande comme déjà signalée à Meta (Purchase) — empêche un
+ * second envoi si son statut ou son paiement change encore ensuite. */
+export async function markMetaPurchaseReported(id: number) {
+  await getDb()
+    .update(orders)
+    .set({ metaPurchaseReportedAt: new Date() })
+    .where(eq(orders.id, id));
+}
+
 export async function createContactMessage(data: {
   name: string;
   phone?: string;

@@ -403,9 +403,11 @@ export default function OrderPage() {
             shipping: DELIVERY_FEE_MILLIMES / 1000,
             items: analyticsItems(),
           })
-          // Même eventID que la Conversions API côté serveur (api/lib/metaConversionsApi.ts)
-          // — Meta déduplique les deux envois d'un même achat.
-          if (order?.id) trackMeta('Purchase', { value: total / 1000, contents: metaContents() }, `order-${order.id}`)
+          // Pas de "Purchase" Meta ici : une commande qui vient d'être créée
+          // n'est ni confirmée (COD) ni payée (D17 en attente de vérification).
+          // L'événement est envoyé côté serveur uniquement une fois la
+          // commande réellement confirmée — voir api/lib/metaConversionsApi.ts
+          // et maybeReportMetaPurchase dans api/ordersRouter.ts.
           setPlaced({
             id: order?.id ?? 0,
             waUrl: 'https://wa.me/21623691039?text=' + encodeURIComponent(text),
