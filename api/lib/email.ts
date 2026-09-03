@@ -63,8 +63,13 @@ export function buildNewOrderEmail(order: NotifiableOrder): { subject: string; h
       : "Espèces à la livraison";
   const addressLine = `${order.address}, ${order.city}${order.postalCode ? ` ${order.postalCode}` : ""}, ${order.governorate}`;
 
+  const contentsText = (it: OrderItem) =>
+    it.contents?.length
+      ? ` [${it.contents.map((c) => `${c.name} ${formatWeight(c.weightKg)}`).join(", ")}]`
+      : "";
   const lines = items.map(
-    (it) => `${it.qty} × ${it.name} (${formatWeight(it.weightKg)}) — ${tnd(it.qty * it.unitPriceMillimes)}`,
+    (it) =>
+      `${it.qty} × ${it.name} (${formatWeight(it.weightKg)})${contentsText(it)} — ${tnd(it.qty * it.unitPriceMillimes)}`,
   );
 
   const text = [
@@ -90,7 +95,11 @@ export function buildNewOrderEmail(order: NotifiableOrder): { subject: string; h
   const rows = items
     .map(
       (it) =>
-        `<tr><td style="padding:6px 0">${it.qty} × ${escapeHtml(it.name)} <span style="color:#756a61">(${formatWeight(it.weightKg)})</span></td><td style="padding:6px 0;text-align:right">${tnd(it.qty * it.unitPriceMillimes)}</td></tr>`,
+        `<tr><td style="padding:6px 0">${it.qty} × ${escapeHtml(it.name)} <span style="color:#756a61">(${formatWeight(it.weightKg)})</span>${
+          it.contents?.length
+            ? `<br><span style="font-size:13px;color:#756a61">${it.contents.map((c) => `${escapeHtml(c.name)} ${formatWeight(c.weightKg)}`).join(" · ")}</span>`
+            : ""
+        }</td><td style="padding:6px 0;text-align:right;vertical-align:top">${tnd(it.qty * it.unitPriceMillimes)}</td></tr>`,
     )
     .join("");
 

@@ -23,6 +23,8 @@ const { ordersRouter } = await import("./ordersRouter");
 const CATALOG = [
   { id: 1, name: "Makroudh aux Dattes", priceMillimes: 8000, available: true },
   { id: 2, name: "Makroudh Blanc à la Pistache", priceMillimes: 40000, available: true },
+  { id: 5, name: "Makroudh Blanc au Fraise", priceMillimes: 22000, available: true },
+  { id: 6, name: "Makroudh aux Amandes", priceMillimes: 17000, available: true },
 ];
 
 const ctx = { req: new Request("http://localhost"), resHeaders: new Headers() };
@@ -222,5 +224,124 @@ describe("admin-only order procedures reject unauthenticated access", () => {
     await expect(
       caller.setPaymentStatus({ token: "not-a-real-token", id: 1, paymentStatus: "approved" }),
     ).rejects.toThrow(TRPCError);
+  });
+});
+
+describe("orders.create — packs prêts (prix fixes)", () => {
+  it("facture un pack au prix de vente fixe, avec son contenu et son poids", async () => {
+    await caller.create({ ...baseInput, items: [{ kind: "pack", packId: "vip", qty: 1 }] });
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            kind: "pack",
+            packId: "vip",
+            name: "Laziz VIP",
+            weightKg: 2,
+            unitPriceMillimes: 69900,
+            contents: [
+              { name: "Makroudh Laziz", weightKg: 0.5 },
+              { name: "Makroudh Blanc à la Pistache", weightKg: 0.5 },
+              { name: "Makroudh Blanc au Fraise", weightKg: 0.5 },
+              { name: "Makroudh Zgougou", weightKg: 0.5 },
+            ],
+          }),
+        ],
+        subtotalMillimes: 69900,
+        totalMillimes: 77900,
+      }),
+    );
+  });
+
+  it("Délice et Classique : 3 produits, 1,5 kg, 39,900 / 29,900 DT", async () => {
+    await caller.create({
+      ...baseInput,
+      items: [
+        { kind: "pack", packId: "delice", qty: 1 },
+        { kind: "pack", packId: "classique", qty: 1 },
+      ],
+    });
+    const [order] = createOrder.mock.calls.at(-1)!;
+    expect(order.items[0]).toMatchObject({ name: "Laziz Délice", weightKg: 1.5, unitPriceMillimes: 39900 });
+    expect(order.items[0].contents).toHaveLength(3);
+    expect(order.items[1]).toMatchObject({ name: "Laziz Classique", weightKg: 1.5, unitPriceMillimes: 29900 });
+    expect(order.items[1].contents).toHaveLength(3);
+    expect(order.subtotalMillimes).toBe(69800);
+  });
+
+  it("ignore tout prix envoyé par le client pour un pack", async () => {
+    await caller.create({
+      ...baseInput,
+      items: [{ kind: "pack", packId: "premium", qty: 2, ...({ unitPriceMillimes: 1 } as object) }],
+    });
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ subtotalMillimes: 99800, totalMillimes: 107800 }),
+    );
+  });
+
+  it("refuse un pack qui n'existe pas", async () => {
+    await expect(
+      // @ts-expect-error — identifiant de pack volontairement invalide
+      caller.create({ ...baseInput, items: [{ kind: "pack", packId: "gold", qty: 1 }] }),
+    ).rejects.toThrow();
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+});
+
+describe("orders.create — Custom Pack (calcul dynamique)", () => {
+  it("4 produits différents × 500 g depuis le catalogue + 10,000 DT de packaging", async () => {
+    await caller.create({ ...baseInput, items: [{ kind: "custom", productIds: [1, 2, 5, 6], qty: 1 }] });
+    // 4.000 + 20.000 + 11.000 + 8.500 = 43.500 + 10.000 packaging
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            kind: "custom",
+            name: "Custom Pack",
+            weightKg: 2,
+            unitPriceMillimes: 53500,
+            packagingMillimes: 10000,
+            contents: [
+              { productId: 1, name: "Makroudh aux Dattes", weightKg: 0.5 },
+              { productId: 2, name: "Makroudh Blanc à la Pistache", weightKg: 0.5 },
+              { productId: 5, name: "Makroudh Blanc au Fraise", weightKg: 0.5 },
+              { productId: 6, name: "Makroudh aux Amandes", weightKg: 0.5 },
+            ],
+          }),
+        ],
+        subtotalMillimes: 53500,
+        totalMillimes: 61500,
+      }),
+    );
+  });
+
+  it("refuse un produit en double (4 produits DIFFÉRENTS)", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ kind: "custom", productIds: [1, 1, 2, 5], qty: 1 }] }),
+    ).rejects.toThrow(/différents/);
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("refuse un pack incomplet (3 produits) ou trop grand (5 produits)", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ kind: "custom", productIds: [1, 2, 5], qty: 1 }] }),
+    ).rejects.toThrow();
+    await expect(
+      caller.create({ ...baseInput, items: [{ kind: "custom", productIds: [1, 2, 5, 6, 1], qty: 1 }] }),
+    ).rejects.toThrow();
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("refuse un produit absent du catalogue", async () => {
+    await expect(
+      caller.create({ ...baseInput, items: [{ kind: "custom", productIds: [1, 2, 5, 999], qty: 1 }] }),
+    ).rejects.toThrow(/indisponible/);
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("un ancien client sans champ « kind » reste une ligne produit au poids", async () => {
+    await caller.create(baseInput);
+    const [order] = createOrder.mock.calls.at(-1)!;
+    expect(order.items[0]).toMatchObject({ kind: "product", productId: 1, weightKg: 1, unitPriceMillimes: 8000 });
   });
 });
