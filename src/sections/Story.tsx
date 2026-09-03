@@ -8,7 +8,8 @@ const DEFAULT_P1 =
 const DEFAULT_P2 =
   'Chaque losange est façonné à la main avec des ingrédients soigneusement choisis : semoule dorée, pâte de dattes fondante, miel — et un goût traditionnel qui ne change jamais.'
 
-export default function Story() {
+export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | 'h2' }) {
+  const Heading = headingLevel
   const { data } = trpc.content.pages.useQuery()
   const eyebrow = data?.maisonEyebrow || DEFAULT_EYEBROW
   const title = data?.maisonTitle || DEFAULT_TITLE
@@ -37,9 +38,9 @@ export default function Story() {
               <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
                 {eyebrow}
               </p>
-              <h2 className="font-display text-3xl leading-tight md:text-[2.6rem]">
+              <Heading className="font-display text-3xl leading-tight md:text-[2.6rem]">
                 {title}
-              </h2>
+              </Heading>
               <div className="mt-6 space-y-5 text-[15px] font-light leading-relaxed text-[#faf6f3]/80">
                 <p>{p1}</p>
                 <p>{p2}</p>

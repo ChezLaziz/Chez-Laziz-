@@ -6,7 +6,8 @@ const MAPS_URL =
 const DEFAULT_EYEBROW = 'Nous trouver'
 const DEFAULT_TITLE = 'La boutique vous attend à Kairouan'
 
-export default function Visit() {
+export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | 'h2' }) {
+  const Heading = headingLevel
   const { data } = trpc.content.pages.useQuery()
 
   return (
@@ -17,9 +18,9 @@ export default function Visit() {
             <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
               {data?.contactEyebrow || DEFAULT_EYEBROW}
             </p>
-            <h2 data-reveal className="font-display max-w-3xl text-4xl leading-[1.08] md:text-6xl">
+            <Heading data-reveal className="font-display max-w-3xl text-4xl leading-[1.08] md:text-6xl">
               {data?.contactTitle || DEFAULT_TITLE}
-            </h2>
+            </Heading>
           </div>
           <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">
             <img

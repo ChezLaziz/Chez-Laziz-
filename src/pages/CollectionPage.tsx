@@ -13,13 +13,14 @@ export default function CollectionPage() {
     description:
       'Le catalogue Chez Laziz : makroudh aux dattes, fruits secs, pistache et nos nouveautés — façonnés à la main chaque jour à Kairouan. Prix en dinars tunisiens.',
     path: '/collection',
+    breadcrumb: 'La Collection',
   })
   return (
     <>
       <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
-        <Collection />
+        <Collection headingLevel="h1" />
         <InstagramReel />
       </main>
       <Footer />

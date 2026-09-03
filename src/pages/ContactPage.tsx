@@ -12,13 +12,14 @@ export default function ContactPage() {
     description:
       'Chez Laziz à Kairouan, Tunisie — ouvert 7j/7 de 07h00 à minuit. Adresse, horaires, téléphone et itinéraire Google Maps.',
     path: '/contact',
+    breadcrumb: 'Nous trouver',
   })
   return (
     <>
       <Cursor />
       <Header />
       <main className="pt-16 md:pt-20">
-        <Visit />
+        <Visit headingLevel="h1" />
       </main>
       <Footer />
     </>

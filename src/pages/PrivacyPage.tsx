@@ -8,6 +8,7 @@ export default function PrivacyPage() {
     title: 'Politique de confidentialité — Chez Laziz',
     description: 'Politique de confidentialité de Chez Laziz — Kairouan, Tunisie.',
     path: '/politique-de-confidentialite',
+    breadcrumb: 'Politique de confidentialité',
   })
   return (
     <div className="min-h-screen bg-[#faf6f3]">

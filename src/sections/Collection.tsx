@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
 import { formatTND, PHONE_TEL } from '@/lib/shop'
@@ -126,11 +127,54 @@ const DEFAULT_TITLE = 'Le makroudh, dans tous ses états'
 const DEFAULT_SUBTITLE =
   'Des classiques aux créations de saison — chaque pièce est façonnée à la main, chaque jour. Prix en dinars tunisiens (TND).'
 
-export default function Collection() {
+export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1' | 'h2' }) {
+  const Heading = headingLevel
   const { data: products, isLoading } = trpc.products.list.useQuery()
   const { data: pages } = trpc.content.pages.useQuery()
   const { cart, add, setQty } = useCart()
   const groups = products ? groupByCategory(products as DbProduct[]) : []
+
+  // Schema.org ItemList/Product — aide Google à comprendre le catalogue
+  // (nom, prix, disponibilité) au-delà du simple texte de la page.
+  useEffect(() => {
+    const scriptId = 'collection-products-jsonld'
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+    if (products && products.length > 0) {
+      if (!script) {
+        script = document.createElement('script')
+        script.id = scriptId
+        script.type = 'application/ld+json'
+        document.head.appendChild(script)
+      }
+      script.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        itemListElement: (products as DbProduct[]).map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          item: {
+            '@type': 'Product',
+            name: p.name,
+            category: p.category,
+            ...(p.description ? { description: p.description } : {}),
+            ...(p.imageUrl ? { image: `https://chezlaziz.com${p.imageUrl}` } : {}),
+            offers: {
+              '@type': 'Offer',
+              price: (p.priceMillimes / 1000).toFixed(3),
+              priceCurrency: 'TND',
+              availability: 'https://schema.org/InStock',
+              url: 'https://chezlaziz.com/collection',
+            },
+          },
+        })),
+      })
+    } else {
+      script?.remove()
+    }
+    return () => {
+      document.getElementById(scriptId)?.remove()
+    }
+  }, [products])
 
   return (
     <section id="collection" className="bg-cream py-24 md:py-36">
@@ -139,9 +183,9 @@ export default function Collection() {
           <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
             {pages?.collectionEyebrow || DEFAULT_EYEBROW}
           </p>
-          <h2 data-reveal className="font-display text-4xl leading-[1.05] md:text-6xl">
+          <Heading data-reveal className="font-display text-4xl leading-[1.05] md:text-6xl">
             {pages?.collectionTitle || DEFAULT_TITLE}
-          </h2>
+          </Heading>
           <p data-reveal className="mx-auto mt-6 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
             {pages?.collectionSubtitle || DEFAULT_SUBTITLE}
           </p>
