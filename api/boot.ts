@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { secureHeaders } from "hono/secure-headers";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
@@ -24,6 +25,25 @@ app.use("*", async (c, next) => {
   }
   await next();
 });
+
+// En-têtes de sécurité HTTP de base (clickjacking, MIME-sniffing, HSTS...).
+// Pas de Content-Security-Policy ici volontairement : le site charge Google
+// Fonts, Meta Pixel et Google Analytics depuis plusieurs domaines externes,
+// et une CSP mal calibrée casserait ce tracking silencieusement (aucune
+// erreur visible, juste des événements manquants) — à faire séparément,
+// avec un audit complet de tous les domaines externes utilisés.
+// crossOriginResourcePolicy/crossOriginOpenerPolicy désactivés : ce site
+// est justement fait pour être partagé/intégré ailleurs (aperçu og:image
+// sur Facebook/Instagram, images produits), l'inverse de ce que ces
+// en-têtes protègent par défaut.
+app.use(
+  "*",
+  secureHeaders({
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+    referrerPolicy: "strict-origin-when-cross-origin",
+  }),
+);
 
 // admin.chezlaziz.com pointe vers ce même service (voir custom domains
 // Railway) ; la racine du sous-domaine doit ouvrir directement le tableau

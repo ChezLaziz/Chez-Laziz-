@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run check
+
+      # Non bloquant pour l'instant : 11 erreurs pré-existantes dans des
+      # composants shadcn/ui vendus (src/components/ui) et quelques hooks,
+      # sans rapport avec les changements de fonctionnalités — à nettoyer
+      # séparément. Reste visible dans les logs sans bloquer les PR sur une
+      # dette antérieure au changement en cours.
+      - name: Lint (informational)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

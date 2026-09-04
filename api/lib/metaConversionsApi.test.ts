@@ -136,7 +136,9 @@ describe("sendMetaPurchaseEvent", () => {
   it("envoie le téléphone haché (jamais en clair) avec l'event_id order-<id>", async () => {
     process.env.META_PIXEL_ID = "999";
     process.env.META_CONVERSIONS_API_TOKEN = "secret-token";
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ events_received: 1 }), { status: 200 }));
+    const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(
+      async () => new Response(JSON.stringify({ events_received: 1 }), { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     await sendMetaPurchaseEvent({
@@ -147,7 +149,7 @@ describe("sendMetaPurchaseEvent", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("graph.facebook.com");
     expect(url).toContain("/999/events");
     expect(url).toContain("access_token=secret-token");
