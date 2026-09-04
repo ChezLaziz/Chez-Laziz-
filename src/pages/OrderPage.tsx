@@ -226,6 +226,7 @@ export default function OrderPage() {
   const [governorate, setGovernorate] = useState('')
   const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
+  const [note, setNote] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [proofKey, setProofKey] = useState<string | null>(null)
   const [proofPreview, setProofPreview] = useState<string | null>(null)
@@ -415,6 +416,7 @@ export default function OrderPage() {
         governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number],
         city: city.trim(),
         address: address.trim(),
+        note: note.trim() || undefined,
         items: items.map(({ line }) =>
           line.kind === 'product'
             ? { kind: 'product' as const, productId: line.productId, weightKg: line.weightKg, qty: line.qty }
@@ -970,6 +972,7 @@ export default function OrderPage() {
                     </select>
                     <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ville / délégation" aria-label="Ville ou délégation" autoComplete="address-level2" className={inputCls} />
                     <textarea required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète (rue, numéro, repère…)" aria-label="Adresse complète" autoComplete="street-address" rows={2} className={`${inputCls} resize-none`} />
+                    <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Précision ? (date souhaitée, occasion…)" aria-label="Précision (facultatif)" rows={2} className={`${inputCls} resize-none`} />
                   </div>
 
                   <fieldset className="mt-6 border-t border-[#faf6f3]/15 pt-6">
