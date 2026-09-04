@@ -67,7 +67,7 @@ export type MetaContentItem = { id: string; quantity?: number; item_price?: numb
  * être identique côté Conversions API (api/lib/metaConversionsApi.ts) pour
  * que Meta déduplique les deux envois d'un même événement. */
 export function trackMeta(
-  event: 'AddToCart' | 'InitiateCheckout' | 'AddPaymentInfo' | 'Purchase',
+  event: 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'AddPaymentInfo' | 'Purchase',
   params: { value: number; contents: MetaContentItem[] },
   eventId?: string,
 ) {

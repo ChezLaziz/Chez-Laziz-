@@ -21,6 +21,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const MakroudhTunisienPage = lazy(() => import('./pages/MakroudhTunisienPage'))
 const MakroudhKairouanPage = lazy(() => import('./pages/MakroudhKairouanPage'))
 const MakroudhDattesPage = lazy(() => import('./pages/MakroudhDattesPage'))
+const MakroudhFruitsSecsPage = lazy(() => import('./pages/MakroudhFruitsSecsPage'))
 const BlogIndexPage = lazy(() => import('./pages/blog/BlogIndexPage'))
 const QuestCeQueLeMakroudhPage = lazy(() => import('./pages/blog/QuestCeQueLeMakroudhPage'))
 const MakroudhKairouanHistoirePage = lazy(() => import('./pages/blog/MakroudhKairouanHistoirePage'))
@@ -62,6 +63,7 @@ export default function App() {
       <Route path="/makroudh-tunisien" element={<Lazy Component={MakroudhTunisienPage} />} />
       <Route path="/makroudh-kairouan" element={<Lazy Component={MakroudhKairouanPage} />} />
       <Route path="/makroudh-aux-dattes" element={<Lazy Component={MakroudhDattesPage} />} />
+      <Route path="/makroudh-fruits-secs" element={<Lazy Component={MakroudhFruitsSecsPage} />} />
       <Route path="/journal" element={<Lazy Component={BlogIndexPage} />} />
       <Route path="/journal/quest-ce-que-le-makroudh-tunisien" element={<Lazy Component={QuestCeQueLeMakroudhPage} />} />
       <Route path="/journal/makroudh-kairouan-histoire-tradition" element={<Lazy Component={MakroudhKairouanHistoirePage} />} />
