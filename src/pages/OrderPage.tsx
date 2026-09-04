@@ -187,7 +187,6 @@ export default function OrderPage() {
   const [governorate, setGovernorate] = useState('')
   const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
-  const [postalCode, setPostalCode] = useState('')
   const [note, setNote] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [proofKey, setProofKey] = useState<string | null>(null)
@@ -370,7 +369,7 @@ export default function OrderPage() {
       contents: l.contents,
       totalMillimes: l.qty * l.unitPriceMillimes,
     }))
-    const addressLine = `${address.trim()}, ${city.trim()}${postalCode.trim() ? ` ${postalCode.trim()}` : ''}, ${governorate}`
+    const addressLine = `${address.trim()}, ${city.trim()}, ${governorate}`
     createOrder.mutate(
       {
         customerName: name.trim(),
@@ -378,7 +377,6 @@ export default function OrderPage() {
         governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number],
         city: city.trim(),
         address: address.trim(),
-        postalCode: postalCode.trim() || undefined,
         note: note.trim() || undefined,
         items: items.map(({ line }) =>
           line.kind === 'product'
@@ -891,18 +889,7 @@ export default function OrderPage() {
                         </option>
                       ))}
                     </select>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ville / délégation" aria-label="Ville ou délégation" autoComplete="address-level2" className={inputCls} />
-                      <input
-                        value={postalCode}
-                        onChange={(e) => setPostalCode(digitsOnly(e.target.value).slice(0, 4))}
-                        placeholder="Code postal"
-                        aria-label="Code postal (facultatif)"
-                        inputMode="numeric"
-                        autoComplete="postal-code"
-                        className={inputCls}
-                      />
-                    </div>
+                    <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ville / délégation" aria-label="Ville ou délégation" autoComplete="address-level2" className={inputCls} />
                     <textarea required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète (rue, numéro, repère…)" aria-label="Adresse complète" autoComplete="street-address" rows={2} className={`${inputCls} resize-none`} />
                     <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Précision ? (date souhaitée, occasion…)" aria-label="Précision (facultatif)" rows={2} className={`${inputCls} resize-none`} />
                   </div>
