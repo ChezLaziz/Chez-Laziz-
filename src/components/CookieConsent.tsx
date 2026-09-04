@@ -1,6 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { getConsent, setConsent } from '@/lib/cookieConsent'
+
+/** Nom de la variable CSS exposant la hauteur réelle du bandeau — lue par
+ * toute barre fixe en bas d'écran (ex. le récap flottant de /commande) pour
+ * se placer au-dessus au lieu de se retrouver cachée derrière (même
+ * position "fixed bottom-0" que le bandeau, sinon). */
+const HEIGHT_VAR = '--cookie-banner-h'
 
 /** Bandeau de consentement — n'apparaît qu'une fois, tant qu'aucun choix
  * n'a été fait. Les cookies de mesure (GA4) et publicitaires (Meta Pixel)
@@ -11,8 +17,26 @@ export default function CookieConsent() {
   // avec un système externe n'est nécessaire ici).
   const [visible, setVisible] = useState(() => getConsent() === null)
   const { pathname } = useLocation()
+  const ref = useRef<HTMLDivElement>(null)
+  const hidden = !visible || pathname.startsWith('/admin')
 
-  if (!visible || pathname.startsWith('/admin')) return null
+  useEffect(() => {
+    const el = ref.current
+    if (hidden || !el) {
+      document.documentElement.style.setProperty(HEIGHT_VAR, '0px')
+      return
+    }
+    const ro = new ResizeObserver(([entry]) => {
+      document.documentElement.style.setProperty(HEIGHT_VAR, `${entry.contentRect.height}px`)
+    })
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      document.documentElement.style.setProperty(HEIGHT_VAR, '0px')
+    }
+  }, [hidden])
+
+  if (hidden) return null
 
   const choose = (value: 'accepted' | 'declined') => {
     setConsent(value)
@@ -20,7 +44,10 @@ export default function CookieConsent() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-sand/70 bg-[#faf6f3] px-5 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:px-10">
+    <div
+      ref={ref}
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-sand/70 bg-[#faf6f3] px-5 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:px-10"
+    >
       <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
         <p className="text-[13px] font-light leading-relaxed text-ink/75">
           Nous utilisons des cookies de mesure d'audience et publicitaires pour améliorer votre
