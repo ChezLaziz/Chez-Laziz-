@@ -7,8 +7,10 @@
 // (ex. "/journal/*" couvre "/journal/mon-article").
 export const PUBLIC_ROUTES = [
   "/",
+  "/ar",
   "/la-maison",
   "/collection",
+  "/ar/collection",
   "/galerie",
   "/contact",
   "/commande",

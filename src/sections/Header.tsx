@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useCart } from '@/providers/cart'
+import { useLang, useIsBilingualPage, altLangPath, type Lang } from '@/lib/i18n'
 
 // Navigation volontairement courte : le parcours principal est
 // Accueil → Collection → Commander → Nous trouver. La Maison et la
@@ -10,17 +11,21 @@ import { useCart } from '@/providers/cart'
 // Sur grand écran, "Commander" est déjà le bouton doré à droite (plus le
 // panier) : le répéter en lien texte ferait trois entrées pour la même
 // page. Le menu mobile, lui, n'a pas ce bouton et garde le lien.
-const LINKS = [
-  { href: '/', label: 'Accueil' },
-  { href: '/collection', label: 'La Collection' },
-  { href: '/contact', label: 'Nous trouver' },
-]
-const MOBILE_LINKS = [
-  LINKS[0],
-  LINKS[1],
-  { href: '/commande', label: 'Commander' },
-  LINKS[2],
-]
+// "Nous trouver" et "Commander" n'ont pas encore de version arabe : le
+// libellé se traduit quand même (cohérence de la navigation), le lien
+// pointe vers la page française telle quelle.
+function links(lang: Lang) {
+  const collection = lang === 'ar' ? '/ar/collection' : '/collection'
+  return [
+    { href: lang === 'ar' ? '/ar' : '/', label: lang === 'ar' ? 'الرئيسية' : 'Accueil' },
+    { href: collection, label: lang === 'ar' ? 'التشكيلة' : 'La Collection' },
+    { href: '/contact', label: lang === 'ar' ? 'تواصل معنا' : 'Nous trouver' },
+  ]
+}
+function mobileLinks(lang: Lang) {
+  const l = links(lang)
+  return [l[0], l[1], { href: '/commande', label: lang === 'ar' ? 'اطلب الآن' : 'Commander' }, l[2]]
+}
 
 function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
   const cls = 'nav-link whitespace-nowrap text-sm font-medium tracking-wide'
@@ -37,9 +42,34 @@ function NavLink({ href, label, onClick }: { href: string; label: string; onClic
   )
 }
 
+/** Bouton FR / عربي — visible seulement sur les pages qui existent dans les
+ * deux langues (voir BILINGUAL_BASE_PATHS). Conserve la page équivalente
+ * et la chaîne de requête (utile pour ?produit=… par ex.). */
+function LanguageSwitch({ tone }: { tone: 'light' | 'dark' }) {
+  const { pathname, search } = useLocation()
+  const lang = useLang()
+  const target = lang === 'ar' ? 'fr' : 'ar'
+  const href = altLangPath(pathname, search, target)
+  return (
+    <Link
+      to={href}
+      lang={target}
+      className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors ${
+        tone === 'light'
+          ? 'border-ink/20 text-ink/70 hover:border-[#b8912e] hover:text-accent'
+          : 'border-[#faf6f3]/50 text-[#faf6f3] hover:bg-[#faf6f3] hover:text-ink'
+      }`}
+    >
+      {target === 'ar' ? 'عربي' : 'FR'}
+    </Link>
+  )
+}
+
 export default function Header() {
   const { pathname } = useLocation()
-  const isHome = pathname === '/'
+  const lang = useLang()
+  const isBilingual = useIsBilingualPage()
+  const isHome = pathname === '/' || pathname === '/ar'
   const [scrolledState, setScrolled] = useState(false)
   // Sur les pages sans photo en fond (tout sauf l'accueil), le header doit
   // toujours être dans son style "clair" (texte foncé, fond visible) —
@@ -48,6 +78,8 @@ export default function Header() {
   const [hidden, setHidden] = useState(false)
   const [open, setOpen] = useState(false)
   const { count } = useCart()
+  const LINKS = links(lang)
+  const MOBILE_LINKS = mobileLinks(lang)
 
   useEffect(() => {
     if (!isHome) return
@@ -81,7 +113,7 @@ export default function Header() {
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
           <Link
-            to="/"
+            to={lang === 'ar' ? '/ar' : '/'}
             className="flex items-center gap-2.5"
           >
             <img src="/images/logo.webp" alt="Chez Laziz" className="h-10 w-10 md:h-12 md:w-12" />
@@ -102,9 +134,10 @@ export default function Header() {
             {LINKS.map((l) => (
               <NavLink key={l.href} {...l} />
             ))}
+            {isBilingual && <LanguageSwitch tone={scrolled ? 'light' : 'dark'} />}
             <Link
               to="/commande"
-              aria-label="Voir le panier"
+              aria-label={lang === 'ar' ? 'عربة التسوق' : 'Voir le panier'}
               className="relative flex h-9 w-9 items-center justify-center"
             >
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -126,14 +159,14 @@ export default function Header() {
                   : 'border-[#faf6f3]/70 text-[#faf6f3] hover:bg-[#faf6f3] hover:text-ink'
               }`}
             >
-              Commander
+              {lang === 'ar' ? 'اطلب الآن' : 'Commander'}
             </Link>
           </nav>
 
           <div className="flex items-center gap-1 md:hidden">
             <Link
               to="/commande"
-              aria-label="Voir le panier"
+              aria-label={lang === 'ar' ? 'عربة التسوق' : 'Voir le panier'}
               className={`relative flex h-10 w-10 items-center justify-center ${
                 scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
               }`}
@@ -200,11 +233,19 @@ export default function Header() {
             </a>
           ),
         )}
+        {isBilingual && (
+          <div
+            className="transition-all duration-500"
+            style={{ transitionDelay: open ? `${120 + MOBILE_LINKS.length * 60}ms` : '0ms', opacity: open ? 1 : 0, transform: open ? 'none' : 'translateY(16px)' }}
+          >
+            <LanguageSwitch tone="dark" />
+          </div>
+        )}
         <a
           href="tel:+21623691039"
           className="mt-4 rounded-full bg-[#b8912e] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"
         >
-          Commander par téléphone
+          {lang === 'ar' ? 'اطلب عبر الهاتف' : 'Commander par téléphone'}
         </a>
       </div>
     </>

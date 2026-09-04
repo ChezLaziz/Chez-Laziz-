@@ -1,4 +1,6 @@
-const ITEMS = [
+import { useLang } from '@/lib/i18n'
+
+const ITEMS_FR = [
   'Miel doré',
   'Pâte de dattes fondante',
   'Semoule dorée à l’huile d’olive',
@@ -8,9 +10,21 @@ const ITEMS = [
   'Frais chaque jour',
   'Sans additif',
 ]
+const ITEMS_AR = [
+  'عسل ذهبي',
+  'عجينة تمر طرية',
+  'سميد ذهبي بزيت الزيتون',
+  'صناعة يدوية',
+  'مقرمش من الخارج، طري من الداخل',
+  'وصفة القيروان',
+  'طازج كل يوم',
+  'بدون إضافات',
+]
 
 export default function Marquee() {
-  const row = [...ITEMS, ...ITEMS]
+  const lang = useLang()
+  const items = lang === 'ar' ? ITEMS_AR : ITEMS_FR
+  const row = [...items, ...items]
   return (
     <div
       className="overflow-hidden border-y border-[#8f6f22]/30 bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22] py-4"

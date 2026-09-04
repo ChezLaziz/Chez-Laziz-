@@ -20,6 +20,7 @@ const caller = contentRouter.createCaller(ctx);
 const base = {
   token: "admin-token",
   tagline: "Pâtisserie artisanale",
+  taglineAr: "حرفة صناعة الحلويات",
   instagram: "https://www.instagram.com/chezlaziz",
   facebook: "https://www.facebook.com/chezlaziz",
   tiktok: "https://www.tiktok.com/@chezlaziz",
@@ -65,20 +66,30 @@ describe("content.updateFooter — photo du bandeau", () => {
 const pagesBase = {
   token: "admin-token",
   homeEyebrow: "",
+  homeEyebrowAr: "",
   homeTitle: "",
   homeSubtitleAr: "",
   homeSubtitleFr: "",
   maisonEyebrow: "",
+  maisonEyebrowAr: "",
   maisonTitle: "",
+  maisonTitleAr: "",
   maisonP1: "",
+  maisonP1Ar: "",
   maisonP2: "",
+  maisonP2Ar: "",
   collectionEyebrow: "",
+  collectionEyebrowAr: "",
   collectionTitle: "",
+  collectionTitleAr: "",
   collectionSubtitle: "",
+  collectionSubtitleAr: "",
   galerieEyebrow: "",
   galerieTitle: "",
   contactEyebrow: "",
+  contactEyebrowAr: "",
   contactTitle: "",
+  contactTitleAr: "",
 };
 
 describe("content.updatePages — photo de la page Contact", () => {

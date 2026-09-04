@@ -1,5 +1,6 @@
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
+import { useLang } from '../lib/i18n'
 import Header from '../sections/Header'
 import Hero from '../sections/Hero'
 import Marquee from '../sections/Marquee'
@@ -15,11 +16,17 @@ import Footer from '../sections/Footer'
 // pied de page (bandeau « Nous trouver »), présent sur toutes les pages.
 export default function Home() {
   useReveal()
+  const lang = useLang()
+  const isAr = lang === 'ar'
   useSEO({
-    title: 'Chez Laziz — عند لعزيز · Makroudh de Kairouan, livré partout en Tunisie',
-    description:
-      'Chez Laziz — عند لعزيز · Pâtisserie à Kairouan spécialisée dans le makroudh kairouanais authentique, fait main chaque jour. Commande en ligne, livraison partout en Tunisie sous 24h.',
-    path: '/',
+    title: isAr
+      ? 'عند لعزيز — مقروض قيرواني أصيل، يوصلكم في كل تونس'
+      : 'Chez Laziz — عند لعزيز · Makroudh de Kairouan, livré partout en Tunisie',
+    description: isAr
+      ? 'عند لعزيز — حلويات القيروان المتخصصة في المقروض القيرواني الأصيل، صناعة يدوية كل يوم. اطلبوا أونلاين، توصيل لكل الجمهوريات التونسية خلال 24 ساعة.'
+      : 'Chez Laziz — عند لعزيز · Pâtisserie à Kairouan spécialisée dans le makroudh kairouanais authentique, fait main chaque jour. Commande en ligne, livraison partout en Tunisie sous 24h.',
+    path: isAr ? '/ar' : '/',
+    alternates: { fr: '/', ar: '/ar' },
   })
 
   return (

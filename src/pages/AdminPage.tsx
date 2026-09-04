@@ -1495,6 +1495,7 @@ function SiteImageField({
 
 type FooterForm = {
   tagline: string
+  taglineAr: string
   instagram: string
   facebook: string
   tiktok: string
@@ -1547,8 +1548,12 @@ function FooterEditorForm({ token, initial }: { token: string; initial: FooterFo
       />
 
       <div>
-        <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de présentation</label>
+        <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de présentation (français)</label>
         <textarea value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} rows={2} className={`${inputCls} resize-none`} />
+      </div>
+      <div>
+        <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de présentation (arabe)</label>
+        <textarea value={form.taglineAr} onChange={(e) => setForm({ ...form, taglineAr: e.target.value })} dir="rtl" rows={2} className={`${inputCls} resize-none`} />
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
@@ -1578,39 +1583,59 @@ function FooterEditorForm({ token, initial }: { token: string; initial: FooterFo
 
 type PagesForm = {
   homeEyebrow: string
+  homeEyebrowAr: string
   homeTitle: string
   homeSubtitleAr: string
   homeSubtitleFr: string
   maisonEyebrow: string
+  maisonEyebrowAr: string
   maisonTitle: string
+  maisonTitleAr: string
   maisonP1: string
+  maisonP1Ar: string
   maisonP2: string
+  maisonP2Ar: string
   collectionEyebrow: string
+  collectionEyebrowAr: string
   collectionTitle: string
+  collectionTitleAr: string
   collectionSubtitle: string
+  collectionSubtitleAr: string
   galerieEyebrow: string
   galerieTitle: string
   contactEyebrow: string
+  contactEyebrowAr: string
   contactTitle: string
+  contactTitleAr: string
   contactImage: string
 }
 
 const EMPTY_PAGES_FORM: PagesForm = {
   homeEyebrow: '',
+  homeEyebrowAr: '',
   homeTitle: '',
   homeSubtitleAr: '',
   homeSubtitleFr: '',
   maisonEyebrow: '',
+  maisonEyebrowAr: '',
   maisonTitle: '',
+  maisonTitleAr: '',
   maisonP1: '',
+  maisonP1Ar: '',
   maisonP2: '',
+  maisonP2Ar: '',
   collectionEyebrow: '',
+  collectionEyebrowAr: '',
   collectionTitle: '',
+  collectionTitleAr: '',
   collectionSubtitle: '',
+  collectionSubtitleAr: '',
   galerieEyebrow: '',
   galerieTitle: '',
   contactEyebrow: '',
+  contactEyebrowAr: '',
   contactTitle: '',
+  contactTitleAr: '',
   contactImage: '',
 }
 
@@ -1646,7 +1671,8 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
       <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
         <p className="mb-4 font-display text-xl">Accueil</p>
         <div className="space-y-4">
-          <input {...field('homeEyebrow')} placeholder="Sur-titre" className={inputCls} />
+          <input {...field('homeEyebrow')} placeholder="Sur-titre (français)" className={inputCls} />
+          <input {...field('homeEyebrowAr')} placeholder="Sur-titre (arabe)" dir="rtl" className={inputCls} />
           <input {...field('homeTitle')} placeholder="Titre principal" className={inputCls} />
           <input {...field('homeSubtitleAr')} placeholder="Sous-titre (arabe)" dir="rtl" className={inputCls} />
           <textarea {...field('homeSubtitleFr')} placeholder="Sous-titre (français)" rows={2} className={`${inputCls} resize-none`} />
@@ -1656,19 +1682,26 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
       <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
         <p className="mb-4 font-display text-xl">La Maison</p>
         <div className="space-y-4">
-          <input {...field('maisonEyebrow')} placeholder="Sur-titre" className={inputCls} />
-          <input {...field('maisonTitle')} placeholder="Titre" className={inputCls} />
-          <textarea {...field('maisonP1')} placeholder="Premier paragraphe" rows={2} className={`${inputCls} resize-none`} />
-          <textarea {...field('maisonP2')} placeholder="Deuxième paragraphe" rows={2} className={`${inputCls} resize-none`} />
+          <input {...field('maisonEyebrow')} placeholder="Sur-titre (français)" className={inputCls} />
+          <input {...field('maisonEyebrowAr')} placeholder="Sur-titre (arabe)" dir="rtl" className={inputCls} />
+          <input {...field('maisonTitle')} placeholder="Titre (français)" className={inputCls} />
+          <input {...field('maisonTitleAr')} placeholder="Titre (arabe)" dir="rtl" className={inputCls} />
+          <textarea {...field('maisonP1')} placeholder="Premier paragraphe (français)" rows={2} className={`${inputCls} resize-none`} />
+          <textarea {...field('maisonP1Ar')} placeholder="Premier paragraphe (arabe)" dir="rtl" rows={2} className={`${inputCls} resize-none`} />
+          <textarea {...field('maisonP2')} placeholder="Deuxième paragraphe (français)" rows={2} className={`${inputCls} resize-none`} />
+          <textarea {...field('maisonP2Ar')} placeholder="Deuxième paragraphe (arabe)" dir="rtl" rows={2} className={`${inputCls} resize-none`} />
         </div>
       </div>
 
       <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
         <p className="mb-4 font-display text-xl">Collection</p>
         <div className="space-y-4">
-          <input {...field('collectionEyebrow')} placeholder="Sur-titre" className={inputCls} />
-          <input {...field('collectionTitle')} placeholder="Titre" className={inputCls} />
-          <textarea {...field('collectionSubtitle')} placeholder="Sous-titre" rows={2} className={`${inputCls} resize-none`} />
+          <input {...field('collectionEyebrow')} placeholder="Sur-titre (français)" className={inputCls} />
+          <input {...field('collectionEyebrowAr')} placeholder="Sur-titre (arabe)" dir="rtl" className={inputCls} />
+          <input {...field('collectionTitle')} placeholder="Titre (français)" className={inputCls} />
+          <input {...field('collectionTitleAr')} placeholder="Titre (arabe)" dir="rtl" className={inputCls} />
+          <textarea {...field('collectionSubtitle')} placeholder="Sous-titre (français)" rows={2} className={`${inputCls} resize-none`} />
+          <textarea {...field('collectionSubtitleAr')} placeholder="Sous-titre (arabe)" dir="rtl" rows={2} className={`${inputCls} resize-none`} />
         </div>
       </div>
 
@@ -1683,8 +1716,10 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
       <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
         <p className="mb-4 font-display text-xl">Contact</p>
         <div className="space-y-4">
-          <input {...field('contactEyebrow')} placeholder="Sur-titre" className={inputCls} />
-          <input {...field('contactTitle')} placeholder="Titre" className={inputCls} />
+          <input {...field('contactEyebrow')} placeholder="Sur-titre (français)" className={inputCls} />
+          <input {...field('contactEyebrowAr')} placeholder="Sur-titre (arabe)" dir="rtl" className={inputCls} />
+          <input {...field('contactTitle')} placeholder="Titre (français)" className={inputCls} />
+          <input {...field('contactTitleAr')} placeholder="Titre (arabe)" dir="rtl" className={inputCls} />
           <SiteImageField
             token={token}
             label="Photo (page Nous trouver)"

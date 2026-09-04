@@ -3,6 +3,7 @@ import { settings } from "@db/schema";
 
 const FOOTER_KEYS = {
   tagline: "footer_tagline",
+  taglineAr: "footer_tagline_ar",
   instagram: "footer_instagram",
   facebook: "footer_facebook",
   tiktok: "footer_tiktok",
@@ -15,6 +16,7 @@ const FOOTER_KEYS = {
 export const FOOTER_DEFAULTS = {
   tagline:
     "Pâtisserie artisanale — Kairouan, Tunisie. Le makroudh kairouanais authentique, fait main chaque jour.",
+  taglineAr: "حرفة صناعة الحلويات — القيروان، تونس. المقروض القيرواني الأصيل، صناعة يدوية كل يوم.",
   instagram: "https://www.instagram.com/chezlaziz",
   facebook: "https://www.facebook.com/profile.php?id=61573444418563",
   tiktok: "https://www.tiktok.com/search?q=chez%20laziz%20kairouan",
@@ -29,6 +31,7 @@ export async function getFooterContent(): Promise<FooterContent> {
   const map = new Map(rows.map((r) => [r.key, r.value]));
   return {
     tagline: map.get(FOOTER_KEYS.tagline) ?? FOOTER_DEFAULTS.tagline,
+    taglineAr: map.get(FOOTER_KEYS.taglineAr) ?? FOOTER_DEFAULTS.taglineAr,
     instagram: map.get(FOOTER_KEYS.instagram) ?? FOOTER_DEFAULTS.instagram,
     facebook: map.get(FOOTER_KEYS.facebook) ?? FOOTER_DEFAULTS.facebook,
     tiktok: map.get(FOOTER_KEYS.tiktok) ?? FOOTER_DEFAULTS.tiktok,
@@ -50,20 +53,30 @@ export async function setFooterContent(data: FooterContent): Promise<void> {
 
 const PAGE_KEYS = {
   homeEyebrow: "page_home_eyebrow",
+  homeEyebrowAr: "page_home_eyebrow_ar",
   homeTitle: "page_home_title",
   homeSubtitleAr: "page_home_subtitle_ar",
   homeSubtitleFr: "page_home_subtitle_fr",
   maisonEyebrow: "page_maison_eyebrow",
+  maisonEyebrowAr: "page_maison_eyebrow_ar",
   maisonTitle: "page_maison_title",
+  maisonTitleAr: "page_maison_title_ar",
   maisonP1: "page_maison_p1",
+  maisonP1Ar: "page_maison_p1_ar",
   maisonP2: "page_maison_p2",
+  maisonP2Ar: "page_maison_p2_ar",
   collectionEyebrow: "page_collection_eyebrow",
+  collectionEyebrowAr: "page_collection_eyebrow_ar",
   collectionTitle: "page_collection_title",
+  collectionTitleAr: "page_collection_title_ar",
   collectionSubtitle: "page_collection_subtitle",
+  collectionSubtitleAr: "page_collection_subtitle_ar",
   galerieEyebrow: "page_galerie_eyebrow",
   galerieTitle: "page_galerie_title",
   contactEyebrow: "page_contact_eyebrow",
+  contactEyebrowAr: "page_contact_eyebrow_ar",
   contactTitle: "page_contact_title",
+  contactTitleAr: "page_contact_title_ar",
   // Photo de la page Contact (clé d'image uploadée depuis l'admin, dossier
   // site/). Vide = photo par défaut du thème (visit-lifestyle.webp).
   contactImage: "page_contact_image",
@@ -71,24 +84,37 @@ const PAGE_KEYS = {
 
 export const PAGES_DEFAULTS = {
   homeEyebrow: "Pâtisserie artisanale — Kairouan",
+  homeEyebrowAr: "حرفة صناعة الحلويات — القيروان",
   homeTitle: "CHEZ LAZIZ",
   homeSubtitleAr: "عند لعزيز — مقروض قيرواني أصيل",
   homeSubtitleFr:
     "L'art du makroudh kairouanais authentique — fait main chaque jour, au goût traditionnel qui ne change jamais.",
   maisonEyebrow: "La Maison",
+  maisonEyebrowAr: "دارنا",
   maisonTitle: "L'art du makroudh kairouanais authentique",
+  maisonTitleAr: "فن المقروض القيرواني الأصيل",
   maisonP1:
     "Enraciné dans l'héritage intemporel de Kairouan, notre makroudh est une célébration du savoir-faire tunisien, raffiné pour les palais d'aujourd'hui.",
+  maisonP1Ar:
+    "متجذّر في تراث القيروان الخالد، مقروضنا احتفاء بالحرفية التونسية الأصيلة، مُعاد صياغته ليلائم أذواق اليوم.",
   maisonP2:
     "Chaque losange est façonné à la main avec des ingrédients soigneusement choisis : semoule dorée, pâte de dattes fondante, miel — et un goût traditionnel qui ne change jamais.",
+  maisonP2Ar:
+    "كل قطعة تُصنع يدويًا بمكونات مُنتقاة بعناية: سميد ذهبي، عجينة تمر طرية، عسل — وطعم تقليدي لا يتغيّر أبدًا.",
   collectionEyebrow: "La Collection",
+  collectionEyebrowAr: "التشكيلة",
   collectionTitle: "Le makroudh, dans tous ses états",
+  collectionTitleAr: "المقروض، بكل أشكاله",
   collectionSubtitle:
     "Des classiques aux créations de saison — chaque pièce est façonnée à la main, chaque jour. Prix en dinars tunisiens (TND).",
+  collectionSubtitleAr:
+    "من الكلاسيكيات إلى إبداعات المواسم — كل قطعة تُصنع يدويًا كل يوم. الأسعار بالدينار التونسي (TND).",
   galerieEyebrow: "La Boutique",
   galerieTitle: "La semoule, les dattes, le miel",
   contactEyebrow: "Nous trouver",
+  contactEyebrowAr: "تواصل معنا",
   contactTitle: "La boutique vous attend à Kairouan",
+  contactTitleAr: "متجرنا بانتظاركم في القيروان",
   contactImage: "",
 };
 
