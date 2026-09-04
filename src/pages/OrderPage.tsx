@@ -81,6 +81,8 @@ const stepperBtnCls =
   'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
 
 const GENERIC_ERROR = `Une erreur est survenue — réessayez, ou appelez-nous au ${PHONE_DISPLAY}.`
+const MAPS_URL =
+  'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
 
 /** Les messages métier du serveur ("preuve D17 obligatoire", "produit
  * indisponible") sont lisibles tels quels ; une erreur de validation
@@ -650,6 +652,15 @@ export default function OrderPage() {
               onAdd={(w) => handleAddProduct(spotlight, w)}
               onSetQty={(w, q) => setQty(spotlight.id, w, q)}
             />
+            <a
+              href={MAPS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 flex items-center justify-center gap-1.5 text-xs font-light text-ink/60 hover:text-accent"
+            >
+              <span aria-hidden="true" className="text-[#b8912e]">★★★★★</span>
+              5,0 — Avis Google
+            </a>
             <p className="mt-4 text-center text-xs font-light text-ink/50">
               Ou{' '}
               <button
@@ -1098,9 +1109,15 @@ export default function OrderPage() {
         </div>
       </main>
 
-      {/* Barre flottante (tous écrans) : composition en cours, sinon total + Commander */}
+      {/* Barre flottante (tous écrans) : composition en cours, sinon total + Commander.
+          "bottom" suit --cookie-banner-h (mis à jour par CookieConsent.tsx) pour
+          rester au-dessus du bandeau de cookies tant qu'il est affiché, au lieu
+          de se retrouver caché derrière (même position fixed bottom-0). */}
       {showBar && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-[#faf6f3]/95 px-5 py-3 backdrop-blur">
+        <div
+          className="fixed inset-x-0 z-40 border-t border-sand bg-[#faf6f3]/95 px-5 py-3 backdrop-blur"
+          style={{ bottom: 'var(--cookie-banner-h, 0px)' }}
+        >
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 md:px-5">
             {composing ? (
               <>
