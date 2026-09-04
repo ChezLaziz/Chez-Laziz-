@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
+import { useLang } from '@/lib/i18n'
 
 function StaggerWord({ word, base }: { word: string; base: number }) {
   return (
@@ -15,20 +16,28 @@ function StaggerWord({ word, base }: { word: string; base: number }) {
 }
 
 const DEFAULT_EYEBROW = 'Pâtisserie artisanale — Kairouan'
+const DEFAULT_EYEBROW_AR = 'حرفة صناعة الحلويات — القيروان'
 const DEFAULT_TITLE = 'CHEZ LAZIZ'
 const DEFAULT_SUBTITLE_AR = 'عند لعزيز — مقروض قيرواني أصيل'
 const DEFAULT_SUBTITLE_FR =
   'L’art du makroudh kairouanais authentique — fait main chaque jour, au goût traditionnel qui ne change jamais.'
+// Pas encore de champ CMS dédié pour ce paragraphe en arabe (voir
+// homeSubtitleAr, qui reste la courte formule décorative) — traduction
+// fixe en attendant, cohérent avec le reste de la page d'accueil arabe.
+const DESCRIPTION_AR =
+  'فن المقروض القيرواني الأصيل — يُصنع يدويًا كل يوم، بنفس الطعم التقليدي الذي لا يتغيّر أبدًا.'
 
 export default function Hero() {
   const [on, setOn] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
   const { data } = trpc.content.pages.useQuery()
+  const lang = useLang()
+  const isAr = lang === 'ar'
 
-  const eyebrow = data?.homeEyebrow || DEFAULT_EYEBROW
+  const eyebrow = isAr ? data?.homeEyebrowAr || DEFAULT_EYEBROW_AR : data?.homeEyebrow || DEFAULT_EYEBROW
   const title = data?.homeTitle || DEFAULT_TITLE
   const subtitleAr = data?.homeSubtitleAr || DEFAULT_SUBTITLE_AR
-  const subtitleFr = data?.homeSubtitleFr || DEFAULT_SUBTITLE_FR
+  const description = isAr ? DESCRIPTION_AR : data?.homeSubtitleFr || DEFAULT_SUBTITLE_FR
 
   // Délai d'apparition de chaque mot : cumul des lettres des mots précédents
   // (calculé sans variable mutée pendant le rendu).
@@ -150,7 +159,7 @@ export default function Hero() {
             transition: 'opacity 0.9s ease 0.95s, transform 0.9s cubic-bezier(0.22,1,0.36,1) 0.95s',
           }}
         >
-          {subtitleFr}
+          {description}
         </p>
 
         <div
@@ -162,14 +171,14 @@ export default function Hero() {
           }}
         >
           <Link
-            to="/collection"
+            to={isAr ? '/ar/collection' : '/collection'}
             className="gold-cta rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
           >
-            Découvrir la collection
+            {isAr ? 'اكتشف تشكيلتنا' : 'Découvrir la collection'}
           </Link>
           <Link to="/commande" className="arrow-link !text-[#faf6f3]">
-            Commander en ligne
-            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+            {isAr ? 'اطلب أونلاين' : 'Commander en ligne'}
+            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
             </svg>
           </Link>
@@ -183,21 +192,23 @@ export default function Hero() {
         style={{ opacity: on ? 1 : 0, transition: 'opacity 1s ease 1.4s' }}
       >
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 py-4 text-[11px] uppercase tracking-[0.22em] text-[#faf6f3]/70 md:justify-between md:px-10">
-          <span className="hidden sm:inline">Ouvert 7j/7 · 07h00 — 00h00</span>
+          <span className="hidden sm:inline">
+            {isAr ? 'مفتوح طوال الأسبوع · 07:00 — 00:00' : 'Ouvert 7j/7 · 07h00 — 00h00'}
+          </span>
           <span className="flex items-center gap-2 text-[#faf6f3]/85">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b8912e" strokeWidth="2" aria-hidden="true">
               <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" strokeLinejoin="round" />
               <circle cx="7" cy="18" r="1.6" /><circle cx="18" cy="18" r="1.6" />
             </svg>
-            Livraison toute la Tunisie · 24h
+            {isAr ? 'التوصيل لكل تونس · 24 ساعة' : 'Livraison toute la Tunisie · 24h'}
           </span>
           <span className="hidden items-center gap-2 sm:flex">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="#b8912e" aria-hidden="true">
               <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" />
             </svg>
-            5,0 sur Google
+            {isAr ? '5.0 على غوغل' : '5,0 sur Google'}
           </span>
-          <a href="tel:+21623691039" className="hover:text-[#faf6f3]">+216 23 691 039</a>
+          <a href="tel:+21623691039" dir="ltr" className="hover:text-[#faf6f3]">+216 23 691 039</a>
         </div>
       </div>
     </section>

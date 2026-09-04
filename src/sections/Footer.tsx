@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { DELIVERY_TIME_LABEL, DELIVERY_FEE_MILLIMES } from '@contracts/shop'
 import { formatTND } from '@/lib/shop'
+import { useLang } from '@/lib/i18n'
 
 const MAPS_URL =
   'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
@@ -12,32 +13,39 @@ const EMAIL = 'contact@chezlaziz.com'
 
 const DEFAULT_TAGLINE =
   'Pâtisserie artisanale — Kairouan, Tunisie. Le makroudh kairouanais authentique, fait main chaque jour.'
+const DEFAULT_TAGLINE_AR = 'حرفة صناعة الحلويات — القيروان، تونس. المقروض القيرواني الأصيل، صناعة يدوية كل يوم.'
 const DEFAULT_COPYRIGHT = '© 2026 Chez Laziz — عند لعزيز · Kairouan. Tous droits réservés.'
 const DEFAULT_VISIT_EYEBROW = 'Nous trouver'
+const DEFAULT_VISIT_EYEBROW_AR = 'تواصل معنا'
 const DEFAULT_VISIT_TITLE = 'La boutique vous attend à Kairouan'
+const DEFAULT_VISIT_TITLE_AR = 'متجرنا بانتظاركم في القيروان'
 
+// Les pages sans version arabe pour l'instant (livraison, FAQ, commande,
+// journal, makroudh-*, la-maison, galerie, contact, mentions légales)
+// gardent leur libellé traduit mais un lien vers la page française telle
+// quelle — cohérent avec le choix fait pour le header (voir Header.tsx).
 const SHOP_LINKS = [
-  ['/', 'Accueil'],
-  ['/collection', 'La Collection'],
-  ['/commande', 'Commander en ligne'],
-  ['/livraison', 'Livraison'],
-  ['/faq', 'Questions fréquentes'],
+  ['/', 'Accueil', 'الرئيسية', true],
+  ['/collection', 'La Collection', 'التشكيلة', true],
+  ['/commande', 'Commander en ligne', 'اطلب أونلاين', false],
+  ['/livraison', 'Livraison', 'التوصيل', false],
+  ['/faq', 'Questions fréquentes', 'الأسئلة الشائعة', false],
 ] as const
 
 const HOUSE_LINKS = [
-  ['/la-maison', 'La Maison'],
-  ['/galerie', 'Galerie'],
-  ['/journal', 'Journal'],
-  ['/makroudh-tunisien', 'Makroudh tunisien'],
-  ['/makroudh-kairouan', 'Makroudh de Kairouan'],
-  ['/makroudh-aux-dattes', 'Makroudh aux dattes'],
-  ['/makroudh-fruits-secs', 'Makroudh aux fruits secs'],
-  ['/contact', 'Nous trouver'],
+  ['/la-maison', 'La Maison', 'قصتنا'],
+  ['/galerie', 'Galerie', 'معرض الصور'],
+  ['/journal', 'Journal', 'المدونة'],
+  ['/makroudh-tunisien', 'Makroudh tunisien', 'المقروض التونسي'],
+  ['/makroudh-kairouan', 'Makroudh de Kairouan', 'مقروض القيروان'],
+  ['/makroudh-aux-dattes', 'Makroudh aux dattes', 'مقروض بالتمر'],
+  ['/makroudh-fruits-secs', 'Makroudh aux fruits secs', 'مقروض بالفواكه الجافة'],
+  ['/contact', 'Nous trouver', 'تواصل معنا'],
 ] as const
 
 const LEGAL_LINKS = [
-  ['/politique-de-confidentialite', 'Politique de confidentialité'],
-  ['/conditions-generales', 'Conditions générales'],
+  ['/politique-de-confidentialite', 'Politique de confidentialité', 'سياسة الخصوصية'],
+  ['/conditions-generales', 'Conditions générales', 'الشروط العامة'],
 ] as const
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -188,23 +196,30 @@ function KairouanSkyline({ className = '' }: { className?: string }) {
   )
 }
 
+/** `bilingual`: chemins existant aussi sous /ar (voir BILINGUAL_BASE_PATHS) —
+ * le lien pointe alors vers la version arabe quand lang === 'ar'. */
 function FooterColumn({
   title,
   links,
+  lang,
   className = '',
 }: {
   title: string
-  links: readonly (readonly [string, string])[]
+  links: readonly (readonly [string, string, string] | readonly [string, string, string, boolean])[]
+  lang: 'fr' | 'ar'
   className?: string
 }) {
   return (
     <div className={className}>
       <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">{title}</p>
       <ul className="space-y-3 text-sm font-light text-[#faf6f3]/75">
-        {links.map(([to, label]) => (
+        {links.map(([to, labelFr, labelAr, bilingual]) => (
           <li key={to}>
-            <Link to={to} className="transition-colors hover:text-[#b8912e]">
-              {label}
+            <Link
+              to={lang === 'ar' && bilingual ? (to === '/' ? '/ar' : `/ar${to}`) : to}
+              className="transition-colors hover:text-[#b8912e]"
+            >
+              {lang === 'ar' ? labelAr : labelFr}
             </Link>
           </li>
         ))}
@@ -215,6 +230,7 @@ function FooterColumn({
 
 /** `hideVisit` : la page /contact affiche déjà ce bloc en pleine page. */
 export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
+  const lang = useLang()
   const { data } = trpc.content.footer.useQuery()
   const { data: pages } = trpc.content.pages.useQuery()
   const banner = data?.bannerImage || ''
@@ -265,7 +281,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               <>
                 <KairouanSkyline className="absolute bottom-0 right-0 hidden h-full w-[46%] lg:block" />
                 <p className="absolute bottom-5 right-6 hidden text-[10px] uppercase tracking-[0.3em] text-[#b8912e]/60 lg:block">
-                  Grande Mosquée de Kairouan
+                  {lang === 'ar' ? 'الجامع الكبير بالقيروان' : 'Grande Mosquée de Kairouan'}
                 </p>
               </>
             )}
@@ -274,25 +290,29 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
           <div className="relative mx-auto max-w-7xl px-5 py-20 md:px-10 md:py-24">
             <div className="lg:max-w-[52%]">
               <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
-                {pages?.contactEyebrow || DEFAULT_VISIT_EYEBROW}
+                {lang === 'ar'
+                  ? pages?.contactEyebrowAr || DEFAULT_VISIT_EYEBROW_AR
+                  : pages?.contactEyebrow || DEFAULT_VISIT_EYEBROW}
               </p>
               <h2 id="footer-visit-title" className="font-display text-4xl leading-[1.08] md:text-5xl">
-                {pages?.contactTitle || DEFAULT_VISIT_TITLE}
+                {lang === 'ar'
+                  ? pages?.contactTitleAr || DEFAULT_VISIT_TITLE_AR
+                  : pages?.contactTitle || DEFAULT_VISIT_TITLE}
               </h2>
 
               <div className="mt-12 grid gap-10 border-t border-[#faf6f3]/15 pt-10 sm:grid-cols-3">
                 <div>
                   <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
-                    Adresse
+                    {lang === 'ar' ? 'العنوان' : 'Adresse'}
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
                     M3MG+VJP
                     <br />
-                    Kairouan, Tunisie
+                    {lang === 'ar' ? 'القيروان، تونس' : 'Kairouan, Tunisie'}
                   </p>
                   <a href={MAPS_URL} target="_blank" rel="noreferrer" className="arrow-link mt-5">
-                    Ouvrir dans Google Maps
-                    <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+                    {lang === 'ar' ? 'افتح في خرائط جوجل' : 'Ouvrir dans Google Maps'}
+                    <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={lang === 'ar' ? 'rotate-180' : ''}>
                       <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
                   </a>
@@ -300,35 +320,37 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
 
                 <div>
                   <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
-                    Horaires
+                    {lang === 'ar' ? 'أوقات العمل' : 'Horaires'}
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
-                    Tous les jours
+                    {lang === 'ar' ? 'كل أيام الأسبوع' : 'Tous les jours'}
                     <br />
                     07h00 – 00h00
                   </p>
                   <p className="mt-4 text-sm font-light text-[#faf6f3]/55">
-                    Makroudh façonné et cuit chaque matin — venez tôt pour les nouveautés du jour.
+                    {lang === 'ar'
+                      ? 'المقروض يُحضّر ويُطهى كل صباح — تعالوا باكرًا لتجربة أحدث الأصناف.'
+                      : 'Makroudh façonné et cuit chaque matin — venez tôt pour les nouveautés du jour.'}
                   </p>
                 </div>
 
                 <div>
                   <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
-                    Contact
+                    {lang === 'ar' ? 'للتواصل' : 'Contact'}
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
-                    <a href={PHONE_TEL} className="transition-colors hover:text-[#b8912e]">
+                    <a href={PHONE_TEL} className="transition-colors hover:text-[#b8912e]" dir="ltr">
                       {PHONE_DISPLAY}
                     </a>
                   </p>
                   <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
-                    <a href={`mailto:${EMAIL}`} className="transition-colors hover:text-[#b8912e]">
+                    <a href={`mailto:${EMAIL}`} className="transition-colors hover:text-[#b8912e]" dir="ltr">
                       {EMAIL}
                     </a>
                   </p>
                   <a href={MESSENGER_URL} target="_blank" rel="noreferrer" className="arrow-link mt-5">
-                    Écrire sur Messenger
-                    <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+                    {lang === 'ar' ? 'راسلونا عبر ماسنجر' : 'Écrire sur Messenger'}
+                    <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={lang === 'ar' ? 'rotate-180' : ''}>
                       <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
                   </a>
@@ -349,7 +371,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
       <div className="border-t border-[#faf6f3]/10">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 py-14 md:px-10 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">
-            <Link to="/" className="inline-flex items-center gap-4">
+            <Link to={lang === 'ar' ? '/ar' : '/'} className="inline-flex items-center gap-4">
               <img
                 src="/images/logo.webp"
                 alt=""
@@ -366,11 +388,11 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               </span>
             </Link>
             <p className="mt-6 max-w-sm text-sm font-light leading-relaxed text-[#faf6f3]/60">
-              {data?.tagline || DEFAULT_TAGLINE}
+              {lang === 'ar' ? data?.taglineAr || DEFAULT_TAGLINE_AR : data?.tagline || DEFAULT_TAGLINE}
             </p>
 
             <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
-              Suivez-nous
+              {lang === 'ar' ? 'تابعونا' : 'Suivez-nous'}
             </p>
             <ul className="mt-4 flex flex-wrap items-center gap-3">
               {socials.map(s => (
@@ -390,17 +412,18 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
             </ul>
           </div>
 
-          <FooterColumn title="Boutique" links={SHOP_LINKS} className="lg:col-span-2" />
-          <FooterColumn title="La Maison" links={HOUSE_LINKS} className="lg:col-span-3" />
+          <FooterColumn title={lang === 'ar' ? 'المتجر' : 'Boutique'} links={SHOP_LINKS} lang={lang} className="lg:col-span-2" />
+          <FooterColumn title={lang === 'ar' ? 'عن الدار' : 'La Maison'} links={HOUSE_LINKS.map(([to, fr, ar]) => [to, fr, ar, false] as const)} lang={lang} className="lg:col-span-3" />
 
           <div className="lg:col-span-3">
             <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
-              Commander
+              {lang === 'ar' ? 'اطلب معنا' : 'Commander'}
             </p>
             <ul className="space-y-3 text-sm font-light text-[#faf6f3]/75">
               <li>
                 <a
                   href={PHONE_TEL}
+                  dir="ltr"
                   className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
                 >
                   <Icon name="Phone" size={16} />
@@ -421,6 +444,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               <li>
                 <a
                   href={`mailto:${EMAIL}`}
+                  dir="ltr"
                   className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
                 >
                   <Icon name="Mail" size={16} />
@@ -432,11 +456,12 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               to="/commande"
               className="gold-cta mt-6 inline-flex items-center justify-center rounded-full bg-[#b8912e] px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#2e2a27] transition-colors hover:bg-[#d4ab3a]"
             >
-              Commander en ligne
+              {lang === 'ar' ? 'اطلب أونلاين' : 'Commander en ligne'}
             </Link>
             <p className="mt-4 text-xs font-light leading-relaxed text-[#faf6f3]/50">
-              Livraison partout en Tunisie sous {DELIVERY_TIME_LABEL} · {formatTND(DELIVERY_FEE_MILLIMES)} TND
-              · Paiement à la livraison ou D17.
+              {lang === 'ar'
+                ? `التوصيل لكل الجمهوريات التونسية خلال ${DELIVERY_TIME_LABEL} · ${formatTND(DELIVERY_FEE_MILLIMES)} د.ت · الدفع عند الاستلام أو عبر D17.`
+                : `Livraison partout en Tunisie sous ${DELIVERY_TIME_LABEL} · ${formatTND(DELIVERY_FEE_MILLIMES)} TND · Paiement à la livraison ou D17.`}
             </p>
           </div>
         </div>
@@ -447,9 +472,9 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-6 text-center text-xs font-light text-[#faf6f3]/45 md:flex-row md:px-10 md:text-left">
           <p>{data?.copyright || DEFAULT_COPYRIGHT}</p>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em]">
-            {LEGAL_LINKS.map(([to, label]) => (
+            {LEGAL_LINKS.map(([to, labelFr, labelAr]) => (
               <Link key={to} to={to} className="transition-colors hover:text-[#b8912e]">
-                {label}
+                {lang === 'ar' ? labelAr : labelFr}
               </Link>
             ))}
           </nav>

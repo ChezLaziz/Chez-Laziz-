@@ -4,6 +4,7 @@ import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { track } from '@/lib/analytics'
 import ProductImage from '@/components/ProductImage'
+import { useLang } from '@/lib/i18n'
 
 type Product = {
   id: number
@@ -25,6 +26,7 @@ function pickFeatured(products: Product[]): Product[] {
 }
 
 export default function Signatures() {
+  const lang = useLang()
   const { data: products, isLoading } = trpc.products.list.useQuery()
   const featured = products ? pickFeatured(products as Product[]) : []
 
@@ -47,15 +49,15 @@ export default function Signatures() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <p data-reveal className="mb-4 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
-              Nos signatures
+              {lang === 'ar' ? 'إبداعاتنا المميزة' : 'Nos signatures'}
             </p>
             <h2 data-reveal className="font-display text-3xl leading-tight md:text-5xl">
-              Une sélection de nos créations emblématiques
+              {lang === 'ar' ? 'تشكيلة من أشهر إبداعاتنا' : 'Une sélection de nos créations emblématiques'}
             </h2>
           </div>
-          <Link data-reveal to="/collection" className="arrow-link">
-            Voir toute la collection
-            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+          <Link data-reveal to={lang === 'ar' ? '/ar/collection' : '/collection'} className="arrow-link">
+            {lang === 'ar' ? 'شاهد التشكيلة كاملة' : 'Voir toute la collection'}
+            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={lang === 'ar' ? 'rotate-180' : ''}>
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
             </svg>
           </Link>
@@ -99,7 +101,7 @@ export default function Signatures() {
                   </p>
                 )}
                 <p className="mt-auto pt-3 font-display text-lg text-accent">
-                  {formatTND(p.priceMillimes)} <span className="text-xs">TND / kg</span>
+                  {formatTND(p.priceMillimes)} <span className="text-xs">{lang === 'ar' ? 'د.ت / كغ' : 'TND / kg'}</span>
                 </p>
               </div>
             </Link>
@@ -107,7 +109,9 @@ export default function Signatures() {
         </div>
 
         <p data-reveal className="mt-6 text-xs uppercase tracking-[0.18em] text-muted-warm">
-          Prix pour 1 kg — poids au choix de 500 g à 2,5 kg à la commande
+          {lang === 'ar'
+            ? 'السعر لكل 1 كغ — الوزن حسب اختياركم من 500 غ إلى 2,5 كغ عند الطلب'
+            : 'Prix pour 1 kg — poids au choix de 500 g à 2,5 kg à la commande'}
         </p>
       </div>
     </section>

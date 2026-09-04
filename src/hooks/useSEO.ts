@@ -35,6 +35,29 @@ export function setJsonLd(id: string, data: unknown): () => void {
   }
 }
 
+/** Pose (ou retire) les <link rel="alternate" hreflang="…"> de la page —
+ * seules les pages traduites en arabe (voir BILINGUAL_BASE_PATHS) en ont.
+ * "x-default" pointe vers le français : c'est le marché principal, la
+ * version à montrer à un visiteur dont la langue ne correspond à aucune
+ * des deux. */
+function setHreflangLinks(alternates?: { fr: string; ar: string }) {
+  document.querySelectorAll('link[data-seo-hreflang]').forEach((el) => el.remove())
+  if (!alternates) return
+  const entries: [string, string][] = [
+    ['fr', alternates.fr],
+    ['ar', alternates.ar],
+    ['x-default', alternates.fr],
+  ]
+  for (const [hreflang, href] of entries) {
+    const link = document.createElement('link')
+    link.setAttribute('rel', 'alternate')
+    link.setAttribute('hreflang', hreflang)
+    link.setAttribute('href', `https://chezlaziz.com${href}`)
+    link.setAttribute('data-seo-hreflang', '1')
+    document.head.appendChild(link)
+  }
+}
+
 export function useSEO({
   title,
   description,
@@ -42,6 +65,7 @@ export function useSEO({
   breadcrumb,
   noindex = false,
   article,
+  alternates,
 }: {
   title: string
   description: string
@@ -54,6 +78,9 @@ export function useSEO({
   /** Articles du Journal : ajoute un schéma Article (date réelle de
    * publication, auteur = la maison). */
   article?: { datePublished: string; dateModified?: string }
+  /** Chemins fr/ar de cette page si elle existe dans les deux langues
+   * (ex. { fr: '/collection', ar: '/ar/collection' }). */
+  alternates?: { fr: string; ar: string }
 }) {
   useEffect(() => {
     const articleId = 'seo-article-jsonld'
@@ -100,6 +127,8 @@ export function useSEO({
     }
     canonical.setAttribute('href', `https://chezlaziz.com${path}`)
 
+    setHreflangLinks(alternates)
+
     const scriptId = 'seo-breadcrumb-jsonld'
     if (breadcrumb) {
       setJsonLd(scriptId, {
@@ -113,5 +142,5 @@ export function useSEO({
     } else {
       document.getElementById(scriptId)?.remove()
     }
-  }, [title, description, path, breadcrumb, noindex])
+  }, [title, description, path, breadcrumb, noindex, alternates])
 }
