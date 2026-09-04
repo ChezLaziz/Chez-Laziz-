@@ -69,7 +69,7 @@ export default function MakroudhFruitsSecsPage() {
 
               <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
-                  to="/commande"
+                  to="/commande?produit=fruits-secs"
                   onClick={() =>
                     trackMeta('InitiateCheckout', { value: 0, contents: [{ id: CONTENT_ID }] })
                   }
@@ -166,7 +166,7 @@ export default function MakroudhFruitsSecsPage() {
               Livraison partout en Tunisie · Paiement à la livraison ou D17
             </p>
             <Link
-              to="/commande"
+              to="/commande?produit=fruits-secs"
               onClick={() => trackMeta('InitiateCheckout', { value: 0, contents: [{ id: CONTENT_ID }] })}
               className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
             >
