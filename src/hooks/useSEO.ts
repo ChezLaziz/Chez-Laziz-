@@ -131,11 +131,17 @@ export function useSEO({
 
     const scriptId = 'seo-breadcrumb-jsonld'
     if (breadcrumb) {
+      const isAr = path === '/ar' || path.startsWith('/ar/')
       setJsonLd(scriptId, {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://chezlaziz.com/' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: isAr ? 'الرئيسية' : 'Accueil',
+            item: isAr ? 'https://chezlaziz.com/ar' : 'https://chezlaziz.com/',
+          },
           { '@type': 'ListItem', position: 2, name: breadcrumb, item: `https://chezlaziz.com${path}` },
         ],
       })
