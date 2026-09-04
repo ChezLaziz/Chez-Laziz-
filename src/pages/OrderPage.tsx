@@ -196,6 +196,12 @@ export default function OrderPage() {
       item_list_name: 'Commande — article mis en avant (pub)',
       items: [{ item_id: String(spotlight.id), item_name: spotlight.name, price: spotlight.priceMillimes / 1000 }],
     })
+    // Signal Meta équivalent à celui de la page produit dédiée — nécessaire
+    // ici car les publicités pointent désormais directement vers /commande.
+    trackMeta('ViewContent', {
+      value: spotlight.priceMillimes / 1000,
+      contents: [{ id: String(spotlight.id), item_price: spotlight.priceMillimes / 1000 }],
+    })
   }, [spotlight])
   const switchTab = (next: Tab) => {
     setTab(next)
