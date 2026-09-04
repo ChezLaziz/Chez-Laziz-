@@ -31,6 +31,7 @@ const HOUSE_LINKS = [
   ['/makroudh-tunisien', 'Makroudh tunisien'],
   ['/makroudh-kairouan', 'Makroudh de Kairouan'],
   ['/makroudh-aux-dattes', 'Makroudh aux dattes'],
+  ['/makroudh-fruits-secs', 'Makroudh aux fruits secs'],
   ['/contact', 'Nous trouver'],
 ] as const
 

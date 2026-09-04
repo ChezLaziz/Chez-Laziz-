@@ -100,6 +100,8 @@ export default function MakroudhKairouanPage() {
             <Link to="/makroudh-tunisien" className="text-accent hover:underline">Makroudh tunisien</Link>
             {' · '}
             <Link to="/makroudh-aux-dattes" className="text-accent hover:underline">Makroudh aux dattes</Link>
+            {' · '}
+            <Link to="/makroudh-fruits-secs" className="text-accent hover:underline">Makroudh aux fruits secs</Link>
           </p>
         </section>
       </main>

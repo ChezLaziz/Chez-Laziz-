@@ -136,6 +136,20 @@ function tabFromHash(hash: string): Tab {
   return 'produits'
 }
 
+/** Un lien publicitaire peut pointer vers ?produit=<slug> pour mettre en
+ * avant UN article précis dès l'arrivée sur la page — sans jamais retirer
+ * le reste du catalogue, qui reste affiché normalement en dessous.
+ * On matche par mot-clé plutôt que par ID : l'ID en base peut changer
+ * (produit recréé depuis l'admin), le nom affiché beaucoup plus rarement. */
+const SPOTLIGHT_KEYWORDS: Record<string, string> = {
+  'fruits-secs': 'fruits secs',
+}
+function findSpotlightProduct(catalog: CatalogProduct[], slug: string | null): CatalogProduct | undefined {
+  const keyword = slug ? SPOTLIGHT_KEYWORDS[slug] : undefined
+  if (!keyword) return undefined
+  return catalog.find((p) => p.name.toLowerCase().includes(keyword))
+}
+
 type Placed = {
   id: number
   recapText: string
@@ -166,6 +180,23 @@ export default function OrderPage() {
   const [tab, setTab] = useState<Tab>(() =>
     typeof window !== 'undefined' ? tabFromHash(window.location.hash) : 'produits',
   )
+
+  // Article mis en avant si on arrive depuis un lien publicitaire ciblé
+  // (ex. /commande?produit=fruits-secs) — voir SPOTLIGHT_KEYWORDS ci-dessus.
+  const [spotlightSlug] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('produit') : null,
+  )
+  const spotlight = useMemo(() => findSpotlightProduct(catalog, spotlightSlug), [catalog, spotlightSlug])
+  const spotlightTrackedRef = useRef(false)
+  useEffect(() => {
+    if (!spotlight || spotlightTrackedRef.current) return
+    spotlightTrackedRef.current = true
+    track('view_item_list', {
+      item_list_id: 'order_spotlight',
+      item_list_name: 'Commande — article mis en avant (pub)',
+      items: [{ item_id: String(spotlight.id), item_name: spotlight.name, price: spotlight.priceMillimes / 1000 }],
+    })
+  }, [spotlight])
   const switchTab = (next: Tab) => {
     setTab(next)
     try {
@@ -597,6 +628,39 @@ export default function OrderPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Article mis en avant (arrivée depuis une publicité ciblée) : un
+          chemin d'achat en un clic, sans jamais retirer le reste du
+          catalogue, toujours visible juste en dessous. ── */}
+      {spotlight && (
+        <section aria-label="Article recommandé pour vous" className="mx-auto max-w-7xl px-5 pt-10 md:px-10">
+          <div className="mx-auto max-w-sm">
+            <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">
+              ★ L'article de votre publicité
+            </p>
+            <ProductOrderCard
+              product={spotlight}
+              qtyByWeight={qtyByWeightFor(spotlight.id)}
+              onAdd={(w) => handleAddProduct(spotlight, w)}
+              onSetQty={(w, q) => setQty(spotlight.id, w, q)}
+            />
+            <p className="mt-4 text-center text-xs font-light text-ink/50">
+              Ou{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  switchTab('produits')
+                  setTimeout(() => scrollToId('panel-produits'), 50)
+                }}
+                className="text-accent underline underline-offset-2"
+              >
+                parcourez tout notre catalogue
+              </button>{' '}
+              ci-dessous.
+            </p>
+          </div>
+        </section>
+      )}
 
       <main className={`mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16 ${showBar ? 'pb-32' : ''}`}>
         {/* ── Nos produits (à la carte, au poids) ── */}
