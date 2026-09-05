@@ -61,7 +61,7 @@ export default function Order() {
                     <span>
                       {productName(q, lang)}
                       {q.isExclusiveCreation && (
-                        <sup className="ms-0.5 text-xs font-normal text-[#faf6f3]/40" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+                        <sup className="ms-0.5 text-xs font-semibold text-accent" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
                           ™
                         </sup>
                       )}

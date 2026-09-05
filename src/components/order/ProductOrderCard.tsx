@@ -59,7 +59,7 @@ export default function ProductOrderCard({
         <p className="break-words font-medium leading-snug">
           {displayName}
           {product.isExclusiveCreation && (
-            <sup className="ms-0.5 text-[10px] font-normal text-ink/40" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+            <sup className="ms-0.5 text-xs font-semibold text-accent" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
               ™
             </sup>
           )}
