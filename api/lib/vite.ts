@@ -23,6 +23,10 @@ type App = Hono<{ Bindings: HttpBindings }>;
 export function spaFallback(indexHtml: string) {
   return (c: Context) => {
     const pathname = new URL(c.req.url).pathname;
+    // Sans directive explicite, certains navigateurs/proxys peuvent mettre en
+    // cache ce HTML et continuer à référencer d'anciens bundles hashés après
+    // un déploiement — on force donc une revalidation systématique.
+    c.header("Cache-Control", "no-cache");
     if (isKnownPublicPath(pathname)) return c.html(indexHtml, 200);
 
     const accept = c.req.header("accept") ?? "";
@@ -38,6 +42,21 @@ export function serveStaticFiles(app: App) {
   // Lu une seule fois au démarrage (le fichier ne change pas en production).
   const indexHtml = fs.readFileSync(path.resolve(distPath, "index.html"), "utf-8");
 
-  app.use("*", serveStatic({ root: "./dist/public" }));
+  app.use(
+    "*",
+    serveStatic({
+      root: "./dist/public",
+      onFound: (filePath, c) => {
+        // Bundles produits par Vite : nom de fichier hashé sur le contenu,
+        // donc jamais réutilisé pour un contenu différent — cache long terme
+        // sûr. Le reste (favicon, manifest, images statiques...) garde une
+        // durée courte pour ne pas geler une mise à jour de plusieurs jours.
+        c.header(
+          "Cache-Control",
+          filePath.includes("/assets/") ? "public, max-age=31536000, immutable" : "public, max-age=3600",
+        );
+      },
+    }),
+  );
   app.notFound(spaFallback(indexHtml));
 }
