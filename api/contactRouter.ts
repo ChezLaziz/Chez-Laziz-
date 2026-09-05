@@ -13,7 +13,10 @@ import {
   listAdminUsers,
   addAdminUser,
   removeAdminUser,
+  requestPasswordReset,
+  resetPasswordWithToken,
 } from "./queries/admin";
+import { sendPasswordResetEmail } from "./lib/email";
 
 export const contactRouter = createRouter({
   /** Envoyer un message (public) */
@@ -131,6 +134,32 @@ export const adminRouter = createRouter({
     .mutation(async ({ input }) => {
       const email = await assertAdmin(input.token);
       await removeAdminUser(email, input.id);
+      return { ok: true };
+    }),
+
+  /** Demande de réinitialisation de mot de passe (page de connexion, avant
+   * authentification). Réponse toujours identique que le compte existe ou
+   * non — ne jamais révéler quelles adresses sont enregistrées. */
+  requestPasswordReset: publicQuery
+    .input(z.object({ email: z.string().min(1).max(255) }))
+    .mutation(async ({ input, ctx }) => {
+      const ip =
+        ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        ctx.req.headers.get("x-real-ip") ||
+        "unknown";
+      const token = await requestPasswordReset(input.email, ip);
+      if (token) {
+        const resetUrl = `https://chezlaziz.com/admin?reset=${token}`;
+        void sendPasswordResetEmail(input.email.trim().toLowerCase(), resetUrl);
+      }
+      return { ok: true };
+    }),
+
+  /** Choix du nouveau mot de passe depuis le lien reçu par e-mail. */
+  resetPassword: publicQuery
+    .input(z.object({ token: z.string().min(1), newPassword: z.string().min(6).max(100) }))
+    .mutation(async ({ input }) => {
+      await resetPasswordWithToken(input.token, input.newPassword);
       return { ok: true };
     }),
 });

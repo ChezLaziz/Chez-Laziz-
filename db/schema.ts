@@ -124,6 +124,10 @@ export const adminUsers = pgTable("admin_users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // Réinitialisation de mot de passe oublié (lien à usage unique envoyé par
+  // e-mail) — resetTokenHash stocke le hash du jeton, jamais le jeton lui-même.
+  resetTokenHash: varchar("reset_token_hash", { length: 255 }),
+  resetTokenExpiresAt: timestamp("reset_token_expires_at"),
 });
 
 // Photos de la page Galerie, gérées depuis l'admin (upload + suppression)

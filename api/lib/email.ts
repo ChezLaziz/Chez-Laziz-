@@ -154,3 +154,47 @@ export async function notifyAdminNewOrder(order: NotifiableOrder): Promise<void>
     console.error(`[email] erreur réseau pour la commande #${order.id}:`, err);
   }
 }
+
+/** Envoie le lien de réinitialisation de mot de passe au compte admin
+ * concerné. Ne lève jamais — retourne `false` si l'envoi échoue (Resend
+ * non configuré ou erreur), pour que l'appelant journalise sans jamais
+ * révéler l'échec au client (voir requestPasswordReset). */
+export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+    console.log("[email] non configuré — lien de réinitialisation non envoyé");
+    return false;
+  }
+  const html = `
+<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#2b211b;background:#faf7f0;padding:28px 24px">
+  <p style="margin:0;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#c88a3d">Chez Laziz</p>
+  <h1 style="margin:8px 0 20px;font-size:24px;font-weight:normal">Réinitialiser votre mot de passe</h1>
+  <p style="margin:0 0 16px;color:#756a61">Une demande de réinitialisation a été faite pour ce compte admin. Ce lien est valable 1 heure et ne peut être utilisé qu'une fois.</p>
+  <p style="margin:24px 0 0"><a href="${escapeHtml(resetUrl)}" style="display:inline-block;padding:10px 18px;background:#c88a3d;color:#fff;text-decoration:none;border-radius:999px;font-size:13px;letter-spacing:.1em;text-transform:uppercase">Choisir un nouveau mot de passe</a></p>
+  <p style="margin:20px 0 0;font-size:13px;color:#756a61">Vous n'êtes pas à l'origine de cette demande ? Ignorez simplement cet e-mail, votre mot de passe reste inchangé.</p>
+</div>`;
+  const text = `Réinitialiser votre mot de passe Chez Laziz : ${resetUrl}\n\nCe lien est valable 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.`;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM,
+        to: [to],
+        subject: "Réinitialiser votre mot de passe — Chez Laziz Admin",
+        html,
+        text,
+      }),
+    });
+    if (!res.ok) {
+      console.error(`[email] échec envoi reset (${res.status}): ${await res.text()}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] erreur réseau envoi reset:", err);
+    return false;
+  }
+}
