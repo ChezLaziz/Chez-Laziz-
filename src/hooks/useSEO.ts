@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { stripLangPrefix, BILINGUAL_BASE_PATHS } from '@/lib/i18n'
 
 function setMeta(attr: 'name' | 'property', key: string, content: string) {
   let el = document.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)
@@ -33,6 +34,16 @@ export function setJsonLd(id: string, data: unknown): () => void {
   return () => {
     document.getElementById(id)?.remove()
   }
+}
+
+/** Déduit automatiquement les URLs fr/ar d'une page à partir de
+ * BILINGUAL_BASE_PATHS — évite d'avoir à passer `alternates` à la main sur
+ * chaque page (oubli facile : la moitié des pages bilingues du site n'avaient
+ * plus leurs balises hreflang après quelques ajouts de pages). */
+function deriveAlternates(path: string): { fr: string; ar: string } | undefined {
+  const base = stripLangPrefix(path)
+  if (!(BILINGUAL_BASE_PATHS as readonly string[]).includes(base)) return undefined
+  return { fr: base, ar: base === '/' ? '/ar' : `/ar${base}` }
 }
 
 /** Pose (ou retire) les <link rel="alternate" hreflang="…"> de la page —
@@ -78,10 +89,12 @@ export function useSEO({
   /** Articles du Journal : ajoute un schéma Article (date réelle de
    * publication, auteur = la maison). */
   article?: { datePublished: string; dateModified?: string }
-  /** Chemins fr/ar de cette page si elle existe dans les deux langues
-   * (ex. { fr: '/collection', ar: '/ar/collection' }). */
+  /** Chemins fr/ar de cette page, seulement si son chemin de base ne figure
+   * PAS dans BILINGUAL_BASE_PATHS (sinon déduits automatiquement) — ou pour
+   * forcer des chemins différents dans un cas particulier. */
   alternates?: { fr: string; ar: string }
 }) {
+  const resolvedAlternates = alternates ?? deriveAlternates(path)
   useEffect(() => {
     const articleId = 'seo-article-jsonld'
     if (article) {
@@ -127,7 +140,7 @@ export function useSEO({
     }
     canonical.setAttribute('href', `https://chezlaziz.com${path}`)
 
-    setHreflangLinks(alternates)
+    setHreflangLinks(resolvedAlternates)
 
     const scriptId = 'seo-breadcrumb-jsonld'
     if (breadcrumb) {
@@ -148,5 +161,5 @@ export function useSEO({
     } else {
       document.getElementById(scriptId)?.remove()
     }
-  }, [title, description, path, breadcrumb, noindex, alternates])
+  }, [title, description, path, breadcrumb, noindex, resolvedAlternates])
 }

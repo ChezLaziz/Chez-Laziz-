@@ -26,7 +26,6 @@ export default function Home() {
       ? 'عند لعزيز — حلويات القيروان المتخصصة في المقروض القيرواني الأصيل، صناعة يدوية كل يوم. اطلبوا أونلاين، توصيل لكل الجمهوريات التونسية خلال 24 ساعة.'
       : 'Chez Laziz — عند لعزيز · Pâtisserie à Kairouan spécialisée dans le makroudh kairouanais authentique, fait main chaque jour. Commande en ligne, livraison partout en Tunisie sous 24h.',
     path: isAr ? '/ar' : '/',
-    alternates: { fr: '/', ar: '/ar' },
   })
 
   return (

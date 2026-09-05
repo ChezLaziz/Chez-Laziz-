@@ -4,16 +4,19 @@ import { BrowserRouter } from 'react-router'
 import './index.css'
 import { TRPCProvider } from "@/providers/trpc"
 import { CartProvider } from "@/providers/cart"
+import ErrorBoundary from '@/components/ErrorBoundary'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <TRPCProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </TRPCProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <TRPCProvider>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </TRPCProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>,
 )

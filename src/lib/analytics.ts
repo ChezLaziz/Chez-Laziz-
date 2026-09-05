@@ -65,3 +65,11 @@ export function track(
   if (!MEASUREMENT_ID || !window.gtag) return
   window.gtag('event', event, { currency: 'TND', ...params })
 }
+
+/** Signale un crash React (voir ErrorBoundary) — sans ça, une erreur
+ * inattendue qui fait planter toute la page ne laisse aucune trace, et
+ * personne ne sait qu'un visiteur est tombé sur un écran blanc. */
+export function trackException(description: string, fatal = true) {
+  if (!MEASUREMENT_ID || !window.gtag) return
+  window.gtag('event', 'exception', { description, fatal })
+}
