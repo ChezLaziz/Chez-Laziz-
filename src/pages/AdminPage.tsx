@@ -1680,8 +1680,14 @@ function FooterEditor({ token }: { token: string }) {
 function FooterEditorForm({ token, initial }: { token: string; initial: FooterForm }) {
   const update = trpc.content.updateFooter.useMutation()
   const utils = trpc.useUtils()
-  const [form, setForm] = useState<FooterForm>(initial)
+  const [formState, setFormState] = useState<FooterForm>(initial)
   const [done, setDone] = useState(false)
+  const form = formState
+  // Voir PagesEditorForm : toute frappe invalide le "Enregistré ✓".
+  const setForm = (next: FooterForm | ((f: FooterForm) => FooterForm)) => {
+    setDone(false)
+    setFormState(next)
+  }
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -1739,10 +1745,19 @@ function FooterEditorForm({ token, initial }: { token: string; initial: FooterFo
         <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de copyright</label>
         <input value={form.copyright} onChange={(e) => setForm({ ...form, copyright: e.target.value })} className={inputCls} />
       </div>
-      {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
-      <button type="submit" disabled={update.isPending} className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
-        {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
-      </button>
+      {/* Barre collante : ce formulaire fait plusieurs écrans de haut sur un
+          téléphone, le bouton d'enregistrement ne doit pas être au fond. */}
+      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#faf6f3]/95 px-1 py-3 backdrop-blur">
+        <button type="submit" disabled={update.isPending} className="min-h-11 rounded-full bg-ink px-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
+          {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+        {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
+        {update.isError && (
+          <p className="text-sm text-red-600" role="alert">
+            Non enregistré : {update.error.message}
+          </p>
+        )}
+      </div>
     </form>
   )
 }
@@ -1813,18 +1828,35 @@ function PagesEditor({ token }: { token: string }) {
 
 function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm }) {
   const update = trpc.content.updatePages.useMutation()
+  const utils = trpc.useUtils()
   const [form, setForm] = useState<PagesForm>({ ...EMPTY_PAGES_FORM, ...initial })
   const [done, setDone] = useState(false)
 
   const field = (key: keyof PagesForm) => ({
     value: form[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm({ ...form, [key]: e.target.value }),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      // Dès qu'on retape, le "Enregistré ✓" précédent ne décrit plus l'état
+      // de l'écran : il laissait croire que les nouvelles modifications
+      // étaient déjà sauvegardées.
+      setDone(false)
+      setForm({ ...form, [key]: e.target.value })
+    },
   })
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    update.mutate({ token, ...form }, { onSuccess: () => setDone(true) })
+    setDone(false)
+    update.mutate(
+      { token, ...form },
+      {
+        onSuccess: () => {
+          setDone(true)
+          // Sans invalidation, le site continuait d'afficher l'ancien texte
+          // jusqu'au prochain rechargement complet.
+          utils.content.pages.invalidate()
+        },
+      },
+    )
   }
 
   return (
@@ -1897,10 +1929,17 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
         </div>
       </div>
 
-      {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
-      <button type="submit" disabled={update.isPending} className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
-        {update.isPending ? 'Enregistrement…' : 'Enregistrer les titres'}
-      </button>
+      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#faf6f3]/95 px-1 py-3 backdrop-blur">
+        <button type="submit" disabled={update.isPending} className="min-h-11 rounded-full bg-ink px-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
+          {update.isPending ? 'Enregistrement…' : 'Enregistrer les titres'}
+        </button>
+        {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
+        {update.isError && (
+          <p className="text-sm text-red-600" role="alert">
+            Non enregistré : {update.error.message}
+          </p>
+        )}
+      </div>
     </form>
   )
 }

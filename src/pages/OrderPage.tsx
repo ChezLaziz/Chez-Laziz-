@@ -46,9 +46,11 @@ function TopBar() {
     <header className="sticky top-0 z-40 border-b border-sand/60 bg-[#faf6f3]/95 backdrop-blur">
       <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
-        <Link to={isAr ? '/ar' : '/'} className="flex items-center gap-2.5">
-          <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 md:h-10 md:w-10" width="40" height="40" />
-          <span className="font-display text-xl tracking-[0.14em] text-ink md:text-2xl">CHEZ&nbsp;LAZIZ</span>
+        <Link to={isAr ? '/ar' : '/'} className="flex min-w-0 items-center gap-2 md:gap-2.5">
+          <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 shrink-0 md:h-10 md:w-10" width="40" height="40" />
+          <span className="truncate font-display text-base tracking-[0.08em] text-ink sm:text-xl sm:tracking-[0.14em] md:text-2xl">
+            CHEZ&nbsp;LAZIZ
+          </span>
         </Link>
         <div className="flex items-center gap-2 md:gap-3">
           <LanguageSwitch tone="light" />
