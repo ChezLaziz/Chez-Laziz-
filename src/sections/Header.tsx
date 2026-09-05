@@ -57,6 +57,17 @@ export default function Header() {
   const [open, setOpen] = useState(false)
   const { count } = useCart()
   const LINKS = links(lang)
+
+  // Ferme le menu mobile au clavier — sans ça, un utilisateur clavier qui
+  // ouvre le menu n'a aucun moyen de le refermer sans la souris.
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
   const MOBILE_LINKS = mobileLinks(lang)
 
   useEffect(() => {
@@ -164,6 +175,8 @@ export default function Header() {
             <button
             onClick={() => setOpen(!open)}
             aria-label="Menu"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
             className={`flex h-10 w-10 flex-col items-center justify-center gap-[6px] ${
               scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
             }`}
@@ -185,6 +198,11 @@ export default function Header() {
 
       {/* Mobile full-screen drawer */}
       <div
+        id="mobile-menu"
+        role="dialog"
+        aria-modal={open}
+        aria-label={lang === 'ar' ? 'قائمة التنقل' : 'Menu de navigation'}
+        inert={!open}
         className={`fixed inset-0 z-40 flex flex-col items-center justify-center gap-8 bg-[#2e2a27] transition-[clip-path] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] md:hidden ${
           open ? '[clip-path:inset(0_0_0_0)]' : 'pointer-events-none [clip-path:inset(0_0_100%_0)]'
         }`}
