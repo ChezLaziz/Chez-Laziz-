@@ -1,19 +1,98 @@
 import { Link } from 'react-router'
 import { useReveal } from '../../hooks/useReveal'
 import { useSEO } from '../../hooks/useSEO'
+import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
 
 export default function CommentEstPreparePage() {
   useReveal()
-  useSEO({
-    title: 'Comment est préparé le véritable makroudh tunisien ? — Journal Chez Laziz',
-    description:
-      'De la pâte de semoule au bain de miel, les étapes de fabrication du makroudh — et ce qui distingue un makroudh fait main.',
-    path: '/journal/comment-est-prepare-le-makroudh',
-    breadcrumb: 'Comment est préparé le makroudh ?',
-    article: { datePublished: '2026-09-03' },
-  })
+  const isAr = useLang() === 'ar'
+  useSEO(
+    isAr
+      ? {
+          title: 'كيفاش يُحضّر المقروض التونسي الحقيقي؟ — مدونة عند لعزيز',
+          description: 'من عجينة السميد لحمام العسل، خطوات صناعة المقروض — وشنية اللي يميّز المقروض المصنوع باليد.',
+          path: '/ar/journal/comment-est-prepare-le-makroudh',
+          breadcrumb: 'كيفاش يُحضّر المقروض؟',
+          article: { datePublished: '2026-09-03' },
+        }
+      : {
+          title: 'Comment est préparé le véritable makroudh tunisien ? — Journal Chez Laziz',
+          description:
+            'De la pâte de semoule au bain de miel, les étapes de fabrication du makroudh — et ce qui distingue un makroudh fait main.',
+          path: '/journal/comment-est-prepare-le-makroudh',
+          breadcrumb: 'Comment est préparé le makroudh ?',
+          article: { datePublished: '2026-09-03' },
+        },
+  )
+
+  if (isAr) {
+    return (
+      <div className="min-h-screen bg-[#faf6f3]">
+        <Header />
+        <main className="pt-16 md:pt-20">
+          <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
+            <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">المدونة</p>
+            <h1 className="font-display text-3xl leading-tight md:text-5xl">
+              كيفاش يُحضّر المقروض التونسي الحقيقي؟
+            </h1>
+
+            <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
+              <p>
+                تحضير المقروض التقليدي يمر بعدة خطوات دقيقة، وين كل حركة مهمة باش نوصلو للقوام والطعم المميز
+                لهذي الحلوى.
+              </p>
+              <h2 className="font-display text-xl text-ink">1. عجينة السميد</h2>
+              <p>
+                كل شي يبدا بعجينة سميد رقيقة، معجونة بزيت الزيتون. هذا الخليط، بلا خميرة، يعطي المقروض قوامه الهش
+                بعد القلي — يختلف بزاف على عجينة الخبز ولا الكيك الكلاسيكية.
+              </p>
+              <h2 className="font-display text-xl text-ink">2. حشوة التمر</h2>
+              <p>
+                عجينة التمر، محضّرة من تمر منزوع النوى ومشتغل عليه حتى توصل لقوام متجانس، تُحط بعدها في وسط
+                أسطوانة من عجينة السميد، اللي تنغلق حواليها.
+              </p>
+              <h2 className="font-display text-xl text-ink">3. التشكيل بالقالب</h2>
+              <p>
+                الأسطوانة المحشوة تُضغط في قالب خشبي منقوش، الطابع، اللي يطبع رسمته المخططة على العجينة قبل
+                القطع لمعينات. هذا القالب، المتناقل في العائلات والمصانع الحرفية، هو اللي يعطي المقروض شكله
+                التقليدي.
+              </p>
+              <h2 className="font-display text-xl text-ink">4. القلي وحمام العسل</h2>
+              <p>
+                المعينات بعدها تُقلى حتى توصل للون الذهبي، وبعدها تُغمس — وهي مازالت سخونة — في شراب عسل. هذي
+                الخطوة الأخيرة أساسية: هي اللي تعطي المقروض بريقه، رطوبته الخفيفة، ومدة حفظه.
+              </p>
+              <h2 className="font-display text-xl text-ink">شنية اللي يميّز المقروض المصنوع باليد</h2>
+              <p>
+                مقروض محضّر باليد، بكمية صغيرة، يخلي جرعة عجينة التمر أدق وتشكيل أكثر انتظام بالقالب الخشبي —
+                تفصيلين يتلاحظو فورًا في الطعم والقوام، مقارنة بإنتاج صناعي بالكامل.
+              </p>
+            </div>
+
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+              <p className="font-display text-xl text-ink">هذا بالضبط كيفاش نحضّروه، كل يوم</p>
+              <Link to="/ar/makroudh-aux-dattes" className="arrow-link mt-4 inline-flex justify-center">
+                اكتشفو مقروضنا بالتمر
+                <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className="rotate-180">
+                  <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+              </Link>
+            </div>
+
+            <Link to="/ar/journal" className="arrow-link mt-14 inline-flex">
+              الرجوع للمدونة
+              <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className="rotate-180">
+                <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+            </Link>
+          </article>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">

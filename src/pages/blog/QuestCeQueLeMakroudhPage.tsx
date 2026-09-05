@@ -1,19 +1,90 @@
 import { Link } from 'react-router'
 import { useReveal } from '../../hooks/useReveal'
 import { useSEO } from '../../hooks/useSEO'
+import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
 
 export default function QuestCeQueLeMakroudhPage() {
   useReveal()
-  useSEO({
-    title: 'Qu\'est-ce que le makroudh tunisien ? — Journal Chez Laziz',
-    description:
-      "Origines, ingrédients et place du makroudh dans la pâtisserie tunisienne — une présentation complète pour qui découvre cette douceur.",
-    path: '/journal/quest-ce-que-le-makroudh-tunisien',
-    breadcrumb: 'Qu\'est-ce que le makroudh tunisien ?',
-    article: { datePublished: '2026-09-03' },
-  })
+  const isAr = useLang() === 'ar'
+  useSEO(
+    isAr
+      ? {
+          title: 'شنية المقروض التونسي؟ — مدونة عند لعزيز',
+          description: 'الأصول، المكونات، ومكانة المقروض في الحلويات التونسية — تقديم كامل لمن يكتشف هذي الحلوى لأول مرة.',
+          path: '/ar/journal/quest-ce-que-le-makroudh-tunisien',
+          breadcrumb: 'شنية المقروض التونسي؟',
+          article: { datePublished: '2026-09-03' },
+        }
+      : {
+          title: 'Qu\'est-ce que le makroudh tunisien ? — Journal Chez Laziz',
+          description:
+            "Origines, ingrédients et place du makroudh dans la pâtisserie tunisienne — une présentation complète pour qui découvre cette douceur.",
+          path: '/journal/quest-ce-que-le-makroudh-tunisien',
+          breadcrumb: 'Qu\'est-ce que le makroudh tunisien ?',
+          article: { datePublished: '2026-09-03' },
+        },
+  )
+
+  if (isAr) {
+    return (
+      <div className="min-h-screen bg-[#faf6f3]">
+        <Header />
+        <main className="pt-16 md:pt-20">
+          <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
+            <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">المدونة</p>
+            <h1 className="font-display text-3xl leading-tight md:text-5xl">
+              شنية المقروض التونسي؟
+            </h1>
+
+            <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
+              <p>
+                المقروض حلوى تونسية تقليدية، تُعرف بشكلها المعيّن ولونها الذهبي. تتكوّن من عنصرين: عجينة سميد
+                رقيقة معجونة بزيت الزيتون، وحشوة — غالبًا عجينة تمر، لكن أحيانًا فواكه جافة أو فستق حسب الأنواع.
+              </p>
+              <h2 className="font-display text-xl text-ink">حلوى يومية، وحلوى المناسبات الكبيرة</h2>
+              <p>
+                خلاف بعض الحلويات المخصصة للأعياد بس، المقروض يُؤكل في اليومي — مع قهوة أو أتاي بالنعناع — وفي
+                المناسبات الكبيرة: العيد، الأعراس، المواليد. له مكانة خاصة في الثقافة التونسية، وين إهداء علبة
+                مقروض عادة شائعة من الضيافة.
+              </p>
+              <h2 className="font-display text-xl text-ink">سميد، تمر وعسل: الثلاثية الأساسية</h2>
+              <p>
+                عجينة السميد تعطي المقروض قوامه الهش وقرمشته بعد القلي. حشوة التمر — الأكثر انتشارًا — تعطي
+                الطراوة والحلاوة الطبيعية، بلا حاجة لزيادة سكر. وأخيرًا، حمام العسل، اللي يُطبّق مباشرة بعد القلي
+                وهي مازالت سخونة، يحبس كل شي ويعطي المقروض بريقه المميز.
+              </p>
+              <h2 className="font-display text-xl text-ink">حلوى تُشكّل باليد</h2>
+              <p>
+                تقليديًا، المقروض يُشكّل في قالب خشبي منقوش يطبع رسمته المخططة على العجينة قبل القطع لمعينات. هذي
+                حركة تتناقل في العائلات والمحلات الحرفية، ومازالت اليوم يصعب تعويضها بإنتاج آلي بالكامل إذا حبينا
+                نحافظو على الشكل التقليدي.
+              </p>
+            </div>
+
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+              <p className="font-display text-xl text-ink">اكتشفو مقروضنا، مشكّل باليد في القيروان</p>
+              <Link to="/ar/makroudh-tunisien" className="arrow-link mt-4 inline-flex justify-center">
+                اعرفو أكثر على مقروضنا
+                <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className="rotate-180">
+                  <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+              </Link>
+            </div>
+
+            <Link to="/ar/journal" className="arrow-link mt-14 inline-flex">
+              الرجوع للمدونة
+              <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className="rotate-180">
+                <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+            </Link>
+          </article>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">

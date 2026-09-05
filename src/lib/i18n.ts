@@ -18,6 +18,10 @@ export const BILINGUAL_BASE_PATHS = [
   '/makroudh-aux-dattes',
   '/makroudh-fruits-secs',
   '/la-maison',
+  '/journal',
+  '/journal/quest-ce-que-le-makroudh-tunisien',
+  '/journal/makroudh-kairouan-histoire-tradition',
+  '/journal/comment-est-prepare-le-makroudh',
 ] as const
 
 export type Lang = 'fr' | 'ar'
