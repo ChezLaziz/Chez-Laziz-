@@ -25,11 +25,16 @@ export const paymentMethodEnum = pgEnum("payment_method", ["cod", "d17"]);
 // COD : "pending" jusqu'à la livraison (pas de vérification de paiement).
 // D17 : "pending_verification" à la création (capture reçue, pas encore
 // vérifiée) puis "approved"/"rejected" décidé par l'admin.
+// "paid" : encaissé. Sert surtout aux commandes en espèces à la livraison,
+// qui restaient sinon "pending" à vie — l'admin n'avait aucune trace de
+// l'argent réellement rentré. Pour D17, "approved" reste la preuve du
+// paiement (capture vérifiée) ; "paid" n'y est pas utilisé.
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "pending_verification",
   "approved",
   "rejected",
+  "paid",
 ]);
 
 // Catalogue des produits (géré depuis l'admin, affiché sur le site)
@@ -83,6 +88,8 @@ export const orders = pgTable("orders", {
   // commande confirmée réelle (voir shouldReportMetaPurchase). Empêche un
   // double envoi si le statut change plusieurs fois après confirmation.
   metaPurchaseReportedAt: timestamp("meta_purchase_reported_at"),
+  /** Date d'encaissement (espèces à la livraison) — voir paymentStatusEnum. */
+  paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [index("orders_created_at_idx").on(t.createdAt)]);

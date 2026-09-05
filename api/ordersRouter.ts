@@ -13,7 +13,11 @@ import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
 import { paymentProofExists } from "./lib/r2";
 import { notifyAdminNewOrder } from "./lib/email";
-import { sendMetaPurchaseEvent, shouldReportMetaPurchase } from "./lib/metaConversionsApi";
+import {
+  sendMetaPurchaseEvent,
+  shouldReportMetaPurchase,
+  type ReportableOrder,
+} from "./lib/metaConversionsApi";
 import { TRPCError } from "@trpc/server";
 import {
   ALLOWED_WEIGHTS_KG,
@@ -54,7 +58,7 @@ async function maybeReportMetaPurchase(order: {
   totalMillimes: number;
   items: string;
   paymentMethod: "cod" | "d17";
-  paymentStatus: "pending" | "pending_verification" | "approved" | "rejected";
+  paymentStatus: ReportableOrder["paymentStatus"];
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
   metaPurchaseReportedAt: Date | null;
 }): Promise<void> {
@@ -262,14 +266,16 @@ export const ordersRouter = createRouter({
       return order;
     }),
 
-  /** Approuver/rejeter une preuve de paiement D17 (n'a pas d'effet sur une
-   * commande "cash on delivery" — voir queries/orders.ts). */
+  /** D17 : approuver/rejeter la capture de paiement.
+   * Espèces à la livraison : marquer la commande encaissée ou non.
+   * Chaque moyen de paiement filtre les valeurs qui le concernent
+   * (voir updatePaymentStatus). */
   setPaymentStatus: publicQuery
     .input(
       z.object({
         token: z.string(),
         id: z.number().int(),
-        paymentStatus: z.enum(["approved", "rejected"]),
+        paymentStatus: z.enum(["approved", "rejected", "paid", "pending"]),
       }),
     )
     .mutation(async ({ input }) => {
