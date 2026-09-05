@@ -133,11 +133,16 @@ describe("Custom Pack — calcul dynamique", () => {
 });
 
 describe("formatPriceDT", () => {
-  it("écrit les prix à la tunisienne", () => {
-    expect(formatPriceDT(69900)).toBe("69,900 DT");
-    expect(formatPriceDT(89000)).toBe("89,000 DT");
-    expect(formatPriceDT(8000)).toBe("8,000 DT");
-    expect(formatPriceDT(4500)).toBe("4,500 DT");
-    expect(formatPriceDT(0)).toBe("0,000 DT");
+  it("écrit les prix en dinars, sans zéros inutiles", () => {
+    expect(formatPriceDT(8000)).toBe("8 DT");
+    expect(formatPriceDT(89000)).toBe("89 DT");
+    expect(formatPriceDT(69900)).toBe("69,9 DT");
+    expect(formatPriceDT(4500)).toBe("4,5 DT");
+    expect(formatPriceDT(0)).toBe("0 DT");
+  });
+
+  it("traduit le libellé de devise", () => {
+    expect(formatPriceDT(8000, "ar")).toBe("8 د.ت");
+    expect(formatPriceDT(69900, "ar")).toBe("69,9 د.ت");
   });
 });

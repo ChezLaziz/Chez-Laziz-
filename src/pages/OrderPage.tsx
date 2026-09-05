@@ -12,14 +12,18 @@ import CustomPackComposer from '@/components/order/CustomPackComposer'
 import ProductOrderCard from '@/components/order/ProductOrderCard'
 import { useLang } from '@/lib/i18n'
 import { CATEGORY_LABELS_AR } from '@/lib/categories'
+import LanguageSwitch from '@/components/LanguageSwitch'
+import { productName } from '@contracts/productText'
 import {
   DELIVERY_FEE_MILLIMES,
   DELIVERY_REGION,
+  formatDinars,
   DELIVERY_TIME_LABEL,
   D17_NUMBER_DISPLAY,
   PAYMENT_PROOF_ALLOWED_MIME,
   PAYMENT_PROOF_MAX_SIZE_BYTES,
   TUNISIA_GOVERNORATES,
+  governorateLabel,
   priceForWeight,
   type PaymentMethod,
   type WeightKg,
@@ -42,11 +46,12 @@ function TopBar() {
     <header className="sticky top-0 z-40 border-b border-sand/60 bg-[#faf6f3]/95 backdrop-blur">
       <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
-        <Link to="/" className="flex items-center gap-2.5">
+        <Link to={isAr ? '/ar' : '/'} className="flex items-center gap-2.5">
           <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 md:h-10 md:w-10" width="40" height="40" />
           <span className="font-display text-xl tracking-[0.14em] text-ink md:text-2xl">CHEZ&nbsp;LAZIZ</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          <LanguageSwitch tone="light" />
           <a
             href={PHONE_TEL}
             dir="ltr"
@@ -179,7 +184,7 @@ export default function OrderPage() {
       ? {
           title: 'اطلبوا — Chez Laziz | مقروض بالوزن، حزم جاهزة وحزمة على المقاس',
           description:
-            'اطلبوا مقروض Chez Laziz: بالوزن (500 غ إلى 2.5 كغ)، حزم Laziz VIP وPremium وDélice وClassique، أو حزمة على مقاسكم (4 × 500 غ). توصيل في جميع أنحاء تونس خلال 24 ساعة، الدفع عند التسليم أو عبر D17.',
+            'اطلبوا مقروض Chez Laziz: بالوزن (500 غ إلى 2.5 كغ)، حزم لعزيز الملكية والفاخرة والشهية والكلاسيكية، أو حزمة على مقاسكم (4 × 500 غ). توصيل في جميع أنحاء تونس خلال 24 ساعة، الدفع عند التسليم أو عبر D17.',
           path: '/ar/commande',
           breadcrumb: 'اطلبوا',
           alternates: { fr: '/commande', ar: '/ar/commande' },
@@ -299,10 +304,13 @@ export default function OrderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length])
 
-  const packPhotos = (contents: readonly string[]) =>
+  // pack.contents relie un pack au catalogue par le nom français exact ;
+  // on résout ici la photo ET le nom affiché de chaque produit inclus.
+  const packItems = (contents: readonly string[]) =>
     contents.map((n) => {
       const p = catalog.find((c) => c.name === n)
-      return { src: p?.imageUrl ?? null, alt: n }
+      const label = p ? productName(p, lang) : n
+      return { src: p?.imageUrl ?? null, alt: label, label }
     })
 
   const handleAddPack = (packId: FixedPackId) => {
@@ -641,13 +649,13 @@ export default function OrderPage() {
               isAr
                 ? [
                     ['100%', 'صناعة يدوية'],
-                    [formatPriceDT(DELIVERY_FEE_MILLIMES, lang).replace(' د.ت', ''), 'د.ت توصيل'],
+                    [formatDinars(DELIVERY_FEE_MILLIMES), 'د.ت توصيل'],
                     [DELIVERY_TIME_LABEL === '24h' ? '24 س' : DELIVERY_TIME_LABEL, 'كل تونس'],
                     ['COD / D17', 'الدفع'],
                   ]
                 : [
                     ['100%', 'Fait main'],
-                    [formatPriceDT(DELIVERY_FEE_MILLIMES, lang).replace(' DT', ''), 'DT livraison'],
+                    [formatDinars(DELIVERY_FEE_MILLIMES), 'DT livraison'],
                     [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
                     ['COD / D17', 'Paiement'],
                   ]
@@ -843,7 +851,8 @@ export default function OrderPage() {
               <PackCard
                 key={pack.id}
                 pack={pack}
-                photos={packPhotos(pack.contents)}
+                photos={packItems(pack.contents)}
+                contentsAr={packItems(pack.contents).map((i) => i.label)}
                 qty={packQty(pack.id)}
                 onAdd={() => handleAddPack(pack.id)}
                 onSetQty={(q) => setLineQty(`pack:${pack.id}`, q)}
@@ -1071,8 +1080,10 @@ export default function OrderPage() {
                         {isAr ? 'الولاية' : 'Gouvernorat'}
                       </option>
                       {TUNISIA_GOVERNORATES.map((g) => (
+                        // value = nom français (validé et stocké côté
+                        // serveur) ; seul le libellé affiché est traduit.
                         <option key={g} value={g} className="text-ink">
-                          {g}
+                          {governorateLabel(g, lang)}
                         </option>
                       ))}
                     </select>

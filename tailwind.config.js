@@ -5,6 +5,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Jetons de la charte Chez Laziz. Ils existaient uniquement comme
+        // utilitaires écrits à la main dans index.css (.text-ink, .bg-sand…),
+        // donc toute variante d'opacité — text-ink/50, border-sand/70… —
+        // ne compilait pas et ne produisait aucune règle CSS. Déclarés ici,
+        // les ~190 usages de ces classes dans src/ fonctionnent enfin.
+        // Valeurs identiques aux variables CSS de :root (src/index.css).
+        // "accent" n'est volontairement PAS redéfini : il est déjà mappé sur
+        // hsl(var(--accent)) pour les composants shadcn.
+        ink: "#3c3835",
+        "ink-deep": "#2e2a27",
+        sand: "#dec9b8",
+        cream: "#f5ece5",
+        "muted-warm": "#aeaaa7",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -1,7 +1,9 @@
 import { cartLineKey, type CartLine } from '@/lib/cartLine'
+import { productName } from '@contracts/productText'
 import { formatWeight, priceForWeight, type WeightKg } from '@contracts/shop'
 import {
   CUSTOM_PACK_NAME,
+  CUSTOM_PACK_NAME_AR,
   CUSTOM_PACK_PACKAGING_MILLIMES,
   CUSTOM_PACK_WEIGHT_KG,
   PACK_ITEM_WEIGHT_KG,
@@ -14,6 +16,8 @@ export type CatalogProduct = {
   id: number
   name: string
   description: string | null
+  nameAr?: string | null
+  descriptionAr?: string | null
   priceMillimes: number
   category: string
   badge: string | null
@@ -54,7 +58,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
       out.push({
         key,
         line,
-        name: p.name,
+        name: productName(p, lang),
         qty: line.qty,
         weightKg: line.weightKg,
         unitPriceMillimes: priceForWeight(p.priceMillimes, line.weightKg),
@@ -69,11 +73,15 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
       out.push({
         key,
         line,
-        name: pack.name,
+        name: lang === 'ar' ? pack.nameAr : pack.name,
         qty: line.qty,
         weightKg: packWeightKg(pack),
         unitPriceMillimes: pack.priceMillimes,
-        contents: pack.contents.map((n) => `${n} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`),
+        contents: pack.contents.map((n) => {
+          const product = catalog.find((c) => c.name === n)
+          const label = product ? productName(product, lang) : n
+          return `${label} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`
+        }),
         packagingMillimes: 0,
         analyticsId: `pack:${pack.id}`,
         variant: kgLabel(packWeightKg(pack), lang),
@@ -85,11 +93,11 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
       out.push({
         key,
         line,
-        name: CUSTOM_PACK_NAME,
+        name: lang === 'ar' ? CUSTOM_PACK_NAME_AR : CUSTOM_PACK_NAME,
         qty: line.qty,
         weightKg: CUSTOM_PACK_WEIGHT_KG,
         unitPriceMillimes: customPackTotal(found.map((p) => p.priceMillimes)),
-        contents: found.map((p) => `${p.name} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`),
+        contents: found.map((p) => `${productName(p, lang)} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`),
         packagingMillimes: CUSTOM_PACK_PACKAGING_MILLIMES,
         analyticsId: `custom:${line.productIds.join('-')}`,
         variant: kgLabel(CUSTOM_PACK_WEIGHT_KG, lang),

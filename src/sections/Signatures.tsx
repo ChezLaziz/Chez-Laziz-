@@ -5,11 +5,14 @@ import { formatTND } from '@/lib/shop'
 import { track } from '@/lib/analytics'
 import ProductImage from '@/components/ProductImage'
 import { useLang } from '@/lib/i18n'
+import { productName, productDescription } from '@contracts/productText'
 
 type Product = {
   id: number
   name: string
   description: string | null
+  nameAr?: string | null
+  descriptionAr?: string | null
   priceMillimes: number
   category: string
   badge: string | null
@@ -84,7 +87,7 @@ export default function Signatures() {
               <div className="relative aspect-[4/5] overflow-hidden">
                 <ProductImage
                   src={p.imageUrl}
-                  alt={p.name}
+                  alt={productName(p, lang)}
                   className="transition-transform duration-500 group-hover:scale-105"
                 />
                 {p.badge && (
@@ -94,14 +97,14 @@ export default function Signatures() {
                 )}
               </div>
               <div className="flex flex-1 flex-col p-4 md:p-5">
-                <h3 className="font-display text-base leading-snug md:text-lg">{p.name}</h3>
-                {p.description && (
+                <h3 className="font-display text-base leading-snug md:text-lg">{productName(p, lang)}</h3>
+                {productDescription(p, lang) && (
                   <p className="mt-1 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
-                    {p.description}
+                    {productDescription(p, lang)}
                   </p>
                 )}
                 <p className="mt-auto pt-3 font-display text-lg text-accent">
-                  {formatTND(p.priceMillimes)} <span className="text-xs">{lang === 'ar' ? 'د.ت / كغ' : 'TND / kg'}</span>
+                  {formatTND(p.priceMillimes)} <span className="text-xs">{lang === 'ar' ? 'د.ت / كغ' : 'DT / kg'}</span>
                 </p>
               </div>
             </Link>

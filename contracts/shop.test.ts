@@ -6,6 +6,10 @@ import {
   priceForWeight,
   isValidPaymentMethod,
   DELIVERY_FEE_MILLIMES,
+  formatDinars,
+  TUNISIA_GOVERNORATES,
+  GOVERNORATE_LABELS_AR,
+  governorateLabel,
 } from "./shop";
 
 describe("weight rules", () => {
@@ -70,7 +74,61 @@ describe("payment method rules", () => {
 });
 
 describe("delivery fee", () => {
-  it("is fixed at 8.000 TND regardless of order size", () => {
+  it("is fixed at 8 DT regardless of order size", () => {
     expect(DELIVERY_FEE_MILLIMES).toBe(8000);
+  });
+});
+
+describe("formatDinars", () => {
+  it("drops the millimes entirely on whole dinars", () => {
+    expect(formatDinars(8000)).toBe("8");
+    expect(formatDinars(25000)).toBe("25");
+    expect(formatDinars(0)).toBe("0");
+  });
+
+  it("keeps only the significant millimes", () => {
+    expect(formatDinars(69900)).toBe("69,9");
+    expect(formatDinars(4500)).toBe("4,5");
+    expect(formatDinars(12750)).toBe("12,75");
+    expect(formatDinars(8123)).toBe("8,123");
+  });
+
+  it("keeps the leading zero of a sub-100 millimes remainder", () => {
+    expect(formatDinars(8050)).toBe("8,05");
+    expect(formatDinars(8005)).toBe("8,005");
+  });
+
+  it("handles amounts below one dinar and negatives", () => {
+    expect(formatDinars(500)).toBe("0,5");
+    expect(formatDinars(-4500)).toBe("-4,5");
+  });
+
+  it("round-trips through the admin price input parser", () => {
+    // L'admin réinjecte la valeur affichée dans un <input>, puis la reparse
+    // (voir toMillimes dans AdminPage.tsx) — le format doit survivre au trajet.
+    const parse = (s: string) => Math.round(parseFloat(s.replace(",", ".")) * 1000);
+    for (const m of [8000, 69900, 4500, 12750, 8050, 25000, 500]) {
+      expect(parse(formatDinars(m))).toBe(m);
+    }
+  });
+});
+
+describe("governorate labels", () => {
+  it("translates every governorate, so no French name leaks into the Arabic form", () => {
+    for (const g of TUNISIA_GOVERNORATES) {
+      expect(GOVERNORATE_LABELS_AR[g], `missing Arabic label for ${g}`).toBeTruthy();
+      expect(governorateLabel(g, "ar")).toBe(GOVERNORATE_LABELS_AR[g]);
+    }
+  });
+
+  it("never changes the value sent to the server — only the displayed label", () => {
+    // Le serveur valide la commande contre TUNISIA_GOVERNORATES : si un jour
+    // quelqu'un traduit les valeurs et pas seulement les libellés, toute
+    // commande arabe échouerait. Ce test est là pour l'empêcher.
+    expect(governorateLabel("Kairouan", "fr")).toBe("Kairouan");
+    expect(TUNISIA_GOVERNORATES).toContain("Kairouan");
+    for (const label of Object.values(GOVERNORATE_LABELS_AR)) {
+      expect(TUNISIA_GOVERNORATES).not.toContain(label as never);
+    }
   });
 });

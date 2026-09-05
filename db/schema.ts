@@ -37,6 +37,12 @@ export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  // Version arabe du nom/description, éditable depuis l'admin. Vide =
+  // repli automatique sur le français (voir productName/productDescription
+  // dans contracts/productText.ts) : la version arabe du site ne casse
+  // jamais si un nouveau produit n'a pas encore été traduit.
+  nameAr: varchar("name_ar", { length: 255 }),
+  descriptionAr: text("description_ar"),
   // Prix en millimes : 8000 = 8.000 TND
   priceMillimes: integer("price_millimes").notNull(),
   category: varchar("category", { length: 100 }).notNull(),

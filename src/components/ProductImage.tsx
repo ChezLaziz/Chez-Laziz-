@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useLang } from '@/lib/i18n'
 
 function Placeholder({ alt, className, compact }: { alt: string; className: string; compact: boolean }) {
+  const isAr = useLang() === 'ar'
   return (
     <div
       role="img"
-      aria-label={`${alt} — photo à venir`}
+      aria-label={isAr ? `${alt} — الصورة قريبًا` : `${alt} — photo à venir`}
       className={`flex h-full w-full flex-col items-center justify-center gap-2 bg-[#f5ece5] ${className}`}
     >
       <img
@@ -15,7 +17,9 @@ function Placeholder({ alt, className, compact }: { alt: string; className: stri
         className={compact ? 'h-7 w-7 opacity-40' : 'h-12 w-12 opacity-40'}
       />
       {!compact && (
-        <span className="text-[10px] uppercase tracking-[0.2em] text-ink/35">Photo à venir</span>
+        <span className={`text-[10px] text-ink/35 ${isAr ? '' : 'uppercase tracking-[0.2em]'}`}>
+          {isAr ? 'الصورة قريبًا' : 'Photo à venir'}
+        </span>
       )}
     </div>
   )

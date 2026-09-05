@@ -12,6 +12,8 @@ import { assertAdmin } from "./queries/admin";
 const productInput = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(2000).optional().nullable(),
+  nameAr: z.string().max(255).optional().nullable(),
+  descriptionAr: z.string().max(2000).optional().nullable(),
   priceMillimes: z.number().int().min(0),
   category: z.string().min(1).max(100),
   badge: z.string().max(50).optional().nullable(),
@@ -39,6 +41,8 @@ export const productsRouter = createRouter({
       return createProduct({
         name: input.data.name,
         description: input.data.description ?? null,
+        nameAr: input.data.nameAr ?? null,
+        descriptionAr: input.data.descriptionAr ?? null,
         priceMillimes: input.data.priceMillimes,
         category: input.data.category,
         badge: input.data.badge ?? null,
@@ -58,10 +62,12 @@ export const productsRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
+      // Un champ absent de la requête n'est pas une demande d'effacement :
+      // on ne met à jour que ce qui a été explicitement envoyé.
       const data = { ...input.data };
-      if (data.description === undefined) delete data.description;
-      if (data.badge === undefined) delete data.badge;
-      if (data.imageUrl === undefined) delete data.imageUrl;
+      for (const key of Object.keys(data) as (keyof typeof data)[]) {
+        if (data[key] === undefined) delete data[key];
+      }
       return updateProduct(input.id, data);
     }),
 

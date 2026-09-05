@@ -3,10 +3,13 @@ import { kgLabel, type CatalogProduct } from '@/lib/orderLines'
 import { formatWeight } from '@contracts/shop'
 import {
   CUSTOM_PACK_NAME,
+  CUSTOM_PACK_NAME_AR,
   CUSTOM_PACK_PACKAGING_LABEL,
+  CUSTOM_PACK_PACKAGING_LABEL_AR,
   CUSTOM_PACK_PACKAGING_MILLIMES,
   CUSTOM_PACK_SIZE,
   CUSTOM_PACK_SUBTITLE,
+  CUSTOM_PACK_SUBTITLE_AR,
   CUSTOM_PACK_WEIGHT_KG,
   PACK_ITEM_WEIGHT_KG,
   customPackProductsTotal,
@@ -15,13 +18,7 @@ import {
   packItemPrice,
 } from '@contracts/packs'
 import { useLang, type Lang } from '@/lib/i18n'
-
-// CUSTOM_PACK_NAME/SUBTITLE/PACKAGING_LABEL (contracts/packs.ts) restent en
-// français : ce sont aussi des libellés de données (ex. nom de ligne dans
-// le panier, l'email de commande), pas seulement du texte d'affichage —
-// les traductions ci-dessous ne couvrent que ce qui est purement visuel
-// sur cette page.
-const CUSTOM_PACK_SUBTITLE_AR = 'كوّنوا الحزمة الخاصة بكم'
+import { productName } from '@contracts/productText'
 
 /** Carte produit sélectionnable (500 g). Tout le bloc est le bouton :
  * grande cible tactile, état sélectionné très visible. */
@@ -42,13 +39,14 @@ function ProductPickCard({
   lang: Lang
 }) {
   const isAr = lang === 'ar'
+  const displayName = productName(product, lang)
   return (
     <button
       type="button"
       onClick={onToggle}
       disabled={disabled}
       aria-pressed={selected}
-      aria-label={`${product.name}, ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}, ${formatPriceDT(packItemPrice(product.priceMillimes), lang)}${
+      aria-label={`${displayName}, ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}, ${formatPriceDT(packItemPrice(product.priceMillimes), lang)}${
         selected ? (isAr ? '، مُختار' : ', sélectionné') : ''
       }`}
       className={`group flex min-w-0 flex-col overflow-hidden whitespace-normal rounded-2xl border bg-white text-left shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 ${
@@ -58,7 +56,7 @@ function ProductPickCard({
       } disabled:cursor-not-allowed disabled:opacity-45`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-sand/30">
-        <ProductImage src={product.imageUrl} alt={product.name} compact />
+        <ProductImage src={product.imageUrl} alt={displayName} compact />
         {selected && position !== null && (
           <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#b8912e] font-display text-sm text-white shadow">
             {position}
@@ -66,7 +64,7 @@ function ProductPickCard({
         )}
       </div>
       <div className="flex flex-1 flex-col p-3.5 md:p-4">
-        <p className="break-words font-medium leading-snug">{product.name}</p>
+        <p className="break-words font-medium leading-snug">{displayName}</p>
         <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-ink/50">
           {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
         </p>
@@ -118,7 +116,7 @@ export default function CustomPackComposer({
   return (
     <div id="composer" className="scroll-mt-24">
       <div className="text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{CUSTOM_PACK_NAME}</p>
+        <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? CUSTOM_PACK_NAME_AR : CUSTOM_PACK_NAME}</p>
         <h2 className="mt-3 font-display text-3xl md:text-4xl">{isAr ? CUSTOM_PACK_SUBTITLE_AR : CUSTOM_PACK_SUBTITLE}</h2>
         <p className="mx-auto mt-3 max-w-md text-[15px] font-light leading-relaxed text-ink/65">
           {isAr
@@ -194,7 +192,7 @@ export default function CustomPackComposer({
         {/* Votre Pack */}
         <div className="min-w-0 lg:col-span-5">
           <div className="rounded-2xl bg-ink-deep p-6 text-[#faf6f3] md:p-8 lg:sticky lg:top-8">
-            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[#b8912e]">{CUSTOM_PACK_NAME}</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[#b8912e]">{isAr ? CUSTOM_PACK_NAME_AR : CUSTOM_PACK_NAME}</p>
             <h3 className="mt-2 font-display text-2xl">{isAr ? 'حزمتكم' : 'Votre Pack'}</h3>
             <p className="mt-1 text-sm text-[#faf6f3]/60" aria-live="polite">
               {isAr ? `${count} / ${CUSTOM_PACK_SIZE} مُختارة` : `${count} / ${CUSTOM_PACK_SIZE} sélectionnés`}
@@ -216,12 +214,12 @@ export default function CustomPackComposer({
                           ✓
                         </span>
                         <span className="min-w-0 flex-1 truncate">
-                          {p.name} <span className="text-[#faf6f3]/55">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
+                          {productName(p, lang)} <span className="text-[#faf6f3]/55">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
                         </span>
                         <span className="font-display text-[#b8912e]">{formatPriceDT(packItemPrice(p.priceMillimes), lang)}</span>
                         <button
                           type="button"
-                          aria-label={isAr ? `إزالة ${p.name} من الحزمة` : `Retirer ${p.name} du pack`}
+                          aria-label={isAr ? `إزالة ${productName(p, lang)} من الحزمة` : `Retirer ${productName(p, lang)} du pack`}
                           onClick={() => onRemove(p.id)}
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#faf6f3]/50 transition-colors hover:bg-[#faf6f3]/10 hover:text-[#faf6f3]"
                         >
@@ -260,7 +258,7 @@ export default function CustomPackComposer({
                 <span>{formatPriceDT(productsTotal, lang)}</span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span>{CUSTOM_PACK_PACKAGING_LABEL}</span>
+                <span>{isAr ? CUSTOM_PACK_PACKAGING_LABEL_AR : CUSTOM_PACK_PACKAGING_LABEL}</span>
                 <span>+ {formatPriceDT(CUSTOM_PACK_PACKAGING_MILLIMES, lang)}</span>
               </div>
             </div>

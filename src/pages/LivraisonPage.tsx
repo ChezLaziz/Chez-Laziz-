@@ -8,7 +8,7 @@ export default function LivraisonPage() {
   useSEO({
     title: 'Livraison — Chez Laziz | Toute la Tunisie sous 24h',
     description:
-      'Livraison de makroudh Chez Laziz partout en Tunisie, à domicile, sous 24h — 8.000 TND. Paiement à la livraison ou par D17.',
+      'Livraison de makroudh Chez Laziz partout en Tunisie, à domicile, sous 24h — 8 DT. Paiement à la livraison ou par D17.',
     path: '/livraison',
     breadcrumb: 'Livraison',
   })
@@ -24,7 +24,7 @@ export default function LivraisonPage() {
         <div className="mt-10 grid grid-cols-3 gap-4 rounded-2xl border border-sand/70 bg-white py-6 text-center shadow-sm">
           {[
             ['Toute la Tunisie', 'Zone'],
-            [formatTND(DELIVERY_FEE_MILLIMES) + ' TND', 'Frais fixes'],
+            [formatTND(DELIVERY_FEE_MILLIMES) + ' DT', 'Frais fixes'],
             ['24h', 'Délai'],
           ].map(([n, label]) => (
             <div key={label}>

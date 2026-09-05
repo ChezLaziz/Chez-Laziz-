@@ -502,18 +502,18 @@ function OrdersTab({
               <div className="flex items-baseline">
                 <span>Sous-total</span>
                 <span className="mx-3 flex-1" />
-                <span>{formatTND(o.subtotalMillimes)} TND</span>
+                <span>{formatTND(o.subtotalMillimes)} DT</span>
               </div>
               <div className="flex items-baseline">
                 <span>Livraison</span>
                 <span className="mx-3 flex-1" />
-                <span>{formatTND(o.deliveryFeeMillimes)} TND</span>
+                <span>{formatTND(o.deliveryFeeMillimes)} DT</span>
               </div>
             </div>
             <div className="mt-2 flex items-baseline">
               <span className="text-xs uppercase tracking-[0.2em] text-ink/50">Total</span>
               <span className="mx-3 flex-1" />
-              <span className="font-display text-xl text-accent">{formatTND(o.totalMillimes)} TND</span>
+              <span className="font-display text-xl text-accent">{formatTND(o.totalMillimes)} DT</span>
               <button
                 onClick={() => {
                   if (window.confirm(`Supprimer la commande #${o.id} ?`)) {
@@ -537,6 +537,8 @@ function OrdersTab({
 type ProductForm = {
   name: string
   description: string
+  nameAr: string
+  descriptionAr: string
   priceTND: string
   category: string
   badge: string
@@ -547,6 +549,8 @@ type ProductForm = {
 const EMPTY_FORM: ProductForm = {
   name: '',
   description: '',
+  nameAr: '',
+  descriptionAr: '',
   priceTND: '',
   category: 'Les classiques',
   badge: '',
@@ -599,6 +603,8 @@ function ProductsTab({ token }: { token: string }) {
     setForm({
       name: p.name,
       description: p.description ?? '',
+      nameAr: p.nameAr ?? '',
+      descriptionAr: p.descriptionAr ?? '',
       priceTND: formatTND(p.priceMillimes),
       category: p.category,
       badge: p.badge ?? '',
@@ -614,6 +620,8 @@ function ProductsTab({ token }: { token: string }) {
     const data = {
       name: form.name.trim(),
       description: form.description.trim() || null,
+      nameAr: form.nameAr.trim() || null,
+      descriptionAr: form.descriptionAr.trim() || null,
       priceMillimes: toMillimes(form.priceTND),
       category: form.category.trim() || 'Les classiques',
       badge: form.badge.trim() || null,
@@ -655,9 +663,34 @@ function ProductsTab({ token }: { token: string }) {
           <p className="font-display text-xl">{editingId ? 'Modifier le produit' : 'Nouveau produit'}</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nom du produit" className={inputCls} />
-            <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix en TND (ex : 8.000)" inputMode="decimal" className={inputCls} />
+            <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix en dinars (ex : 8 ou 8,5)" inputMode="decimal" className={inputCls} />
           </div>
           <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (facultative)" rows={2} className={`${inputCls} resize-none`} />
+
+          <div className="rounded-lg border border-[#b8912e]/30 bg-white/60 p-4">
+            <p className="mb-3 text-xs font-semibold text-ink/70">
+              Version arabe <span className="font-normal text-ink/50">— laissez vide pour afficher le texte français sur le site arabe</span>
+            </p>
+            <div className="space-y-3">
+              <input
+                value={form.nameAr}
+                onChange={(e) => setForm({ ...form, nameAr: e.target.value })}
+                placeholder="اسم المنتج بالعربية"
+                dir="rtl"
+                lang="ar"
+                className={inputCls}
+              />
+              <textarea
+                value={form.descriptionAr}
+                onChange={(e) => setForm({ ...form, descriptionAr: e.target.value })}
+                placeholder="وصف المنتج بالعربية (اختياري)"
+                dir="rtl"
+                lang="ar"
+                rows={2}
+                className={`${inputCls} resize-none`}
+              />
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-white">
@@ -735,8 +768,13 @@ function ProductsTab({ token }: { token: string }) {
                     </span>
                   )}
                 </div>
+                {p.nameAr ? (
+                  <p className="mt-0.5 text-xs text-ink/55" dir="rtl" lang="ar">{p.nameAr}</p>
+                ) : (
+                  <p className="mt-0.5 text-[11px] font-medium text-amber-700">Pas encore traduit en arabe</p>
+                )}
                 <p className="mt-0.5 text-xs text-ink/45">
-                  {p.category} · <span className="font-display text-accent">{formatTND(p.priceMillimes)} TND</span>
+                  {p.category} · <span className="font-display text-accent">{formatTND(p.priceMillimes)} DT</span>
                 </p>
               </div>
             </div>
@@ -1830,7 +1868,7 @@ function OverviewTab({
         <div className="grid gap-4 sm:grid-cols-3">
           {revenueCards.map((c) => (
             <div key={c.label} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-center">
-              <p className="font-display text-3xl text-accent">{formatTND(c.value)} <span className="text-base">TND</span></p>
+              <p className="font-display text-3xl text-accent">{formatTND(c.value)} <span className="text-base">DT</span></p>
               <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
                 {c.label}
               </p>
@@ -1925,7 +1963,7 @@ function OverviewTab({
                   </span>
                   <span className="flex-1 text-sm">{p.name}</span>
                   <span className="text-xs text-ink/45">{p.qtySold} vendus</span>
-                  <span className="font-display text-accent">{formatTND(p.revenueMillimes)} TND</span>
+                  <span className="font-display text-accent">{formatTND(p.revenueMillimes)} DT</span>
                 </li>
               ))}
             </ul>
