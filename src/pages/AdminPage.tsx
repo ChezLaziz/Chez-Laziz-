@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { formatWeight, type WeightKg } from '@contracts/shop'
@@ -152,12 +152,144 @@ function formatDate(d: Date | string) {
 
 /* ------------------------------ Login ------------------------------ */
 
+/** Demande d'envoi du lien de réinitialisation — réponse toujours identique
+ * côté serveur que le compte existe ou non (voir requestPasswordReset côté
+ * API), donc rien ici ne doit non plus laisser deviner si l'adresse existe. */
+function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
+  const [email, setEmail] = useState('')
+  const request = trpc.admin.requestPasswordReset.useMutation()
+
+  if (request.isSuccess) {
+    return (
+      <>
+        <p className="mt-6 text-center text-sm leading-relaxed text-ink/70">
+          Si un compte existe avec cette adresse, un e-mail contenant un lien de réinitialisation vient d'être envoyé.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-6 block w-full text-center text-xs text-ink/50 underline underline-offset-4 transition-colors hover:text-accent"
+        >
+          ← Retour à la connexion
+        </button>
+      </>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        request.mutate({ email })
+      }}
+    >
+      <p className="mt-6 text-center text-sm text-ink/60">
+        Indiquez votre adresse e-mail admin : nous vous enverrons un lien pour choisir un nouveau mot de passe.
+      </p>
+      <label className="mt-6 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
+        Adresse e-mail
+      </label>
+      <input
+        type="email"
+        required
+        autoFocus
+        autoComplete="username"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="contact@chezlaziz.com"
+        className={`${inputCls} mt-2`}
+      />
+      <button
+        type="submit"
+        disabled={request.isPending}
+        className="gold-cta mt-6 w-full rounded-full px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
+      >
+        {request.isPending ? 'Envoi…' : 'Envoyer le lien'}
+      </button>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mt-6 block w-full text-center text-xs text-ink/50 underline underline-offset-4 transition-colors hover:text-accent"
+      >
+        ← Retour à la connexion
+      </button>
+    </form>
+  )
+}
+
+/** Formulaire ouvert depuis le lien reçu par e-mail (?reset=<jeton>). */
+function ResetPasswordForm({ token, onDone }: { token: string; onDone: () => void }) {
+  const [password, setPassword] = useState('')
+  const reset = trpc.admin.resetPassword.useMutation()
+
+  if (reset.isSuccess) {
+    return (
+      <>
+        <p className="mt-6 text-center text-sm text-ink/70">
+          Mot de passe mis à jour. Vous pouvez maintenant vous connecter.
+        </p>
+        <button
+          type="button"
+          onClick={onDone}
+          className="gold-cta mt-6 w-full rounded-full px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02]"
+        >
+          Se connecter
+        </button>
+      </>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        reset.mutate({ token, newPassword: password })
+      }}
+    >
+      <p className="mt-6 text-center text-sm text-ink/60">Choisissez un nouveau mot de passe.</p>
+      <label className="mt-6 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
+        Nouveau mot de passe
+      </label>
+      <div className="mt-2">
+        <PasswordField
+          required
+          minLength={6}
+          autoFocus
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+        />
+      </div>
+      {reset.isError && (
+        <p className="mt-3 text-center text-sm text-red-600">{reset.error.message}</p>
+      )}
+      <button
+        type="submit"
+        disabled={reset.isPending}
+        className="gold-cta mt-6 w-full rounded-full px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
+      >
+        {reset.isPending ? 'Enregistrement…' : 'Enregistrer'}
+      </button>
+    </form>
+  )
+}
+
 function Login({ onLogin }: { onLogin: (token: string) => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [forgot, setForgot] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const resetToken = searchParams.get('reset')
   const login = trpc.admin.login.useMutation({
     onSuccess: (token) => onLogin(token),
   })
+
+  const clearResetToken = () => {
+    const next = new URLSearchParams(searchParams)
+    next.delete('reset')
+    setSearchParams(next, { replace: true })
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink-deep px-5 py-16">
@@ -182,13 +314,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         }}
       />
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          login.mutate({ email, password })
-        }}
-        className="relative w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl border border-white/10 bg-[#faf6f3] p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.65)] duration-700 md:p-10"
-      >
+      <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl border border-white/10 bg-[#faf6f3] p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.65)] duration-700 md:p-10">
         <img src="/images/logo.webp" alt="Chez Laziz" className="mx-auto h-14 w-14" />
         <p className="mt-4 text-center font-display text-2xl tracking-[0.14em] text-ink">
           CHEZ&nbsp;LAZIZ
@@ -198,51 +324,71 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
         </p>
         <Ornament className="mt-5 opacity-70" />
 
-        <label className="mt-6 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
-          Adresse e-mail
-        </label>
-        <input
-          type="email"
-          required
-          autoFocus
-          autoComplete="username"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="contact@chezlaziz.com"
-          className={`${inputCls} mt-2`}
-        />
+        {resetToken ? (
+          <ResetPasswordForm token={resetToken} onDone={clearResetToken} />
+        ) : forgot ? (
+          <ForgotPasswordForm onBack={() => setForgot(false)} />
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              login.mutate({ email, password })
+            }}
+          >
+            <label className="mt-6 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
+              Adresse e-mail
+            </label>
+            <input
+              type="email"
+              required
+              autoFocus
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="contact@chezlaziz.com"
+              className={`${inputCls} mt-2`}
+            />
 
-        <label className="mt-4 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
-          Mot de passe
-        </label>
-        <div className="mt-2">
-          <PasswordField
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-          />
-        </div>
-        {login.isError && (
-          <p className="mt-3 text-center text-sm text-red-600">
-            {login.error.message || 'Mot de passe incorrect'}
-          </p>
+            <label className="mt-4 block text-[10px] font-medium uppercase tracking-[0.22em] text-ink/45">
+              Mot de passe
+            </label>
+            <div className="mt-2">
+              <PasswordField
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            {login.isError && (
+              <p className="mt-3 text-center text-sm text-red-600">
+                {login.error.message || 'Mot de passe incorrect'}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={login.isPending}
+              className="gold-cta mt-6 w-full rounded-full px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
+            >
+              {login.isPending ? 'Connexion…' : 'Se connecter'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setForgot(true)}
+              className="mt-4 block w-full text-center text-xs text-ink/50 underline underline-offset-4 transition-colors hover:text-accent"
+            >
+              Mot de passe oublié ?
+            </button>
+            <Link
+              to="/"
+              className="mt-4 block text-center text-xs text-ink/50 underline underline-offset-4 transition-colors hover:text-accent"
+            >
+              ← Retour au site
+            </Link>
+          </form>
         )}
-        <button
-          type="submit"
-          disabled={login.isPending}
-          className="gold-cta mt-6 w-full rounded-full px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] disabled:opacity-50"
-        >
-          {login.isPending ? 'Connexion…' : 'Se connecter'}
-        </button>
-        <Link
-          to="/"
-          className="mt-6 block text-center text-xs text-ink/50 underline underline-offset-4 transition-colors hover:text-accent"
-        >
-          ← Retour au site
-        </Link>
-      </form>
+      </div>
     </div>
   )
 }
@@ -691,6 +837,22 @@ function ProductsTab({ token }: { token: string }) {
   const update = trpc.products.update.useMutation({ onSuccess: onSaved, onError: onSaveError })
   const remove = trpc.products.delete.useMutation({ onSuccess: onSaved, onError: onSaveError })
 
+  /** Échange l'ordre d'affichage entre le produit à `index` et son voisin
+   * (`direction` -1 = monter, +1 = descendre). Normalise au passage tous les
+   * `sortOrder` de la liste affichée (souvent tous à 0 par défaut) pour que
+   * le geste ait toujours un effet visible, même la toute première fois. */
+  const moveProduct = (index: number, direction: -1 | 1) => {
+    const list = products ?? []
+    const swapIndex = index + direction
+    if (swapIndex < 0 || swapIndex >= list.length) return
+    list.forEach((p, i) => {
+      const desired = i === index ? swapIndex : i === swapIndex ? index : i
+      if (p.sortOrder !== desired) {
+        update.mutate({ token, id: p.id, data: { sortOrder: desired } })
+      }
+    })
+  }
+
   const toMillimes = (tnd: string) => Math.round(parseFloat(tnd.replace(',', '.')) * 1000)
 
   const startEdit = (p: NonNullable<typeof products>[number]) => {
@@ -844,9 +1006,31 @@ function ProductsTab({ token }: { token: string }) {
 
       {isLoading && <p className="text-sm text-ink/50">Chargement…</p>}
       <div className="space-y-3">
-        {(products ?? []).map((p) => (
+        {(products ?? []).map((p, index) => (
           <div key={p.id} className="flex flex-col gap-3 rounded-2xl border border-sand/70 bg-white shadow-sm p-4 sm:flex-row sm:items-center sm:gap-4 md:p-5">
             <div className="flex min-w-0 flex-1 items-center gap-4">
+              {/* Ordre d'affichage sur le site (catalogue, sélecteurs de commande) —
+                  sinon seule une modification directe en base pouvait le changer. */}
+              <div className="flex shrink-0 flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => moveProduct(index, -1)}
+                  disabled={index === 0}
+                  aria-label="Monter"
+                  className="flex h-6 w-6 items-center justify-center rounded border border-ink/20 text-ink/60 transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-25"
+                >
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 8l4-4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveProduct(index, 1)}
+                  disabled={index === (products?.length ?? 0) - 1}
+                  aria-label="Descendre"
+                  className="flex h-6 w-6 items-center justify-center rounded border border-ink/20 text-ink/60 transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-25"
+                >
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+              </div>
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-[#faf6f3]">
                 {p.imageUrl ? (
                   <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />

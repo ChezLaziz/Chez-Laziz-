@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, createHmac, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync, createHmac, createHash, timingSafeEqual } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./connection";
 import { settings, adminUsers } from "@db/schema";
@@ -185,6 +185,88 @@ export async function addAdminUser(email: string, password: string): Promise<voi
     email: normalized,
     passwordHash: hashPassword(password.trim()),
   });
+}
+
+const RESET_TOKEN_TTL_MS = 1000 * 60 * 60; // 1 heure
+
+function hashResetToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+// ---- Anti brute-force pour la demande de réinitialisation : limite par IP,
+// distincte de celle du login (voir checkLoginRateLimit) ----
+const resetRequestAttempts = new Map<string, { count: number; windowStart: number }>();
+
+function checkResetRequestRateLimit(ip: string) {
+  const now = Date.now();
+  const entry = resetRequestAttempts.get(ip);
+  if (!entry || now - entry.windowStart > LOGIN_WINDOW_MS) {
+    resetRequestAttempts.set(ip, { count: 1, windowStart: now });
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > LOGIN_MAX_ATTEMPTS) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Trop de tentatives. Réessayez dans quelques minutes.",
+    });
+  }
+}
+
+/** Génère un jeton de réinitialisation à usage unique (valable 1h) pour le
+ * compte correspondant à `email`, s'il existe. Retourne le jeton en clair
+ * (à insérer dans le lien envoyé par e-mail) ou `null` si aucun compte ne
+ * correspond — l'appelant ne doit JAMAIS révéler cette différence au client
+ * (réponse générique dans les deux cas, pour ne pas confirmer les adresses
+ * enregistrées à un attaquant). */
+export async function requestPasswordReset(
+  email: string,
+  ip = "unknown",
+): Promise<string | null> {
+  checkResetRequestRateLimit(ip);
+  const user = await findUserByEmail(email);
+  if (!user) return null;
+  const token = randomBytes(32).toString("hex");
+  await getDb()
+    .update(adminUsers)
+    .set({
+      resetTokenHash: hashResetToken(token),
+      resetTokenExpiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+    })
+    .where(eq(adminUsers.id, user.id));
+  return token;
+}
+
+/** Valide un jeton de réinitialisation et applique le nouveau mot de passe.
+ * Le jeton est à usage unique : consommé (effacé) qu'il réussisse ou non
+ * dès qu'un compte correspondant est trouvé, et toute session active du
+ * compte est invalidée (comme changeMyPassword). */
+export async function resetPasswordWithToken(
+  token: string,
+  newPassword: string,
+): Promise<void> {
+  const tokenHash = hashResetToken(token);
+  const candidates = await getDb().query.adminUsers.findMany({
+    where: (u, { isNotNull }) => isNotNull(u.resetTokenHash),
+  });
+  const user = candidates.find(
+    (u) => u.resetTokenHash && safeEqual(u.resetTokenHash, tokenHash),
+  );
+  if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt.getTime() < Date.now()) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Ce lien de réinitialisation est invalide ou a expiré.",
+    });
+  }
+  await getDb()
+    .update(adminUsers)
+    .set({
+      passwordHash: hashPassword(newPassword.trim()),
+      resetTokenHash: null,
+      resetTokenExpiresAt: null,
+    })
+    .where(eq(adminUsers.id, user.id));
+  await setSetting("admin_token_secret", randomBytes(32).toString("hex"));
 }
 
 export async function removeAdminUser(requestingEmail: string, id: number): Promise<void> {
