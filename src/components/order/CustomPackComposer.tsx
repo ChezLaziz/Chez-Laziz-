@@ -67,7 +67,7 @@ function ProductPickCard({
         <p className="break-words font-medium leading-snug">
           {displayName}
           {product.isExclusiveCreation && (
-            <sup className="ms-0.5 text-[10px] font-normal text-ink/40" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+            <sup className="ms-0.5 text-xs font-semibold text-accent" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
               ™
             </sup>
           )}
@@ -222,7 +222,7 @@ export default function CustomPackComposer({
                         </span>
                         <span className="min-w-0 flex-1 truncate">
                           {productName(p, lang)}
-                          {p.isExclusiveCreation && <sup className="text-[10px] text-[#faf6f3]/40">™</sup>}{' '}
+                          {p.isExclusiveCreation && <sup className="text-xs font-semibold text-accent">™</sup>}{' '}
                           <span className="text-[#faf6f3]/55">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
                         </span>
                         <span className="font-display text-[#b8912e]">{formatPriceDT(packItemPrice(p.priceMillimes), lang)}</span>

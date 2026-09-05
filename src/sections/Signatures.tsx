@@ -101,7 +101,7 @@ export default function Signatures() {
                 <h3 className="font-display text-base leading-snug md:text-lg">
                   {productName(p, lang)}
                   {p.isExclusiveCreation && (
-                    <sup className="ms-0.5 text-[10px] font-normal text-ink/40" title={lang === 'ar' ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+                    <sup className="ms-0.5 text-xs font-semibold text-accent" title={lang === 'ar' ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
                       ™
                     </sup>
                   )}

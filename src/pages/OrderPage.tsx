@@ -949,7 +949,7 @@ export default function OrderPage() {
                           <p className="font-display text-xl">
                             {l.name}
                             {l.isExclusiveCreation && (
-                              <sup className="ms-0.5 text-xs font-normal text-ink/40" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+                              <sup className="ms-0.5 text-xs font-semibold text-accent" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
                                 ™
                               </sup>
                             )}
