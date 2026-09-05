@@ -37,6 +37,8 @@ export const PUBLIC_ROUTES = [
   "/ar/makroudh-fruits-secs",
   "/journal",
   "/journal/*",
+  "/ar/journal",
+  "/ar/journal/*",
 ] as const;
 
 /** Vrai si le chemin correspond à une page connue de l'application. */

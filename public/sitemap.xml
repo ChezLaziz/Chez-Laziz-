@@ -175,8 +175,20 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://chezlaziz.com/ar/journal</loc>
+    <lastmod>2026-09-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://chezlaziz.com/journal/quest-ce-que-le-makroudh-tunisien</loc>
     <lastmod>2026-09-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://chezlaziz.com/ar/journal/quest-ce-que-le-makroudh-tunisien</loc>
+    <lastmod>2026-09-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -187,8 +199,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://chezlaziz.com/ar/journal/makroudh-kairouan-histoire-tradition</loc>
+    <lastmod>2026-09-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://chezlaziz.com/journal/comment-est-prepare-le-makroudh</loc>
     <lastmod>2026-09-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://chezlaziz.com/ar/journal/comment-est-prepare-le-makroudh</loc>
+    <lastmod>2026-09-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
