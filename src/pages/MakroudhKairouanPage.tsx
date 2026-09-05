@@ -2,6 +2,9 @@ import { Link } from 'react-router'
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
+import { trpc } from '@/providers/trpc'
+import { formatTND } from '@/lib/shop'
+import { cheapestPriceMillimes } from '@/lib/landingProduct'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import Ornament from '../components/Ornament'
@@ -27,6 +30,17 @@ export default function MakroudhKairouanPage() {
         },
   )
 
+  // Page de catégorie (pas une fiche produit précise) — un "à partir de"
+  // basé sur le prix le plus bas du catalogue, pas de schéma Product ici
+  // (ce serait faux de désigner un seul produit pour toute la gamme).
+  const { data: products } = trpc.products.list.useQuery()
+  const cheapest = cheapestPriceMillimes(products)
+  const priceLabel = cheapest
+    ? isAr
+      ? `ابتداءً من ${formatTND(cheapest)} د.ت / كغ`
+      : `À partir de ${formatTND(cheapest)} DT / kg`
+    : null
+
   if (isAr) {
     return (
       <div className="min-h-screen bg-[#faf6f3]">
@@ -39,6 +53,11 @@ export default function MakroudhKairouanPage() {
             <h1 data-reveal className="font-display text-4xl leading-tight md:text-6xl">
               مقروض القيروان — التقليد التونسي الأصيل
             </h1>
+            {priceLabel && (
+              <p data-reveal className="mt-4 text-xs uppercase tracking-[0.2em] text-accent">
+                {priceLabel}
+              </p>
+            )}
 
             <div data-reveal className="mt-10 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
               <p>
@@ -118,6 +137,11 @@ export default function MakroudhKairouanPage() {
           <h1 data-reveal className="font-display text-4xl leading-tight md:text-6xl">
             Makroudh de Kairouan — L'Authentique Tradition Tunisienne
           </h1>
+          {priceLabel && (
+            <p data-reveal className="mt-4 text-xs uppercase tracking-[0.2em] text-accent">
+              {priceLabel}
+            </p>
+          )}
 
           <div data-reveal className="mt-10 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
             <p>

@@ -2,6 +2,9 @@ import { Link } from 'react-router'
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
+import { trpc } from '@/providers/trpc'
+import { formatTND } from '@/lib/shop'
+import { findProductByKeyword, useProductJsonLd } from '@/lib/landingProduct'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import Ornament from '../components/Ornament'
@@ -27,6 +30,23 @@ export default function MakroudhDattesPage() {
         },
   )
 
+  const { data: products } = trpc.products.list.useQuery()
+  const product = findProductByKeyword(products, 'dattes')
+  useProductJsonLd({
+    id: 'product-jsonld-dattes',
+    product,
+    name: isAr ? 'مقروض بالتمر' : 'Makroudh aux Dattes',
+    description: isAr
+      ? 'مقروض بالتمر مصنوع باليد: سميد ذهبي، عجينة تمر طرية، وعسل.'
+      : 'Makroudh aux dattes façonné à la main : semoule dorée, pâte de dattes fondante et miel.',
+    url: isAr ? '/ar/makroudh-aux-dattes' : '/makroudh-aux-dattes',
+  })
+  const priceLabel = product
+    ? isAr
+      ? `ابتداءً من ${formatTND(product.priceMillimes)} د.ت / كغ`
+      : `À partir de ${formatTND(product.priceMillimes)} DT / kg`
+    : null
+
   if (isAr) {
     return (
       <div className="min-h-screen bg-[#faf6f3]">
@@ -39,6 +59,11 @@ export default function MakroudhDattesPage() {
             <h1 data-reveal className="font-display text-4xl leading-tight md:text-6xl">
               مقروض بالتمر — الوصفة التونسية التقليدية
             </h1>
+            {priceLabel && (
+              <p data-reveal className="mt-4 text-xs uppercase tracking-[0.2em] text-accent">
+                {priceLabel}
+              </p>
+            )}
 
             <div data-reveal className="mt-10 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
               <p>
@@ -118,6 +143,11 @@ export default function MakroudhDattesPage() {
           <h1 data-reveal className="font-display text-4xl leading-tight md:text-6xl">
             Makroudh aux Dattes — La Recette Tunisienne Traditionnelle
           </h1>
+          {priceLabel && (
+            <p data-reveal className="mt-4 text-xs uppercase tracking-[0.2em] text-accent">
+              {priceLabel}
+            </p>
+          )}
 
           <div data-reveal className="mt-10 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
             <p>

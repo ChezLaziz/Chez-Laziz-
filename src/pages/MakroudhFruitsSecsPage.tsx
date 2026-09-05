@@ -5,6 +5,9 @@ import { useSEO } from '../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import { track } from '../lib/analytics'
 import { trackMeta } from '../lib/metaPixel'
+import { trpc } from '@/providers/trpc'
+import { formatTND } from '@/lib/shop'
+import { findProductByKeyword, useProductJsonLd } from '@/lib/landingProduct'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import Ornament from '../components/Ornament'
@@ -49,6 +52,25 @@ export default function MakroudhFruitsSecsPage() {
 
   const orderHref = isAr ? '/ar/commande?produit=fruits-secs' : '/commande?produit=fruits-secs'
   const collectionHref = isAr ? '/ar/collection' : '/collection'
+
+  // Prix réel du produit (catalogue) — affiché sur la page ET repris dans le
+  // schéma Product/Offer ci-dessous : Google exige que les deux correspondent.
+  const { data: products } = trpc.products.list.useQuery()
+  const product = findProductByKeyword(products, 'fruits secs')
+  useProductJsonLd({
+    id: 'product-jsonld-fruits-secs',
+    product,
+    name: isAr ? 'مقروض لعزيز بالفواكه الجافة' : 'Makroudh Laziz aux Fruits Secs',
+    description: isAr
+      ? 'مقروض لعزيز بالفواكه الجافة: حشوة سخية من اللوز والجوز والبندق في عجينة سميد ذهبية بالعسل.'
+      : "Le Makroudh Laziz aux Fruits Secs : une garniture généreuse d'amandes, de noix et de noisettes dans une pâte de semoule dorée au miel.",
+    url: isAr ? '/ar/makroudh-fruits-secs' : '/makroudh-fruits-secs',
+  })
+  const priceLabel = product
+    ? isAr
+      ? `ابتداءً من ${formatTND(product.priceMillimes)} د.ت / كغ`
+      : `À partir de ${formatTND(product.priceMillimes)} DT / kg`
+    : null
 
   if (isAr) {
     return (
@@ -102,7 +124,8 @@ export default function MakroudhFruitsSecsPage() {
                   </Link>
                 </div>
                 <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted-warm">
-                  الثمن بالكيلو · الوزن على اختياركم من 500 غ إلى 2,5 كغ عند الطلب
+                  {priceLabel && <>{priceLabel} · </>}
+                  الوزن على اختياركم من 500 غ إلى 2,5 كغ عند الطلب
                 </p>
               </div>
 
@@ -241,7 +264,8 @@ export default function MakroudhFruitsSecsPage() {
                 </Link>
               </div>
               <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted-warm">
-                Prix au kilo · poids au choix de 500 g à 2,5 kg à la commande
+                {priceLabel && <>{priceLabel} · </>}
+                poids au choix de 500 g à 2,5 kg à la commande
               </p>
             </div>
 
