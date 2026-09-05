@@ -5,6 +5,10 @@ import { useSEO, setJsonLd } from '../../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
+import { ARTICLES } from './articles'
+import RelatedArticles from './RelatedArticles'
+
+const META = ARTICLES.find((a) => a.slug === 'faq-makroudh')!
 
 const FAQ_FR = [
   {
@@ -80,6 +84,7 @@ export default function FaqMakroudhPage() {
           path: '/ar/journal/faq-makroudh',
           breadcrumb: 'أسئلة شائعة عن المقروض',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         }
       : {
           title: 'FAQ makroudh : toutes les réponses aux questions les plus posées — Journal Chez Laziz',
@@ -88,6 +93,7 @@ export default function FaqMakroudhPage() {
           path: '/journal/faq-makroudh',
           breadcrumb: 'FAQ makroudh',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         },
   )
 
@@ -116,6 +122,15 @@ export default function FaqMakroudhPage() {
           <h1 className="font-display text-3xl leading-tight md:text-5xl">
             {isAr ? 'أسئلة شائعة عن المقروض: كل الأجوبة' : 'FAQ makroudh : toutes les réponses aux questions les plus posées'}
           </h1>
+          <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">
+            {isAr ? 'بقلم فريق عند لعزيز' : "Par l'équipe Chez Laziz"}
+          </p>
+          <img
+            src={META.image}
+            alt={isAr ? META.imageAltAr : META.imageAlt}
+            loading="lazy"
+            className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
 
           <div className="mt-10 divide-y divide-sand/70 border-y border-sand/70">
             {FAQ.map((item) => (
@@ -128,6 +143,8 @@ export default function FaqMakroudhPage() {
               </details>
             ))}
           </div>
+
+          <RelatedArticles slugs={META.related} isAr={isAr} />
 
           <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
             <p className="font-display text-xl text-ink">

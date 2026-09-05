@@ -4,6 +4,10 @@ import { useSEO } from '../../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
+import { ARTICLES } from './articles'
+import RelatedArticles from './RelatedArticles'
+
+const META = ARTICLES.find((a) => a.slug === 'comment-choisir-son-makroudh')!
 
 export default function ChoisirMakroudhPage() {
   useReveal()
@@ -16,6 +20,7 @@ export default function ChoisirMakroudhPage() {
           path: '/ar/journal/comment-choisir-son-makroudh',
           breadcrumb: 'كيفاش تختار مقروض بنّان؟',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         }
       : {
           title: 'Comment bien choisir son makroudh : le guide complet — Journal Chez Laziz',
@@ -24,6 +29,7 @@ export default function ChoisirMakroudhPage() {
           path: '/journal/comment-choisir-son-makroudh',
           breadcrumb: 'Comment choisir son makroudh ?',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         },
   )
 
@@ -35,6 +41,13 @@ export default function ChoisirMakroudhPage() {
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
             <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">المدونة</p>
             <h1 className="font-display text-3xl leading-tight md:text-5xl">كيفاش تختار مقروض بنّان: الدليل الكامل</h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">بقلم فريق عند لعزيز</p>
+            <img
+              src={META.image}
+              alt={META.imageAltAr}
+              loading="lazy"
+              className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+            />
 
             <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
               <p>
@@ -71,6 +84,8 @@ export default function ChoisirMakroudhPage() {
               </p>
             </div>
 
+            <RelatedArticles slugs={META.related} isAr={true} />
+
             <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
               <p className="font-display text-xl text-ink">جرّبوا مقروض عند لعزيز، مصنوع باليد كل يوم في القيروان</p>
               <Link to="/ar/commande" className="arrow-link mt-4 inline-flex justify-center">
@@ -101,6 +116,13 @@ export default function ChoisirMakroudhPage() {
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
           <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Le Journal</p>
           <h1 className="font-display text-3xl leading-tight md:text-5xl">Comment bien choisir son makroudh : le guide complet</h1>
+          <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">Par l'équipe Chez Laziz</p>
+          <img
+            src={META.image}
+            alt={META.imageAlt}
+            loading="lazy"
+            className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
 
           <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
             <p>
@@ -140,6 +162,8 @@ export default function ChoisirMakroudhPage() {
             </p>
             <p>Au final, la meilleure façon de s'assurer de la qualité reste de goûter : un bon makroudh se reconnaît dès la première bouchée.</p>
           </div>
+
+          <RelatedArticles slugs={META.related} isAr={false} />
 
           <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
             <p className="font-display text-xl text-ink">Goûtez le makroudh Chez Laziz, fait main chaque jour à Kairouan</p>

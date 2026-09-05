@@ -4,6 +4,10 @@ import { useSEO } from '../../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
+import { ARTICLES } from './articles'
+import RelatedArticles from './RelatedArticles'
+
+const META = ARTICLES.find((a) => a.slug === 'makroudh-el-louz-vs-traditionnel')!
 
 export default function MakroudhElLouzPage() {
   useReveal()
@@ -16,6 +20,7 @@ export default function MakroudhElLouzPage() {
           path: '/ar/journal/makroudh-el-louz-vs-traditionnel',
           breadcrumb: 'مقروض اللوز ولا التقليدي؟',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         }
       : {
           title: 'Makroudh el louz ou makroudh traditionnel : lequel choisir ? — Journal Chez Laziz',
@@ -24,6 +29,7 @@ export default function MakroudhElLouzPage() {
           path: '/journal/makroudh-el-louz-vs-traditionnel',
           breadcrumb: 'Makroudh el louz ou traditionnel ?',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         },
   )
 
@@ -35,6 +41,13 @@ export default function MakroudhElLouzPage() {
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
             <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">المدونة</p>
             <h1 className="font-display text-3xl leading-tight md:text-5xl">مقروض اللوز ولا المقروض التقليدي: شنو تختار؟</h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">بقلم فريق عند لعزيز</p>
+            <img
+              src={META.image}
+              alt={META.imageAltAr}
+              loading="lazy"
+              className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+            />
 
             <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
               <p>
@@ -66,6 +79,8 @@ export default function MakroudhElLouzPage() {
               </p>
             </div>
 
+            <RelatedArticles slugs={META.related} isAr={true} />
+
             <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
               <p className="font-display text-xl text-ink">اكتشفو مقروضنا التقليدي، مصنوع باليد كل يوم</p>
               <Link to="/ar/collection" className="arrow-link mt-4 inline-flex justify-center">
@@ -96,6 +111,13 @@ export default function MakroudhElLouzPage() {
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
           <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Le Journal</p>
           <h1 className="font-display text-3xl leading-tight md:text-5xl">Makroudh el louz ou makroudh traditionnel : lequel choisir ?</h1>
+          <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">Par l'équipe Chez Laziz</p>
+          <img
+            src={META.image}
+            alt={META.imageAlt}
+            loading="lazy"
+            className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
 
           <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
             <p>
@@ -132,6 +154,8 @@ export default function MakroudhElLouzPage() {
               nous concentrons sur le makroudh traditionnel kairouanais, dans sa version la plus authentique.
             </p>
           </div>
+
+          <RelatedArticles slugs={META.related} isAr={false} />
 
           <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
             <p className="font-display text-xl text-ink">Découvrez notre makroudh traditionnel, fait main chaque jour</p>
