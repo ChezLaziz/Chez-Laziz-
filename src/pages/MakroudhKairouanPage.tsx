@@ -70,7 +70,7 @@ export default function MakroudhKairouanPage() {
                     التشكيلة
                   </Link>
                   ، قصتنا وحرفتنا في{' '}
-                  <Link to="/la-maison" className="text-accent underline underline-offset-2">
+                  <Link to="/ar/la-maison" className="text-accent underline underline-offset-2">
                     قصتنا
                   </Link>
                   ، أو العنوان الدقيق للمحل في{' '}

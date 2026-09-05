@@ -9,6 +9,7 @@ export const PUBLIC_ROUTES = [
   "/",
   "/ar",
   "/la-maison",
+  "/ar/la-maison",
   "/collection",
   "/ar/collection",
   "/galerie",

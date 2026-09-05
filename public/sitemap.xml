@@ -19,6 +19,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://chezlaziz.com/ar/la-maison</loc>
+    <lastmod>2026-09-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://chezlaziz.com/collection</loc>
     <lastmod>2026-09-03</lastmod>
     <changefreq>weekly</changefreq>

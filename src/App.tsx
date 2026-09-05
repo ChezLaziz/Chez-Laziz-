@@ -68,6 +68,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/ar" element={<Home />} />
       <Route path="/la-maison" element={<Lazy Component={MaisonPage} />} />
+      <Route path="/ar/la-maison" element={<Lazy Component={MaisonPage} />} />
       <Route path="/collection" element={<Lazy Component={CollectionPage} />} />
       <Route path="/ar/collection" element={<Lazy Component={CollectionPage} />} />
       <Route path="/galerie" element={<Lazy Component={GaleriePage} />} />
