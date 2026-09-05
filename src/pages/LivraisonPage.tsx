@@ -56,7 +56,7 @@ export default function LivraisonPage() {
           <section>
             <h2 className="mb-2 font-display text-xl text-ink">Poids disponibles</h2>
             <p>
-              Chaque makroudh se commande par poids : {ALLOWED_WEIGHTS_KG.map(formatWeight).join(', ')}.
+              Chaque makroudh se commande par poids : {ALLOWED_WEIGHTS_KG.map((w) => formatWeight(w)).join(', ')}.
               Le prix affiché sur la collection est le prix pour 1 kg ; le poids se
               choisit sur la page{' '}
               <Link to="/commande" className="text-accent underline underline-offset-2">Commander</Link>.

@@ -73,6 +73,7 @@ export default function App() {
       <Route path="/galerie" element={<Lazy Component={GaleriePage} />} />
       <Route path="/contact" element={<Lazy Component={ContactPage} />} />
       <Route path="/commande" element={<Lazy Component={OrderPage} />} />
+      <Route path="/ar/commande" element={<Lazy Component={OrderPage} />} />
       <Route path="/admin" element={<Lazy Component={AdminPage} />} />
       <Route path="/politique-de-confidentialite" element={<Lazy Component={PrivacyPage} />} />
       <Route path="/conditions-generales" element={<Lazy Component={TermsPage} />} />

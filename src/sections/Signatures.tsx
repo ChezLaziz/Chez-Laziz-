@@ -77,7 +77,7 @@ export default function Signatures() {
           {featured.map((p) => (
             <Link
               key={p.id}
-              to="/commande"
+              to={lang === 'ar' ? '/ar/commande' : '/commande'}
               data-reveal
               className="group flex flex-col overflow-hidden rounded-2xl border border-sand bg-white transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgba(46,42,39,0.25)]"
             >

@@ -15,10 +15,11 @@ export function isValidWeight(value: unknown): value is WeightKg {
   );
 }
 
-/** 0.5 → "500 g", 1.5 → "1,5 kg" */
-export function formatWeight(kg: WeightKg): string {
-  if (kg < 1) return `${Math.round(kg * 1000)} g`;
-  return `${kg.toString().replace(".", ",")} kg`;
+/** 0.5 → "500 g", 1.5 → "1,5 kg" (lang="ar" → "500 غ", "1,5 كغ"). */
+export function formatWeight(kg: WeightKg, lang: "fr" | "ar" = "fr"): string {
+  const unit = lang === "ar" ? { small: "غ", big: "كغ" } : { small: "g", big: "kg" };
+  if (kg < 1) return `${Math.round(kg * 1000)} ${unit.small}`;
+  return `${kg.toString().replace(".", ",")} ${unit.big}`;
 }
 
 /** Prix (en millimes) pour un poids donné, calculé depuis le prix de base

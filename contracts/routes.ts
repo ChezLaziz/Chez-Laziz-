@@ -14,6 +14,7 @@ export const PUBLIC_ROUTES = [
   "/galerie",
   "/contact",
   "/commande",
+  "/ar/commande",
   "/admin",
   "/politique-de-confidentialite",
   "/conditions-generales",

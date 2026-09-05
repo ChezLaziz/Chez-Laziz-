@@ -70,7 +70,7 @@ export default function HowToOrder() {
 
         <div data-reveal className="mt-14 flex flex-col items-center gap-5 text-center">
           <Link
-            to="/commande"
+            to={isAr ? '/ar/commande' : '/commande'}
             className="gold-cta rounded-full px-9 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-white transition-transform duration-300 hover:scale-[1.02]"
           >
             {isAr ? 'اطلب أونلاين' : 'Commander en ligne'}

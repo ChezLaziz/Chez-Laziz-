@@ -176,7 +176,7 @@ export default function Hero() {
           >
             {isAr ? 'اكتشف تشكيلتنا' : 'Découvrir la collection'}
           </Link>
-          <Link to="/commande" className="arrow-link !text-[#faf6f3]">
+          <Link to={isAr ? '/ar/commande' : '/commande'} className="arrow-link !text-[#faf6f3]">
             {isAr ? 'اطلب أونلاين' : 'Commander en ligne'}
             <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />

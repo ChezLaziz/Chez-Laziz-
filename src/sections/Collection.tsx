@@ -7,6 +7,7 @@ import { track } from '@/lib/analytics'
 import { setJsonLd } from '@/hooks/useSEO'
 import ProductImage from '@/components/ProductImage'
 import { useLang } from '@/lib/i18n'
+import { CATEGORY_LABELS_AR } from '@/lib/categories'
 
 type DbProduct = {
   id: number
@@ -21,13 +22,6 @@ type DbProduct = {
 const CATEGORY_ORDER = ['Les classiques', 'Les signatures', 'Les nouveautés']
 const CATEGORY_NOTES: Record<string, string> = {
   'Les nouveautés': 'Selon la saison — à découvrir en boutique ou sur Instagram',
-}
-// Le nom de catégorie vient de la base (utilisé aussi pour le regroupement,
-// voir groupByCategory) — seule sa version affichée change avec la langue.
-const CATEGORY_LABELS_AR: Record<string, string> = {
-  'Les classiques': 'الكلاسيكيات',
-  'Les signatures': 'إبداعاتنا المميزة',
-  'Les nouveautés': 'الجديد',
 }
 const CATEGORY_NOTES_AR: Record<string, string> = {
   'Les nouveautés': 'حسب الموسم — اكتشفوها في المتجر أو على إنستغرام',

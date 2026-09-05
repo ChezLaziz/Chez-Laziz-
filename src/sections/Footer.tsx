@@ -20,14 +20,14 @@ const DEFAULT_VISIT_EYEBROW_AR = 'تواصل معنا'
 const DEFAULT_VISIT_TITLE = 'La boutique vous attend à Kairouan'
 const DEFAULT_VISIT_TITLE_AR = 'متجرنا بانتظاركم في القيروان'
 
-// Les pages sans version arabe pour l'instant (livraison, FAQ, commande,
-// journal, makroudh-*, la-maison, galerie, contact, mentions légales)
-// gardent leur libellé traduit mais un lien vers la page française telle
-// quelle — cohérent avec le choix fait pour le header (voir Header.tsx).
+// Les pages sans version arabe pour l'instant (livraison, FAQ, journal,
+// makroudh-*, la-maison, galerie, contact, mentions légales) gardent leur
+// libellé traduit mais un lien vers la page française telle quelle —
+// cohérent avec le choix fait pour le header (voir Header.tsx).
 const SHOP_LINKS = [
   ['/', 'Accueil', 'الرئيسية', true],
   ['/collection', 'La Collection', 'التشكيلة', true],
-  ['/commande', 'Commander en ligne', 'اطلب أونلاين', false],
+  ['/commande', 'Commander en ligne', 'اطلب أونلاين', true],
   ['/livraison', 'Livraison', 'التوصيل', false],
   ['/faq', 'Questions fréquentes', 'الأسئلة الشائعة', false],
 ] as const
@@ -453,7 +453,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               </li>
             </ul>
             <Link
-              to="/commande"
+              to={lang === 'ar' ? '/ar/commande' : '/commande'}
               className="gold-cta mt-6 inline-flex items-center justify-center rounded-full bg-[#b8912e] px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#2e2a27] transition-colors hover:bg-[#d4ab3a]"
             >
               {lang === 'ar' ? 'اطلب أونلاين' : 'Commander en ligne'}

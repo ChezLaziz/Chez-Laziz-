@@ -119,11 +119,12 @@ export function normalizeCustomSelection(ids: readonly number[]): number[] {
   return [...ids].sort((a, b) => a - b);
 }
 
-/** 69900 → "69,900 DT" (écriture tunisienne : dinars, virgule, millimes). */
-export function formatPriceDT(millimes: number): string {
+/** 69900 → "69,900 DT" (écriture tunisienne : dinars, virgule, millimes) ;
+ * lang="ar" → "69,900 د.ت". */
+export function formatPriceDT(millimes: number, lang: "fr" | "ar" = "fr"): string {
   const sign = millimes < 0 ? "-" : "";
   const abs = Math.abs(Math.round(millimes));
   const dinars = Math.floor(abs / 1000);
   const mill = String(abs % 1000).padStart(3, "0");
-  return `${sign}${dinars},${mill} DT`;
+  return `${sign}${dinars},${mill} ${lang === "ar" ? "د.ت" : "DT"}`;
 }

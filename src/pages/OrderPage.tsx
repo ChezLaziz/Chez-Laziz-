@@ -10,6 +10,8 @@ import { buildDisplayLines, kgLabel, type CatalogProduct, type DisplayLine } fro
 import PackCard from '@/components/order/PackCard'
 import CustomPackComposer from '@/components/order/CustomPackComposer'
 import ProductOrderCard from '@/components/order/ProductOrderCard'
+import { useLang } from '@/lib/i18n'
+import { CATEGORY_LABELS_AR } from '@/lib/categories'
 import {
   DELIVERY_FEE_MILLIMES,
   DELIVERY_REGION,
@@ -34,6 +36,8 @@ import {
 
 function TopBar() {
   const { count } = useCart()
+  const lang = useLang()
+  const isAr = lang === 'ar'
   return (
     <header className="sticky top-0 z-40 border-b border-sand/60 bg-[#faf6f3]/95 backdrop-blur">
       <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
@@ -45,6 +49,7 @@ function TopBar() {
         <div className="flex items-center gap-3">
           <a
             href={PHONE_TEL}
+            dir="ltr"
             className="hidden items-center gap-2 rounded-full border border-ink/15 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent md:flex"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -55,14 +60,14 @@ function TopBar() {
           <a
             href="#recap"
             className="relative flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent"
-            aria-label={`Votre commande, ${count} article${count > 1 ? 's' : ''}`}
+            aria-label={isAr ? `طلبكم، ${count} عنصر` : `Votre commande, ${count} article${count > 1 ? 's' : ''}`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.6a1 1 0 0 0 1-.8L21 8H7" strokeLinecap="round" strokeLinejoin="round" />
               <circle cx="10" cy="20" r="1.2" />
               <circle cx="17" cy="20" r="1.2" />
             </svg>
-            <span className="hidden sm:inline">Ma commande</span>
+            <span className="hidden sm:inline">{isAr ? 'طلبي' : 'Ma commande'}</span>
             {count > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#b8912e] px-1.5 text-[11px] text-white">
                 {count}
@@ -81,20 +86,22 @@ const stepperBtnCls =
   'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
 
 const GENERIC_ERROR = `Une erreur est survenue — réessayez, ou appelez-nous au ${PHONE_DISPLAY}.`
+const GENERIC_ERROR_AR = `حدث خطأ — أعيدوا المحاولة، أو اتصلوا بنا على ⁦${PHONE_DISPLAY}⁩.`
 const MAPS_URL =
   'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
 
 /** Les messages métier du serveur ("preuve D17 obligatoire", "produit
  * indisponible") sont lisibles tels quels ; une erreur de validation
  * technique (JSON, zod) est remplacée par un message humain. */
-function friendlyError(message?: string): string {
-  if (!message) return GENERIC_ERROR
+function friendlyError(message: string | undefined, isAr: boolean): string {
+  const generic = isAr ? GENERIC_ERROR_AR : GENERIC_ERROR
+  if (!message) return generic
   const technical =
     message.startsWith('[') ||
     message.startsWith('{') ||
     /invalid_type|expected|received|zod|undefined|null/i.test(message) ||
     message.length > 180
-  return technical ? GENERIC_ERROR : message
+  return technical ? generic : message
 }
 
 function newIdempotencyKey(): string {
@@ -165,13 +172,27 @@ type Placed = {
 }
 
 export default function OrderPage() {
-  useSEO({
-    title: 'Commander — Chez Laziz | Makroudh au poids, packs et pack sur mesure',
-    description:
-      'Commandez vos makroudh Chez Laziz : à la carte (500 g à 2,5 kg), packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement à la livraison ou D17.',
-    path: '/commande',
-    breadcrumb: 'Commander',
-  })
+  const lang = useLang()
+  const isAr = lang === 'ar'
+  useSEO(
+    isAr
+      ? {
+          title: 'اطلبوا — Chez Laziz | مقروض بالوزن، حزم جاهزة وحزمة على المقاس',
+          description:
+            'اطلبوا مقروض Chez Laziz: بالوزن (500 غ إلى 2.5 كغ)، حزم Laziz VIP وPremium وDélice وClassique، أو حزمة على مقاسكم (4 × 500 غ). توصيل في جميع أنحاء تونس خلال 24 ساعة، الدفع عند التسليم أو عبر D17.',
+          path: '/ar/commande',
+          breadcrumb: 'اطلبوا',
+          alternates: { fr: '/commande', ar: '/ar/commande' },
+        }
+      : {
+          title: 'Commander — Chez Laziz | Makroudh au poids, packs et pack sur mesure',
+          description:
+            'Commandez vos makroudh Chez Laziz : à la carte (500 g à 2,5 kg), packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement à la livraison ou D17.',
+          path: '/commande',
+          breadcrumb: 'Commander',
+          alternates: { fr: '/commande', ar: '/ar/commande' },
+        },
+  )
   const { data: products, isLoading } = trpc.products.list.useQuery()
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
@@ -254,7 +275,7 @@ export default function OrderPage() {
     return () => io.disconnect()
   }, [placed])
 
-  const items: DisplayLine[] = useMemo(() => buildDisplayLines(lines, catalog), [lines, catalog])
+  const items: DisplayLine[] = useMemo(() => buildDisplayLines(lines, catalog, lang), [lines, catalog, lang])
   const subtotal = items.reduce((s, l) => s + l.qty * l.unitPriceMillimes, 0)
   const total = subtotal + DELIVERY_FEE_MILLIMES
   const totalWeightKg = items.reduce((s, l) => s + l.qty * l.weightKg, 0)
@@ -376,11 +397,11 @@ export default function OrderPage() {
     setProofPreview(null)
     if (!file) return
     if (!PAYMENT_PROOF_ALLOWED_MIME.has(file.type)) {
-      setProofError('Format non supporté — utilisez une image JPG, PNG ou WEBP.')
+      setProofError(isAr ? 'صيغة غير مدعومة — استخدموا صورة JPG أو PNG أو WEBP.' : 'Format non supporté — utilisez une image JPG, PNG ou WEBP.')
       return
     }
     if (file.size > PAYMENT_PROOF_MAX_SIZE_BYTES) {
-      setProofError('Image trop lourde (8 Mo maximum).')
+      setProofError(isAr ? 'الصورة ثقيلة جدًا (8 ميغا كحد أقصى).' : 'Image trop lourde (8 Mo maximum).')
       return
     }
     setProofPreview(URL.createObjectURL(file))
@@ -390,10 +411,11 @@ export default function OrderPage() {
       body.append('file', file)
       const res = await fetch('/api/uploads/payment-proof', { method: 'POST', body })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Échec de l'envoi de la capture")
+      const uploadFailedMsg = isAr ? "فشل إرسال الصورة" : "Échec de l'envoi de la capture"
+      if (!res.ok) throw new Error(data.error || uploadFailedMsg)
       setProofKey(data.key)
     } catch (e) {
-      setProofError(e instanceof Error ? e.message : "Échec de l'envoi de la capture")
+      setProofError(e instanceof Error ? e.message : isAr ? 'فشل إرسال الصورة' : "Échec de l'envoi de la capture")
     } finally {
       setProofUploading(false)
     }
@@ -404,7 +426,7 @@ export default function OrderPage() {
     if (!canSubmit) return
     const snapshot = items.map((l) => ({
       key: l.key,
-      label: `${l.qty} × ${l.name} (${kgLabel(l.weightKg)})`,
+      label: `${l.qty} × ${l.name} (${kgLabel(l.weightKg, lang)})`,
       contents: l.contents,
       totalMillimes: l.qty * l.unitPriceMillimes,
     }))
@@ -430,11 +452,17 @@ export default function OrderPage() {
       },
       {
         onSuccess: (order) => {
-          const text = `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${snapshot
-            .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
-            .join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatPriceDT(total)}\nPaiement : ${
-            paymentMethod === 'd17' ? 'D17 (capture envoyée)' : 'À la livraison'
-          }`
+          const text = isAr
+            ? `مرحبًا Chez Laziz! الطلب رقم ${order?.id ?? ''} — ${name.trim()} :\n${snapshot
+                .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
+                .join('\n')}\nالتوصيل: ${addressLine}\nالمجموع (التوصيل مشمول): ${formatPriceDT(total, lang)}\nالدفع: ${
+                paymentMethod === 'd17' ? 'D17 (تم إرسال الصورة)' : 'عند التسليم'
+              }`
+            : `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${snapshot
+                .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
+                .join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatPriceDT(total, lang)}\nPaiement : ${
+                paymentMethod === 'd17' ? 'D17 (capture envoyée)' : 'À la livraison'
+              }`
           track('purchase', {
             transaction_id: String(order?.id ?? ''),
             value: total / 1000,
@@ -497,22 +525,28 @@ export default function OrderPage() {
               <path d="M4 12.5l5 5L20 6.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
-          <h1 className="mt-8 font-display text-4xl md:text-5xl">Merci, commande n°{placed.id} reçue&nbsp;!</h1>
+          <h1 className="mt-8 font-display text-4xl md:text-5xl">
+            {isAr ? <>شكرًا، الطلب رقم {placed.id} استُلم&nbsp;!</> : <>Merci, commande n°{placed.id} reçue&nbsp;!</>}
+          </h1>
           <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
-            {placed.paymentMethod === 'd17'
-              ? "Votre capture d'écran D17 a bien été reçue — elle est en attente de vérification par notre équipe (le paiement n'est pas encore confirmé). Nous vous appelons très vite pour confirmer votre commande."
-              : 'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'}
+            {isAr
+              ? placed.paymentMethod === 'd17'
+                ? 'صورة الدفع عبر D17 وصلتنا — هي الآن قيد التحقق من فريقنا (الدفع لم يُؤكَّد بعد). سنتصل بكم في أقرب وقت لتأكيد طلبكم.'
+                : 'سنتصل بكم في أقرب وقت لتأكيد طلبكم. الدفع نقدًا عند التسليم.'
+              : placed.paymentMethod === 'd17'
+                ? "Votre capture d'écran D17 a bien été reçue — elle est en attente de vérification par notre équipe (le paiement n'est pas encore confirmé). Nous vous appelons très vite pour confirmer votre commande."
+                : 'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'}
           </p>
 
-          <div className="mt-10 w-full rounded-2xl border border-sand/70 bg-white p-6 text-left shadow-sm">
-            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-accent">Récapitulatif</p>
+          <div className={`mt-10 w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm ${isAr ? 'text-right' : 'text-left'}`}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-accent">{isAr ? 'ملخص الطلب' : 'Récapitulatif'}</p>
             <ul className="mt-4 space-y-3 text-[15px] font-light">
               {placed.recap.lines.map((l) => (
                 <li key={l.key}>
                   <div className="flex items-baseline">
                     <span>{l.label}</span>
                     <span className="mx-3 flex-1 border-b border-dotted border-ink/15" aria-hidden="true" />
-                    <span className="font-display text-accent">{formatPriceDT(l.totalMillimes)}</span>
+                    <span className="font-display text-accent">{formatPriceDT(l.totalMillimes, lang)}</span>
                   </div>
                   {l.contents.length > 0 && (
                     <p className="mt-0.5 text-xs text-ink/50">{l.contents.join(' · ')}</p>
@@ -522,20 +556,22 @@ export default function OrderPage() {
             </ul>
             <div className="mt-4 space-y-1 border-t border-sand/60 pt-3 text-sm font-light text-ink/60">
               <div className="flex justify-between">
-                <span>Sous-total</span>
-                <span>{formatPriceDT(placed.recap.subtotalMillimes)}</span>
+                <span>{isAr ? 'المجموع الجزئي' : 'Sous-total'}</span>
+                <span>{formatPriceDT(placed.recap.subtotalMillimes, lang)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Livraison</span>
-                <span>{formatPriceDT(DELIVERY_FEE_MILLIMES)}</span>
+                <span>{isAr ? 'التوصيل' : 'Livraison'}</span>
+                <span>{formatPriceDT(DELIVERY_FEE_MILLIMES, lang)}</span>
               </div>
             </div>
             <div className="mt-2 flex justify-between border-t border-sand/60 pt-3">
-              <span className="text-xs uppercase tracking-[0.2em] text-ink/50">Total</span>
-              <span className="font-display text-xl text-accent">{formatPriceDT(placed.recap.totalMillimes)}</span>
+              <span className="text-xs uppercase tracking-[0.2em] text-ink/50">{isAr ? 'المجموع' : 'Total'}</span>
+              <span className="font-display text-xl text-accent">{formatPriceDT(placed.recap.totalMillimes, lang)}</span>
             </div>
             <p className="mt-4 text-sm font-light text-ink/60">
-              Livraison à : {placed.recap.address} — {DELIVERY_REGION.toLowerCase()}, sous {DELIVERY_TIME_LABEL}.
+              {isAr
+                ? `التوصيل إلى: ${placed.recap.address} — في جميع أنحاء تونس، خلال ${DELIVERY_TIME_LABEL === '24h' ? '24 ساعة' : DELIVERY_TIME_LABEL}.`
+                : `Livraison à : ${placed.recap.address} — ${DELIVERY_REGION.toLowerCase()}, sous ${DELIVERY_TIME_LABEL}.`}
             </p>
           </div>
 
@@ -546,13 +582,13 @@ export default function OrderPage() {
               rel="noreferrer"
               className="flex items-center justify-center gap-3 rounded-full bg-[#0084FF] px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.03]"
             >
-              Nous écrire sur Messenger
+              {isAr ? 'راسلونا على Messenger' : 'Nous écrire sur Messenger'}
             </a>
             <Link
-              to="/"
+              to={isAr ? '/ar' : '/'}
               className="flex items-center justify-center rounded-full border border-ink/25 px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-ink transition-colors hover:bg-ink hover:text-[#faf6f3]"
             >
-              Retour au site
+              {isAr ? 'العودة إلى الموقع' : 'Retour au site'}
             </Link>
           </div>
           <button
@@ -560,7 +596,13 @@ export default function OrderPage() {
             onClick={copyRecap}
             className="mt-4 text-xs uppercase tracking-[0.15em] text-ink/50 underline underline-offset-2 transition-colors hover:text-ink"
           >
-            {recapCopied ? 'Récapitulatif copié ✓' : 'Copier le récapitulatif pour le coller sur Messenger'}
+            {isAr
+              ? recapCopied
+                ? 'تم نسخ الملخص ✓'
+                : 'انسخوا الملخص للصقه على Messenger'
+              : recapCopied
+                ? 'Récapitulatif copié ✓'
+                : 'Copier le récapitulatif pour le coller sur Messenger'}
           </button>
         </main>
       </div>
@@ -584,20 +626,32 @@ export default function OrderPage() {
       <section className="relative border-b border-sand/60">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[#f3e9dc] to-transparent" />
         <div className="relative mx-auto max-w-3xl px-5 pb-10 pt-14 text-center md:px-10 md:pt-20">
-          <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Commande en ligne</p>
-          <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">Commandez vos makroudh</h1>
+          <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'اطلبوا عبر الإنترنت' : 'Commande en ligne'}</p>
+          <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">{isAr ? 'اطلبوا مقروضكم' : 'Commandez vos makroudh'}</h1>
           <Divider />
           <p className="mx-auto mt-5 max-w-xl text-[15px] font-light leading-relaxed text-ink/70 md:text-base">
-            Nos makroudh au poids, quatre packs prêts à offrir, ou votre pack sur mesure — façonnés à la main
-            à Kairouan et livrés partout en Tunisie sous {DELIVERY_TIME_LABEL}.
+            {isAr
+              ? `مقروضنا بالوزن، أربع حزم جاهزة للإهداء، أو حزمة على مقاسكم — تُصنع يدويًا في القيروان وتُوصَّل في جميع أنحاء تونس خلال ${
+                  DELIVERY_TIME_LABEL === '24h' ? '24 ساعة' : DELIVERY_TIME_LABEL
+                }.`
+              : `Nos makroudh au poids, quatre packs prêts à offrir, ou votre pack sur mesure — façonnés à la main à Kairouan et livrés partout en Tunisie sous ${DELIVERY_TIME_LABEL}.`}
           </p>
           <div className="mx-auto mt-8 grid max-w-xl grid-cols-2 gap-3 rounded-2xl border border-sand/70 bg-white py-5 text-center shadow-sm sm:grid-cols-4">
-            {[
-              ['100%', 'Fait main'],
-              [formatPriceDT(DELIVERY_FEE_MILLIMES).replace(' DT', ''), 'DT livraison'],
-              [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
-              ['COD / D17', 'Paiement'],
-            ].map(([n, label]) => (
+            {(
+              isAr
+                ? [
+                    ['100%', 'صناعة يدوية'],
+                    [formatPriceDT(DELIVERY_FEE_MILLIMES, lang).replace(' د.ت', ''), 'د.ت توصيل'],
+                    [DELIVERY_TIME_LABEL === '24h' ? '24 س' : DELIVERY_TIME_LABEL, 'كل تونس'],
+                    ['COD / D17', 'الدفع'],
+                  ]
+                : [
+                    ['100%', 'Fait main'],
+                    [formatPriceDT(DELIVERY_FEE_MILLIMES, lang).replace(' DT', ''), 'DT livraison'],
+                    [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
+                    ['COD / D17', 'Paiement'],
+                  ]
+            ).map(([n, label]) => (
               <div key={label}>
                 <div className="font-display text-xl text-[#b8912e] md:text-2xl">{n}</div>
                 <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink/50 md:text-[11px]">{label}</div>
@@ -608,13 +662,19 @@ export default function OrderPage() {
 
         {/* Onglets */}
         <div className="mx-auto max-w-7xl px-5 pb-8 md:px-10">
-          <div role="tablist" aria-label="Mode de commande" className="mx-auto grid max-w-3xl grid-cols-3 gap-1 rounded-2xl border border-sand bg-white p-1.5 shadow-sm">
+          <div role="tablist" aria-label={isAr ? 'طريقة الطلب' : 'Mode de commande'} className="mx-auto grid max-w-3xl grid-cols-3 gap-1 rounded-2xl border border-sand bg-white p-1.5 shadow-sm">
             {(
-              [
-                ['produits', 'Nos produits', 'Produits', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
-                ['packs', 'Packs prêts', 'Packs', 'M3 8l9-4 9 4-9 4-9-4zm0 0v9l9 4 9-4V8M12 12v9'],
-                ['custom', 'Composez votre Pack', 'Sur mesure', 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18M4 7.5l8 4.5 8-4.5'],
-              ] as const
+              isAr
+                ? ([
+                    ['produits', 'منتجاتنا', 'المنتجات', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
+                    ['packs', 'حزم جاهزة', 'الحزم', 'M3 8l9-4 9 4-9 4-9-4zm0 0v9l9 4 9-4V8M12 12v9'],
+                    ['custom', 'كوّنوا حزمتكم', 'على المقاس', 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18M4 7.5l8 4.5 8-4.5'],
+                  ] as const)
+                : ([
+                    ['produits', 'Nos produits', 'Produits', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
+                    ['packs', 'Packs prêts', 'Packs', 'M3 8l9-4 9 4-9 4-9-4zm0 0v9l9 4 9-4V8M12 12v9'],
+                    ['custom', 'Composez votre Pack', 'Sur mesure', 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18M4 7.5l8 4.5 8-4.5'],
+                  ] as const)
             ).map(([id, label, shortLabel, icon]) => (
               <button
                 key={id}
@@ -643,10 +703,10 @@ export default function OrderPage() {
           chemin d'achat en un clic, sans jamais retirer le reste du
           catalogue, toujours visible juste en dessous. ── */}
       {spotlight && (
-        <section aria-label="Article recommandé pour vous" className="mx-auto max-w-7xl px-5 pt-10 md:px-10">
+        <section aria-label={isAr ? 'المنتج المُوصى به لكم' : 'Article recommandé pour vous'} className="mx-auto max-w-7xl px-5 pt-10 md:px-10">
           <div className="mx-auto max-w-sm">
             <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-accent">
-              ★ L'article de votre publicité
+              {isAr ? '★ منتج إعلانكم' : "★ L'article de votre publicité"}
             </p>
             <ProductOrderCard
               product={spotlight}
@@ -661,10 +721,10 @@ export default function OrderPage() {
               className="mt-3 flex items-center justify-center gap-1.5 text-xs font-light text-ink/60 hover:text-accent"
             >
               <span aria-hidden="true" className="text-[#b8912e]">★★★★★</span>
-              5,0 — Avis Google
+              {isAr ? '5.0 — تقييمات Google' : '5,0 — Avis Google'}
             </a>
             <p className="mt-4 text-center text-xs font-light text-ink/50">
-              Ou{' '}
+              {isAr ? 'أو ' : 'Ou '}
               <button
                 type="button"
                 onClick={() => {
@@ -673,9 +733,9 @@ export default function OrderPage() {
                 }}
                 className="text-accent underline underline-offset-2"
               >
-                parcourez tout notre catalogue
+                {isAr ? 'تصفحوا كامل كاتالوجنا' : 'parcourez tout notre catalogue'}
               </button>{' '}
-              ci-dessous.
+              {isAr ? 'أدناه.' : 'ci-dessous.'}
             </p>
           </div>
         </section>
@@ -685,10 +745,12 @@ export default function OrderPage() {
         {/* ── Nos produits (à la carte, au poids) ── */}
         <section id="panel-produits" role="tabpanel" aria-labelledby="tab-produits" hidden={tab !== 'produits'}>
           <div className="text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">À la carte</p>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl">Nos produits</h2>
+            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'بالوزن' : 'À la carte'}</p>
+            <h2 className="mt-3 font-display text-3xl md:text-4xl">{isAr ? 'منتجاتنا' : 'Nos produits'}</h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] font-light leading-relaxed text-ink/65">
-              Choisissez le poids (500 g à 2,5 kg) et la quantité de chaque makroudh. Prix affichés pour 1 kg.
+              {isAr
+                ? 'اختاروا الوزن (500 غ إلى 2.5 كغ) وكمية كل نوع مقروض. الأسعار المعروضة لـ 1 كغ.'
+                : 'Choisissez le poids (500 g à 2,5 kg) et la quantité de chaque makroudh. Prix affichés pour 1 kg.'}
             </p>
           </div>
           {isLoading ? (
@@ -706,14 +768,20 @@ export default function OrderPage() {
             </div>
           ) : catalog.length === 0 ? (
             <p className="mt-10 text-center text-sm font-light text-ink/60">
-              Le catalogue est momentanément indisponible — appelez-nous au{' '}
-              <a href={PHONE_TEL} className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a>.
+              {isAr ? (
+                <>الكاتالوج غير متوفر حاليًا — اتصلوا بنا على <span dir="ltr">{PHONE_DISPLAY}</span>.</>
+              ) : (
+                <>
+                  Le catalogue est momentanément indisponible — appelez-nous au{' '}
+                  <a href={PHONE_TEL} className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a>.
+                </>
+              )}
             </p>
           ) : (
             categories.map(([category, items]) => (
               <div key={category} className="mt-10">
                 <h3 className="mb-4 flex items-center gap-4 font-display text-2xl">
-                  {category}
+                  {isAr ? CATEGORY_LABELS_AR[category] || category : category}
                   <span className="h-px flex-1 bg-sand" aria-hidden="true" />
                 </h3>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
@@ -731,25 +799,43 @@ export default function OrderPage() {
             ))
           )}
           <p className="mt-10 text-center text-sm font-light text-ink/60">
-            Pour offrir :{' '}
-            <button type="button" onClick={() => switchTab('packs')} className="text-accent underline underline-offset-4">
-              découvrez nos packs
-            </button>{' '}
-            ou{' '}
-            <button type="button" onClick={() => switchTab('custom')} className="text-accent underline underline-offset-4">
-              composez le vôtre
-            </button>
-            .
+            {isAr ? (
+              <>
+                للإهداء:{' '}
+                <button type="button" onClick={() => switchTab('packs')} className="text-accent underline underline-offset-4">
+                  اكتشفوا حزمنا
+                </button>{' '}
+                أو{' '}
+                <button type="button" onClick={() => switchTab('custom')} className="text-accent underline underline-offset-4">
+                  كوّنوا حزمتكم الخاصة
+                </button>
+                .
+              </>
+            ) : (
+              <>
+                Pour offrir :{' '}
+                <button type="button" onClick={() => switchTab('packs')} className="text-accent underline underline-offset-4">
+                  découvrez nos packs
+                </button>{' '}
+                ou{' '}
+                <button type="button" onClick={() => switchTab('custom')} className="text-accent underline underline-offset-4">
+                  composez le vôtre
+                </button>
+                .
+              </>
+            )}
           </p>
         </section>
 
         {/* ── A. Packs prêts ── */}
         <section id="panel-packs" role="tabpanel" aria-labelledby="tab-packs" hidden={tab !== 'packs'}>
           <div className="text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Nos packs</p>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl">Prêts à offrir, prêts à savourer</h2>
+            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'حزمنا' : 'Nos packs'}</p>
+            <h2 className="mt-3 font-display text-3xl md:text-4xl">{isAr ? 'جاهزة للإهداء، جاهزة للتذوق' : 'Prêts à offrir, prêts à savourer'}</h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] font-light leading-relaxed text-ink/65">
-              Chaque produit est conditionné par 500 g. Choisissez votre pack, nous nous occupons du reste.
+              {isAr
+                ? 'كل منتج مُعبّأ بـ 500 غ. اختاروا حزمتكم، ونحن نهتم بالباقي.'
+                : 'Chaque produit est conditionné par 500 g. Choisissez votre pack, nous nous occupons du reste.'}
             </p>
           </div>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4 xl:gap-6">
@@ -766,9 +852,9 @@ export default function OrderPage() {
             ))}
           </div>
           <p className="mt-8 text-center text-sm font-light text-ink/60">
-            Envie d'autres saveurs ?{' '}
+            {isAr ? 'رغبة في نكهات أخرى؟ ' : "Envie d'autres saveurs ? "}
             <button type="button" onClick={() => switchTab('custom')} className="text-accent underline underline-offset-4">
-              Composez votre propre pack
+              {isAr ? 'كوّنوا حزمتكم الخاصة' : 'Composez votre propre pack'}
             </button>
           </p>
         </section>
@@ -792,14 +878,16 @@ export default function OrderPage() {
         {/* ── Votre commande : lignes + coordonnées + paiement ── */}
         <section id="recap" ref={recapRef} className="mt-20 scroll-mt-24 border-t border-sand/60 pt-14 md:mt-24">
           <div className="text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Votre commande</p>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl">Récapitulatif et livraison</h2>
+            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'طلبكم' : 'Votre commande'}</p>
+            <h2 className="mt-3 font-display text-3xl md:text-4xl">{isAr ? 'الملخص والتوصيل' : 'Récapitulatif et livraison'}</h2>
           </div>
 
           {items.length === 0 ? (
             <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-sand bg-white p-8 text-center">
-              <p className="font-display text-xl">Votre commande est vide</p>
-              <p className="mt-2 text-sm font-light text-ink/60">Choisissez vos makroudh au poids, un pack prêt, ou composez le vôtre.</p>
+              <p className="font-display text-xl">{isAr ? 'طلبكم فارغ' : 'Votre commande est vide'}</p>
+              <p className="mt-2 text-sm font-light text-ink/60">
+                {isAr ? 'اختاروا مقروضكم بالوزن، حزمة جاهزة، أو كوّنوا حزمتكم الخاصة.' : 'Choisissez vos makroudh au poids, un pack prêt, ou composez le vôtre.'}
+              </p>
               <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                 <button
                   type="button"
@@ -809,7 +897,7 @@ export default function OrderPage() {
                   }}
                   className="gold-cta rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
                 >
-                  Voir les produits
+                  {isAr ? 'شاهدوا المنتجات' : 'Voir les produits'}
                 </button>
                 <button
                   type="button"
@@ -819,7 +907,7 @@ export default function OrderPage() {
                   }}
                   className="rounded-full border border-ink/25 px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-ink hover:text-[#faf6f3]"
                 >
-                  Voir les packs
+                  {isAr ? 'شاهدوا الحزم' : 'Voir les packs'}
                 </button>
                 <button
                   type="button"
@@ -829,11 +917,15 @@ export default function OrderPage() {
                   }}
                   className="rounded-full border border-ink/25 px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-ink hover:text-[#faf6f3]"
                 >
-                  Composer mon pack
+                  {isAr ? 'كوّنوا حزمتي' : 'Composer mon pack'}
                 </button>
               </div>
               <p className="mt-5 text-xs font-light text-ink/50">
-                Ou appelez-nous : <a href={PHONE_TEL} className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a>
+                {isAr ? (
+                  <>اتصلوا بنا: <a href={PHONE_TEL} dir="ltr" className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a></>
+                ) : (
+                  <>Ou appelez-nous : <a href={PHONE_TEL} className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a></>
+                )}
               </p>
             </div>
           ) : (
@@ -849,7 +941,9 @@ export default function OrderPage() {
                           <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-ink/50">
                             {l.line.kind === 'product'
                               ? l.variant
-                              : `${l.contents.length} × 500 g · ${kgLabel(l.weightKg)}`}
+                              : isAr
+                                ? `${l.contents.length} × 500 غ · ${kgLabel(l.weightKg, lang)}`
+                                : `${l.contents.length} × 500 g · ${kgLabel(l.weightKg, lang)}`}
                           </p>
                           {l.contents.length > 0 && (
                             <ul className="mt-3 space-y-1 text-sm text-ink/70">
@@ -865,33 +959,33 @@ export default function OrderPage() {
                           )}
                           {l.packagingMillimes > 0 && (
                             <p className="mt-2 text-xs text-ink/50">
-                              Produits {formatPriceDT(l.unitPriceMillimes - l.packagingMillimes)} + {CUSTOM_PACK_PACKAGING_LABEL}{' '}
-                              {formatPriceDT(l.packagingMillimes)}
+                              {isAr ? 'المنتجات' : 'Produits'} {formatPriceDT(l.unitPriceMillimes - l.packagingMillimes, lang)} + {CUSTOM_PACK_PACKAGING_LABEL}{' '}
+                              {formatPriceDT(l.packagingMillimes, lang)}
                             </p>
                           )}
                         </div>
-                        <p className="font-display text-xl text-accent">{formatPriceDT(l.qty * l.unitPriceMillimes)}</p>
+                        <p className="font-display text-xl text-accent">{formatPriceDT(l.qty * l.unitPriceMillimes, lang)}</p>
                       </div>
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-sand/60 pt-4">
-                        <div className="flex items-center gap-2" role="group" aria-label={`Quantité — ${l.name}`}>
-                          <button type="button" aria-label={`Retirer un ${l.name}`} onClick={() => setLineQty(l.key, l.qty - 1)} className={stepperBtnCls}>
+                        <div className="flex items-center gap-2" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${l.name}`}>
+                          <button type="button" aria-label={isAr ? `إنقاص ${l.name}` : `Retirer un ${l.name}`} onClick={() => setLineQty(l.key, l.qty - 1)} className={stepperBtnCls}>
                             −
                           </button>
                           <span className="w-7 text-center font-display text-lg" aria-live="polite">
                             {l.qty}
                           </span>
-                          <button type="button" aria-label={`Ajouter un ${l.name}`} onClick={() => setLineQty(l.key, l.qty + 1)} className={stepperBtnCls}>
+                          <button type="button" aria-label={isAr ? `زيادة ${l.name}` : `Ajouter un ${l.name}`} onClick={() => setLineQty(l.key, l.qty + 1)} className={stepperBtnCls}>
                             +
                           </button>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.14em]">
                           {l.line.kind === 'custom' && (
                             <button type="button" onClick={() => editCustom(l.line as CustomLine, l.key)} className="text-accent underline-offset-4 hover:underline">
-                              Modifier
+                              {isAr ? 'تعديل' : 'Modifier'}
                             </button>
                           )}
                           <button type="button" onClick={() => removeLine(l.key)} className="text-ink/50 underline-offset-4 hover:text-red-600 hover:underline">
-                            Retirer
+                            {isAr ? 'إزالة' : 'Retirer'}
                           </button>
                         </div>
                       </div>
@@ -902,67 +996,79 @@ export default function OrderPage() {
                 <div className="mt-6 rounded-2xl border border-sand/80 bg-white p-5 text-[15px] shadow-sm">
                   <div className="space-y-2 font-light text-ink/70">
                     <div className="flex items-baseline justify-between">
-                      <span>Poids total</span>
-                      <span>{kgLabel(totalWeightKg)}</span>
+                      <span>{isAr ? 'الوزن الإجمالي' : 'Poids total'}</span>
+                      <span>{kgLabel(totalWeightKg, lang)}</span>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <span>Sous-total</span>
-                      <span>{formatPriceDT(subtotal)}</span>
+                      <span>{isAr ? 'المجموع الجزئي' : 'Sous-total'}</span>
+                      <span>{formatPriceDT(subtotal, lang)}</span>
                     </div>
                     <div className="flex items-baseline justify-between gap-3">
-                      <span>Livraison porte-à-porte</span>
-                      <span className="shrink-0 whitespace-nowrap">{formatPriceDT(DELIVERY_FEE_MILLIMES)}</span>
+                      <span>{isAr ? 'التوصيل إلى المنزل' : 'Livraison porte-à-porte'}</span>
+                      <span className="shrink-0 whitespace-nowrap">{formatPriceDT(DELIVERY_FEE_MILLIMES, lang)}</span>
                     </div>
                   </div>
                   <div className="mt-3 flex items-baseline justify-between border-t border-sand/70 pt-3">
-                    <span className="text-sm uppercase tracking-[0.2em] text-ink/60">Total</span>
-                    <span className="font-display text-2xl text-accent">{formatPriceDT(total)}</span>
+                    <span className="text-sm uppercase tracking-[0.2em] text-ink/60">{isAr ? 'المجموع' : 'Total'}</span>
+                    <span className="font-display text-2xl text-accent">{formatPriceDT(total, lang)}</span>
                   </div>
                 </div>
                 <p className="mt-3 text-xs font-light text-ink/50">
-                  <Link to="/livraison" className="text-accent underline underline-offset-2">Détails livraison</Link>
+                  <Link to="/livraison" className="text-accent underline underline-offset-2">{isAr ? 'تفاصيل التوصيل' : 'Détails livraison'}</Link>
                   {' · '}
-                  <Link to="/faq" className="text-accent underline underline-offset-2">Questions fréquentes</Link>
+                  <Link to="/faq" className="text-accent underline underline-offset-2">{isAr ? 'الأسئلة الشائعة' : 'Questions fréquentes'}</Link>
                 </p>
               </div>
 
               {/* Coordonnées + paiement */}
               <div className="min-w-0 lg:col-span-5">
                 <div className="rounded-2xl bg-ink-deep p-6 text-[#faf6f3] md:p-8 lg:sticky lg:top-24">
-                  <h3 className="font-display text-2xl">Livraison</h3>
+                  <h3 className="font-display text-2xl">{isAr ? 'التوصيل' : 'Livraison'}</h3>
                   <p className="mt-1 text-sm font-light text-[#faf6f3]/60">
-                    Nous vous appelons pour confirmer avant préparation.
+                    {isAr ? 'سنتصل بكم للتأكيد قبل التحضير.' : 'Nous vous appelons pour confirmer avant préparation.'}
                   </p>
                   <div className="mt-6 space-y-4">
-                    <input required value={name} onChange={(e) => setName(e.target.value)} onFocus={onCheckoutStart} placeholder="Votre nom" aria-label="Votre nom" autoComplete="name" className={inputCls} />
+                    <input
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onFocus={onCheckoutStart}
+                      placeholder={isAr ? 'اسمكم' : 'Votre nom'}
+                      aria-label={isAr ? 'اسمكم' : 'Votre nom'}
+                      autoComplete="name"
+                      className={inputCls}
+                    />
                     <div>
                       <input
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         onFocus={onCheckoutStart}
-                        placeholder="Téléphone (ex : 23 691 039)"
-                        aria-label="Téléphone"
+                        placeholder={isAr ? 'الهاتف (مثال: 23 691 039)' : 'Téléphone (ex : 23 691 039)'}
+                        aria-label={isAr ? 'الهاتف' : 'Téléphone'}
                         aria-invalid={phone.length > 0 && !phoneValid}
                         type="tel"
                         inputMode="tel"
                         autoComplete="tel"
+                        dir="ltr"
                         className={inputCls}
                       />
                       {phone.length > 0 && !phoneValid && (
-                        <p className="mt-1.5 text-xs text-red-300" role="alert">Numéro tunisien invalide (8 chiffres).</p>
+                        <p className="mt-1.5 text-xs text-red-300" role="alert">
+                          {isAr ? 'رقم هاتف تونسي غير صحيح (8 أرقام).' : 'Numéro tunisien invalide (8 chiffres).'}
+                        </p>
                       )}
                     </div>
                     <select
                       required
                       value={governorate}
                       onChange={(e) => setGovernorate(e.target.value)}
-                      aria-label="Gouvernorat"
+                      aria-label={isAr ? 'الولاية' : 'Gouvernorat'}
                       autoComplete="address-level1"
                       className={`${inputCls} h-[50px] ${governorate ? '' : 'text-ink/35'}`}
                     >
                       <option value="" disabled>
-                        Gouvernorat
+                        {isAr ? 'الولاية' : 'Gouvernorat'}
                       </option>
                       {TUNISIA_GOVERNORATES.map((g) => (
                         <option key={g} value={g} className="text-ink">
@@ -970,20 +1076,49 @@ export default function OrderPage() {
                         </option>
                       ))}
                     </select>
-                    <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ville / délégation" aria-label="Ville ou délégation" autoComplete="address-level2" className={inputCls} />
-                    <textarea required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète (rue, numéro, repère…)" aria-label="Adresse complète" autoComplete="street-address" rows={2} className={`${inputCls} resize-none`} />
-                    <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Précision ? (date souhaitée, occasion…)" aria-label="Précision (facultatif)" rows={2} className={`${inputCls} resize-none`} />
+                    <input
+                      required
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder={isAr ? 'المدينة / المعتمدية' : 'Ville / délégation'}
+                      aria-label={isAr ? 'المدينة أو المعتمدية' : 'Ville ou délégation'}
+                      autoComplete="address-level2"
+                      className={inputCls}
+                    />
+                    <textarea
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder={isAr ? 'العنوان الكامل (الشارع، الرقم، معلم قريب…)' : 'Adresse complète (rue, numéro, repère…)'}
+                      aria-label={isAr ? 'العنوان الكامل' : 'Adresse complète'}
+                      autoComplete="street-address"
+                      rows={2}
+                      className={`${inputCls} resize-none`}
+                    />
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder={isAr ? 'ملاحظة؟ (تاريخ مرغوب، مناسبة…)' : 'Précision ? (date souhaitée, occasion…)'}
+                      aria-label={isAr ? 'ملاحظة (اختياري)' : 'Précision (facultatif)'}
+                      rows={2}
+                      className={`${inputCls} resize-none`}
+                    />
                   </div>
 
                   <fieldset className="mt-6 border-t border-[#faf6f3]/15 pt-6">
-                    <legend className="sr-only">Moyen de paiement</legend>
-                    <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-[#faf6f3]/50">Paiement</p>
-                    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Moyen de paiement">
+                    <legend className="sr-only">{isAr ? 'طريقة الدفع' : 'Moyen de paiement'}</legend>
+                    <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-[#faf6f3]/50">{isAr ? 'الدفع' : 'Paiement'}</p>
+                    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label={isAr ? 'طريقة الدفع' : 'Moyen de paiement'}>
                       {(
-                        [
-                          ['cod', 'À la livraison'],
-                          ['d17', 'D17'],
-                        ] as const
+                        isAr
+                          ? ([
+                              ['cod', 'عند التسليم'],
+                              ['d17', 'D17'],
+                            ] as const)
+                          : ([
+                              ['cod', 'À la livraison'],
+                              ['d17', 'D17'],
+                            ] as const)
                       ).map(([method, label]) => (
                         <button
                           key={method}
@@ -1005,11 +1140,17 @@ export default function OrderPage() {
                     {paymentMethod === 'd17' && (
                       <div className="mt-4 rounded-lg border border-[#b8912e]/40 bg-[#b8912e]/10 p-4">
                         <p className="text-sm font-light text-[#faf6f3]/85">
-                          Envoyez <strong className="font-semibold text-[#b8912e]">{formatPriceDT(total)}</strong> au numéro D17&nbsp;:
+                          {isAr ? (
+                            <>أرسلوا <strong className="font-semibold text-[#b8912e]">{formatPriceDT(total, lang)}</strong> إلى رقم D17&nbsp;:</>
+                          ) : (
+                            <>Envoyez <strong className="font-semibold text-[#b8912e]">{formatPriceDT(total, lang)}</strong> au numéro D17&nbsp;:</>
+                          )}
                         </p>
-                        <p className="mt-1 select-all font-display text-2xl tracking-wide text-[#b8912e]">{D17_NUMBER_DISPLAY}</p>
+                        <p className="mt-1 select-all font-display text-2xl tracking-wide text-[#b8912e]" dir="ltr">{D17_NUMBER_DISPLAY}</p>
                         <p className="mt-2 text-xs font-light text-[#faf6f3]/60">
-                          Puis joignez ci-dessous la capture d'écran du paiement (obligatoire).
+                          {isAr
+                            ? 'ثم أرفقوا أدناه صورة الدفع (إلزامي).'
+                            : "Puis joignez ci-dessous la capture d'écran du paiement (obligatoire)."}
                         </p>
                         <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#faf6f3]/30 bg-[#faf6f3]/5 px-4 py-4 text-sm text-[#faf6f3]/70 transition-colors hover:border-[#b8912e] focus-within:border-[#b8912e] focus-within:ring-2 focus-within:ring-[#b8912e]/40">
                           <input
@@ -1020,14 +1161,26 @@ export default function OrderPage() {
                             onChange={(e) => handleProofChange(e.target.files?.[0] ?? null)}
                           />
                           {proofUploading
-                            ? 'Envoi de la capture…'
+                            ? isAr
+                              ? 'إرسال الصورة…'
+                              : 'Envoi de la capture…'
                             : proofKey
-                              ? '✓ Capture envoyée — cliquez pour la remplacer'
-                              : 'Joindre la capture d’écran du paiement'}
+                              ? isAr
+                                ? '✓ الصورة أُرسلت — انقروا لاستبدالها'
+                                : '✓ Capture envoyée — cliquez pour la remplacer'
+                              : isAr
+                                ? 'أرفقوا صورة الدفع'
+                                : 'Joindre la capture d’écran du paiement'}
                         </label>
-                        <p id="proof-help" className="sr-only">Image JPG, PNG ou WEBP, 8 Mo maximum.</p>
+                        <p id="proof-help" className="sr-only">
+                          {isAr ? 'صورة JPG أو PNG أو WEBP، 8 ميغا كحد أقصى.' : 'Image JPG, PNG ou WEBP, 8 Mo maximum.'}
+                        </p>
                         {proofPreview && (
-                          <img src={proofPreview} alt="Aperçu de votre capture d'écran D17" className="mt-3 max-h-40 rounded-lg border border-[#faf6f3]/20 object-contain" />
+                          <img
+                            src={proofPreview}
+                            alt={isAr ? 'معاينة صورة الدفع D17' : "Aperçu de votre capture d'écran D17"}
+                            className="mt-3 max-h-40 rounded-lg border border-[#faf6f3]/20 object-contain"
+                          />
                         )}
                         {proofError && <p className="mt-2 text-xs text-red-300" role="alert">{proofError}</p>}
                       </div>
@@ -1035,33 +1188,41 @@ export default function OrderPage() {
                   </fieldset>
 
                   <div className="mt-6 flex items-baseline border-t border-[#faf6f3]/15 pt-5">
-                    <span className="text-sm uppercase tracking-[0.2em]">Total</span>
+                    <span className="text-sm uppercase tracking-[0.2em]">{isAr ? 'المجموع' : 'Total'}</span>
                     <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
-                    <span className="font-display text-2xl text-[#b8912e]">{formatPriceDT(total)}</span>
+                    <span className="font-display text-2xl text-[#b8912e]">{formatPriceDT(total, lang)}</span>
                   </div>
                   <button
                     type="submit"
                     disabled={!canSubmit}
                     className="gold-cta mt-5 h-13 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {createOrder.isPending ? 'Envoi…' : 'Commander'}
+                    {createOrder.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'اطلبوا الآن' : 'Commander'}
                   </button>
                   {!canSubmit && !createOrder.isPending && (
                     <p className="mt-3 text-center text-xs font-light text-[#faf6f3]/50">
                       {!addressValid
-                        ? 'Complétez vos coordonnées et votre adresse de livraison.'
+                        ? isAr
+                          ? 'أكملوا معلوماتكم وعنوان التوصيل.'
+                          : 'Complétez vos coordonnées et votre adresse de livraison.'
                         : paymentMethod === 'd17' && !proofKey
-                          ? "Joignez votre capture d'écran de paiement D17 pour continuer."
+                          ? isAr
+                            ? 'أرفقوا صورة دفع D17 للمتابعة.'
+                            : "Joignez votre capture d'écran de paiement D17 pour continuer."
                           : ''}
                     </p>
                   )}
                   {createOrder.isError && (
                     <p className="mt-3 text-center text-sm text-red-300" role="alert">
-                      {friendlyError(createOrder.error.message)}
+                      {friendlyError(createOrder.error.message, isAr)}
                     </p>
                   )}
                   <p className="mt-5 text-center text-xs font-light tracking-wide text-[#faf6f3]/50">
-                    Ou appelez directement : <a href={PHONE_TEL} className="underline">{PHONE_DISPLAY}</a>
+                    {isAr ? (
+                      <>أو اتصلوا مباشرة: <a href={PHONE_TEL} dir="ltr" className="underline">{PHONE_DISPLAY}</a></>
+                    ) : (
+                      <>Ou appelez directement : <a href={PHONE_TEL} className="underline">{PHONE_DISPLAY}</a></>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1072,39 +1233,74 @@ export default function OrderPage() {
         {/* Contact message */}
         <div className="mt-24 grid gap-10 border-t border-sand/60 pt-16 lg:grid-cols-12">
           <div className="min-w-0 lg:col-span-5">
-            <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Contact</p>
+            <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'اتصل بنا' : 'Contact'}</p>
             <h2 className="font-display text-3xl leading-tight md:text-4xl">
-              Une question ?
-              <br />
-              Écrivez-nous
+              {isAr ? (
+                <>
+                  لديكم سؤال؟
+                  <br />
+                </>
+              ) : (
+                <>
+                  Une question ?
+                  <br />
+                </>
+              )}
+              {isAr ? 'راسلونا' : 'Écrivez-nous'}
             </h2>
             <p className="mt-4 max-w-sm text-[15px] font-light leading-relaxed text-ink/70">
-              Commande spéciale, mariage, Aïd, grande quantité — laissez un message, on vous répond vite. Vous pouvez
-              aussi passer à la boutique, ouverte 7j/7 de 07h00 à minuit.
+              {isAr
+                ? 'طلب خاص، زفاف، عيد، كمية كبيرة — اتركوا رسالة، نجيبكم بسرعة. يمكنكم أيضًا المرور إلى المتجر، المفتوح 7 أيام على 7 من الساعة 07:00 حتى منتصف الليل.'
+                : 'Commande spéciale, mariage, Aïd, grande quantité — laissez un message, on vous répond vite. Vous pouvez aussi passer à la boutique, ouverte 7j/7 de 07h00 à minuit.'}
             </p>
           </div>
           <div className="min-w-0 lg:col-span-7">
             {msgSent ? (
               <div className="rounded-xl border border-[#b8912e] bg-[#f5ece5] p-8 text-center">
-                <p className="font-display text-2xl">Message envoyé, merci !</p>
-                <p className="mt-2 text-sm font-light text-ink/60">Nous vous répondrons très vite.</p>
+                <p className="font-display text-2xl">{isAr ? 'الرسالة أُرسلت، شكرًا!' : 'Message envoyé, merci !'}</p>
+                <p className="mt-2 text-sm font-light text-ink/60">{isAr ? 'سنرد عليكم في أقرب وقت.' : 'Nous vous répondrons très vite.'}</p>
               </div>
             ) : (
               <form onSubmit={submitMessage} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <input required value={msgName} onChange={(e) => setMsgName(e.target.value)} placeholder="Votre nom" aria-label="Votre nom" autoComplete="name" className={inputCls} />
-                  <input value={msgPhone} onChange={(e) => setMsgPhone(e.target.value)} placeholder="Téléphone (facultatif)" aria-label="Téléphone (facultatif)" type="tel" autoComplete="tel" className={inputCls} />
+                  <input
+                    required
+                    value={msgName}
+                    onChange={(e) => setMsgName(e.target.value)}
+                    placeholder={isAr ? 'اسمكم' : 'Votre nom'}
+                    aria-label={isAr ? 'اسمكم' : 'Votre nom'}
+                    autoComplete="name"
+                    className={inputCls}
+                  />
+                  <input
+                    value={msgPhone}
+                    onChange={(e) => setMsgPhone(e.target.value)}
+                    placeholder={isAr ? 'الهاتف (اختياري)' : 'Téléphone (facultatif)'}
+                    aria-label={isAr ? 'الهاتف (اختياري)' : 'Téléphone (facultatif)'}
+                    type="tel"
+                    autoComplete="tel"
+                    dir="ltr"
+                    className={inputCls}
+                  />
                 </div>
-                <textarea required value={msgText} onChange={(e) => setMsgText(e.target.value)} placeholder="Votre message…" aria-label="Votre message" rows={5} className={`${inputCls} resize-none`} />
+                <textarea
+                  required
+                  value={msgText}
+                  onChange={(e) => setMsgText(e.target.value)}
+                  placeholder={isAr ? 'رسالتكم…' : 'Votre message…'}
+                  aria-label={isAr ? 'رسالتكم' : 'Votre message'}
+                  rows={5}
+                  className={`${inputCls} resize-none`}
+                />
                 {sendMessage.isError && (
-                  <p className="text-sm text-red-600" role="alert">{friendlyError(sendMessage.error.message)}</p>
+                  <p className="text-sm text-red-600" role="alert">{friendlyError(sendMessage.error.message, isAr)}</p>
                 )}
                 <button
                   type="submit"
                   disabled={sendMessage.isPending}
                   className="rounded-full bg-ink px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#faf6f3] transition-transform duration-300 hover:scale-[1.03] disabled:opacity-40"
                 >
-                  {sendMessage.isPending ? 'Envoi…' : 'Envoyer le message'}
+                  {sendMessage.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'أرسلوا الرسالة' : 'Envoyer le message'}
                 </button>
               </form>
             )}
@@ -1126,9 +1322,11 @@ export default function OrderPage() {
               <>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-ink/50" aria-live="polite">
-                    {selected.length} / {CUSTOM_PACK_SIZE} sélectionnés · {kgLabel(CUSTOM_PACK_WEIGHT_KG)}
+                    {isAr
+                      ? `${selected.length} / ${CUSTOM_PACK_SIZE} مُختارة · ${kgLabel(CUSTOM_PACK_WEIGHT_KG, lang)}`
+                      : `${selected.length} / ${CUSTOM_PACK_SIZE} sélectionnés · ${kgLabel(CUSTOM_PACK_WEIGHT_KG, lang)}`}
                   </p>
-                  <p className="font-display text-lg text-accent">{formatPriceDT(customBarTotal)}</p>
+                  <p className="font-display text-lg text-accent">{formatPriceDT(customBarTotal, lang)}</p>
                 </div>
                 <button
                   type="button"
@@ -1136,23 +1334,31 @@ export default function OrderPage() {
                   disabled={selected.length !== CUSTOM_PACK_SIZE}
                   className="gold-cta shrink-0 rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {selected.length === CUSTOM_PACK_SIZE ? 'Ajouter au panier' : `Encore ${CUSTOM_PACK_SIZE - selected.length}`}
+                  {selected.length === CUSTOM_PACK_SIZE
+                    ? isAr
+                      ? 'أضف إلى السلة'
+                      : 'Ajouter au panier'
+                    : isAr
+                      ? `تبقّى ${CUSTOM_PACK_SIZE - selected.length}`
+                      : `Encore ${CUSTOM_PACK_SIZE - selected.length}`}
                 </button>
               </>
             ) : (
               <>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-ink/50">
-                    {count} article{count > 1 ? 's' : ''} · {kgLabel(totalWeightKg)} · livraison incluse
+                    {isAr
+                      ? `${count} عنصر · ${kgLabel(totalWeightKg, lang)} · التوصيل مشمول`
+                      : `${count} article${count > 1 ? 's' : ''} · ${kgLabel(totalWeightKg, lang)} · livraison incluse`}
                   </p>
-                  <p className="font-display text-lg text-accent">{formatPriceDT(total)}</p>
+                  <p className="font-display text-lg text-accent">{formatPriceDT(total, lang)}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => scrollToId('recap')}
                   className="gold-cta shrink-0 rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
                 >
-                  Commander
+                  {isAr ? 'اطلبوا الآن' : 'Commander'}
                 </button>
               </>
             )}

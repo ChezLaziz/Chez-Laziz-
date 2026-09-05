@@ -11,9 +11,9 @@ import { useLang, useIsBilingualPage, altLangPath, type Lang } from '@/lib/i18n'
 // Sur grand écran, "Commander" est déjà le bouton doré à droite (plus le
 // panier) : le répéter en lien texte ferait trois entrées pour la même
 // page. Le menu mobile, lui, n'a pas ce bouton et garde le lien.
-// "Nous trouver" et "Commander" n'ont pas encore de version arabe : le
-// libellé se traduit quand même (cohérence de la navigation), le lien
-// pointe vers la page française telle quelle.
+// "Nous trouver" n'a pas encore de version arabe : le libellé se traduit
+// quand même (cohérence de la navigation), le lien pointe vers la page
+// française telle quelle.
 function links(lang: Lang) {
   const collection = lang === 'ar' ? '/ar/collection' : '/collection'
   return [
@@ -22,9 +22,12 @@ function links(lang: Lang) {
     { href: '/contact', label: lang === 'ar' ? 'تواصل معنا' : 'Nous trouver' },
   ]
 }
+function orderHref(lang: Lang) {
+  return lang === 'ar' ? '/ar/commande' : '/commande'
+}
 function mobileLinks(lang: Lang) {
   const l = links(lang)
-  return [l[0], l[1], { href: '/commande', label: lang === 'ar' ? 'اطلب الآن' : 'Commander' }, l[2]]
+  return [l[0], l[1], { href: orderHref(lang), label: lang === 'ar' ? 'اطلب الآن' : 'Commander' }, l[2]]
 }
 
 function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
@@ -136,7 +139,7 @@ export default function Header() {
             ))}
             {isBilingual && <LanguageSwitch tone={scrolled ? 'light' : 'dark'} />}
             <Link
-              to="/commande"
+              to={orderHref(lang)}
               aria-label={lang === 'ar' ? 'عربة التسوق' : 'Voir le panier'}
               className="relative flex h-9 w-9 items-center justify-center"
             >
@@ -152,7 +155,7 @@ export default function Header() {
               )}
             </Link>
             <Link
-              to="/commande"
+              to={orderHref(lang)}
               className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors duration-300 ${
                 scrolled
                   ? 'border-[#b8912e] text-accent hover:bg-[#b8912e] hover:text-white'
@@ -165,7 +168,7 @@ export default function Header() {
 
           <div className="flex items-center gap-1 md:hidden">
             <Link
-              to="/commande"
+              to={orderHref(lang)}
               aria-label={lang === 'ar' ? 'عربة التسوق' : 'Voir le panier'}
               className={`relative flex h-10 w-10 items-center justify-center ${
                 scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
