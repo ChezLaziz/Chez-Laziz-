@@ -92,13 +92,11 @@ export default function MakroudhFruitsSecsPage() {
             <div data-reveal className="order-1 md:order-2">
               <div className="overflow-hidden rounded-2xl border border-sand/70 shadow-sm">
                 <img
-                  src="/images/products/makroudh-fruits-secs.jpg"
+                  src="/api/uploads/products/1788568180259-c582ad55d766.jpg"
                   alt="Makroudh Laziz aux fruits secs, garni d'amandes, de noix et de noisettes"
                   className="aspect-[4/3] w-full object-cover"
                   loading="eager"
                   fetchPriority="high"
-                  width={800}
-                  height={538}
                 />
               </div>
             </div>
