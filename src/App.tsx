@@ -86,9 +86,13 @@ export default function App() {
       <Route path="/faq" element={<Lazy Component={FAQPage} />} />
       <Route path="/ar/faq" element={<Lazy Component={FAQPage} />} />
       <Route path="/makroudh-tunisien" element={<Lazy Component={MakroudhTunisienPage} />} />
+      <Route path="/ar/makroudh-tunisien" element={<Lazy Component={MakroudhTunisienPage} />} />
       <Route path="/makroudh-kairouan" element={<Lazy Component={MakroudhKairouanPage} />} />
+      <Route path="/ar/makroudh-kairouan" element={<Lazy Component={MakroudhKairouanPage} />} />
       <Route path="/makroudh-aux-dattes" element={<Lazy Component={MakroudhDattesPage} />} />
+      <Route path="/ar/makroudh-aux-dattes" element={<Lazy Component={MakroudhDattesPage} />} />
       <Route path="/makroudh-fruits-secs" element={<Lazy Component={MakroudhFruitsSecsPage} />} />
+      <Route path="/ar/makroudh-fruits-secs" element={<Lazy Component={MakroudhFruitsSecsPage} />} />
       <Route path="/journal" element={<Lazy Component={BlogIndexPage} />} />
       <Route path="/journal/quest-ce-que-le-makroudh-tunisien" element={<Lazy Component={QuestCeQueLeMakroudhPage} />} />
       <Route path="/journal/makroudh-kairouan-histoire-tradition" element={<Lazy Component={MakroudhKairouanHistoirePage} />} />
