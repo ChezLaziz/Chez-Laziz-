@@ -27,6 +27,10 @@ const BlogIndexPage = lazy(() => import('./pages/blog/BlogIndexPage'))
 const QuestCeQueLeMakroudhPage = lazy(() => import('./pages/blog/QuestCeQueLeMakroudhPage'))
 const MakroudhKairouanHistoirePage = lazy(() => import('./pages/blog/MakroudhKairouanHistoirePage'))
 const CommentEstPreparePage = lazy(() => import('./pages/blog/CommentEstPreparePage'))
+const MakroudhVsBaklavaPage = lazy(() => import('./pages/blog/MakroudhVsBaklavaPage'))
+const ChoisirMakroudhPage = lazy(() => import('./pages/blog/ChoisirMakroudhPage'))
+const DureeConservationMakroudhPage = lazy(() => import('./pages/blog/DureeConservationMakroudhPage'))
+const MakroudhIdeeCadeauPage = lazy(() => import('./pages/blog/MakroudhIdeeCadeauPage'))
 
 function Lazy({ Component }: { Component: React.ComponentType }) {
   return (
@@ -102,6 +106,14 @@ export default function App() {
       <Route path="/ar/journal/makroudh-kairouan-histoire-tradition" element={<Lazy Component={MakroudhKairouanHistoirePage} />} />
       <Route path="/journal/comment-est-prepare-le-makroudh" element={<Lazy Component={CommentEstPreparePage} />} />
       <Route path="/ar/journal/comment-est-prepare-le-makroudh" element={<Lazy Component={CommentEstPreparePage} />} />
+      <Route path="/journal/makroudh-vs-baklava-difference" element={<Lazy Component={MakroudhVsBaklavaPage} />} />
+      <Route path="/ar/journal/makroudh-vs-baklava-difference" element={<Lazy Component={MakroudhVsBaklavaPage} />} />
+      <Route path="/journal/comment-choisir-son-makroudh" element={<Lazy Component={ChoisirMakroudhPage} />} />
+      <Route path="/ar/journal/comment-choisir-son-makroudh" element={<Lazy Component={ChoisirMakroudhPage} />} />
+      <Route path="/journal/duree-conservation-makroudh" element={<Lazy Component={DureeConservationMakroudhPage} />} />
+      <Route path="/ar/journal/duree-conservation-makroudh" element={<Lazy Component={DureeConservationMakroudhPage} />} />
+      <Route path="/journal/makroudh-idee-cadeau" element={<Lazy Component={MakroudhIdeeCadeauPage} />} />
+      <Route path="/ar/journal/makroudh-idee-cadeau" element={<Lazy Component={MakroudhIdeeCadeauPage} />} />
       <Route path="*" element={<Lazy Component={NotFoundPage} />} />
       </Routes>
       <CookieConsent />

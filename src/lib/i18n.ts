@@ -22,6 +22,10 @@ export const BILINGUAL_BASE_PATHS = [
   '/journal/quest-ce-que-le-makroudh-tunisien',
   '/journal/makroudh-kairouan-histoire-tradition',
   '/journal/comment-est-prepare-le-makroudh',
+  '/journal/makroudh-vs-baklava-difference',
+  '/journal/comment-choisir-son-makroudh',
+  '/journal/duree-conservation-makroudh',
+  '/journal/makroudh-idee-cadeau',
 ] as const
 
 export type Lang = 'fr' | 'ar'
