@@ -55,6 +55,10 @@ export const products = pgTable("products", {
   imageUrl: varchar("image_url", { length: 255 }),
   available: boolean("available").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
+  // Nom/recette inventés par Chez Laziz (pas un dérivé d'un produit déjà sur
+  // le marché) — affiche un ™ à côté du nom sur le site, pour documenter
+  // publiquement (avec createdAt) l'antériorité d'usage de ce nom.
+  isExclusiveCreation: boolean("is_exclusive_creation").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

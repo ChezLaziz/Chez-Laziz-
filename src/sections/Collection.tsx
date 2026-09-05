@@ -20,6 +20,7 @@ type DbProduct = {
   category: string
   badge: string | null
   imageUrl: string | null
+  isExclusiveCreation: boolean
 }
 
 const CATEGORY_ORDER = ['Les classiques', 'Les signatures', 'Les nouveautés']
@@ -78,7 +79,14 @@ function ProductCard({
 
       <div className="flex flex-1 flex-col p-5">
         {/* Titre court */}
-        <h4 className="font-display text-lg leading-snug">{displayName}</h4>
+        <h4 className="font-display text-lg leading-snug">
+          {displayName}
+          {product.isExclusiveCreation && (
+            <sup className="ms-0.5 text-[10px] font-normal text-ink/40" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+              ™
+            </sup>
+          )}
+        </h4>
 
         {/* Description courte */}
         {displayDescription && (

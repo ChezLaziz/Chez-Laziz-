@@ -20,6 +20,7 @@ const productInput = z.object({
   imageUrl: z.string().max(255).optional().nullable(),
   available: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  isExclusiveCreation: z.boolean().optional(),
 });
 
 export const productsRouter = createRouter({
@@ -49,6 +50,7 @@ export const productsRouter = createRouter({
         imageUrl: input.data.imageUrl ?? null,
         available: input.data.available ?? true,
         sortOrder: input.data.sortOrder ?? 0,
+        isExclusiveCreation: input.data.isExclusiveCreation ?? false,
       });
     }),
 
