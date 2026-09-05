@@ -23,6 +23,7 @@ export type CatalogProduct = {
   badge: string | null
   imageUrl: string | null
   available: boolean
+  isExclusiveCreation: boolean
 }
 
 /** Une ligne du panier, résolue contre le catalogue : nom, prix unitaire,

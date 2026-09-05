@@ -782,6 +782,7 @@ type ProductForm = {
   badge: string
   imageUrl: string
   available: boolean
+  isExclusiveCreation: boolean
 }
 
 const EMPTY_FORM: ProductForm = {
@@ -794,6 +795,7 @@ const EMPTY_FORM: ProductForm = {
   badge: '',
   imageUrl: '',
   available: true,
+  isExclusiveCreation: false,
 }
 
 function ProductsTab({ token }: { token: string }) {
@@ -867,6 +869,7 @@ function ProductsTab({ token }: { token: string }) {
       badge: p.badge ?? '',
       imageUrl: p.imageUrl ?? '',
       available: p.available,
+      isExclusiveCreation: p.isExclusiveCreation,
     })
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -884,6 +887,7 @@ function ProductsTab({ token }: { token: string }) {
       badge: form.badge.trim() || null,
       imageUrl: form.imageUrl.trim() || null,
       available: form.available,
+      isExclusiveCreation: form.isExclusiveCreation,
     }
     if (Number.isNaN(data.priceMillimes)) return
     if (editingId) {
@@ -993,6 +997,29 @@ function ProductsTab({ token }: { token: string }) {
               Visible sur le site
             </label>
           </div>
+          {/* Marque un nom/recette inventé par Chez Laziz (pas une variante
+              d'un produit déjà existant sur le marché) — affiche un ™ à côté
+              du nom sur le site pour documenter publiquement l'antériorité
+              d'usage de ce nom. Ce n'est PAS un dépôt officiel de marque :
+              ça ne remplace pas un enregistrement réel à l'INNORPI, mais ça
+              constitue une preuve de date de première utilisation. */}
+          <label className="flex items-start gap-3 rounded-lg border border-[#b8912e]/30 bg-white/60 p-4 text-sm text-ink/70">
+            <input
+              type="checkbox"
+              checked={form.isExclusiveCreation}
+              onChange={(e) => setForm({ ...form, isExclusiveCreation: e.target.checked })}
+              className="mt-0.5 h-4 w-4 accent-[#b8912e]"
+            />
+            <span>
+              <span className="font-medium text-ink">Création exclusive Chez Laziz (™)</span>
+              <br />
+              <span className="text-xs text-ink/50">
+                À cocher seulement pour un nom/recette entièrement inventé par nous, absent du marché.
+                Affiche « ™ » à côté du nom sur le site — sert de preuve de date de première utilisation,
+                pas un dépôt officiel de marque (à faire séparément auprès de l'INNORPI si besoin).
+              </span>
+            </span>
+          </label>
           <div className="flex gap-3">
             <button type="submit" disabled={saving} className="rounded-full bg-ink px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-50">
               {saving ? 'Enregistrement…' : 'Enregistrer'}
@@ -1041,6 +1068,11 @@ function ProductsTab({ token }: { token: string }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{p.name}</span>
+                  {p.isExclusiveCreation && (
+                    <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent" title="Nom/recette exclusif Chez Laziz — affiché avec ™ sur le site">
+                      ™ Exclusif
+                    </span>
+                  )}
                   {p.badge && (
                     <span className="rounded-full border border-[#b8912e] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
                       {p.badge}
