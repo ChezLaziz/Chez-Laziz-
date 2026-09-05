@@ -1,19 +1,111 @@
 import { Link } from 'react-router'
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
+import { useLang } from '@/lib/i18n'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import Ornament from '../components/Ornament'
 
 export default function MakroudhDattesPage() {
   useReveal()
-  useSEO({
-    title: 'Makroudh aux Dattes — La Recette Tunisienne Traditionnelle | Chez Laziz',
-    description:
-      'Makroudh aux dattes façonné à la main : semoule dorée, pâte de dattes fondante et miel. Découvrez la recette traditionnelle telle que Chez Laziz la prépare chaque jour à Kairouan.',
-    path: '/makroudh-aux-dattes',
-    breadcrumb: 'Makroudh aux Dattes',
-  })
+  const isAr = useLang() === 'ar'
+  useSEO(
+    isAr
+      ? {
+          title: 'مقروض بالتمر — الوصفة التونسية التقليدية | عند لعزيز',
+          description:
+            'مقروض بالتمر مصنوع باليد: سميد ذهبي، عجينة تمر طرية، وعسل. اكتشفو الوصفة التقليدية كيفاش عند لعزيز يحضّرها كل يوم في القيروان.',
+          path: '/ar/makroudh-aux-dattes',
+          breadcrumb: 'مقروض بالتمر',
+        }
+      : {
+          title: 'Makroudh aux Dattes — La Recette Tunisienne Traditionnelle | Chez Laziz',
+          description:
+            'Makroudh aux dattes façonné à la main : semoule dorée, pâte de dattes fondante et miel. Découvrez la recette traditionnelle telle que Chez Laziz la prépare chaque jour à Kairouan.',
+          path: '/makroudh-aux-dattes',
+          breadcrumb: 'Makroudh aux Dattes',
+        },
+  )
+
+  if (isAr) {
+    return (
+      <div className="min-h-screen bg-[#faf6f3]">
+        <Header />
+        <main className="pt-16 md:pt-20">
+          <section className="mx-auto max-w-3xl px-5 py-24 md:px-10 md:py-32">
+            <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
+              الوصفة التقليدية
+            </p>
+            <h1 data-reveal className="font-display text-4xl leading-tight md:text-6xl">
+              مقروض بالتمر — الوصفة التونسية التقليدية
+            </h1>
+
+            <div data-reveal className="mt-10 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
+              <p>
+                <strong className="font-medium text-ink">المقروض بالتمر</strong> هو الشكل الأكثر شهرة وانتشارًا من
+                المقروض التونسي. حشوته عجينة تمر طرية، ملفوفة في عجينة سميد رقيقة معجونة بزيت الزيتون، ومشكّلة على
+                شكل معينات في قالب خشبي منقوش.
+              </p>
+              <p>
+                تونس من أكبر البلدان المنتجة للتمر في العالم، خصوصًا صنف دقلة النور — مكوّن أساسي في الحلويات
+                التونسية منذ القديم. هذه الثروة هي اللي تعطي المقروض نكهته العميقة وطراوته المميزة، بلا زيادة سكر:
+                التمر وحده يكفي.
+              </p>
+              <p>
+                بعد التشكيل، كل قطعة تُقلى وبعدها تُغمس، وهي مازالت سخونة، في شراب العسل — خطوة تحبس القرمشة من
+                برا والطراوة من داخل.
+              </p>
+            </div>
+
+            <div data-reveal className="mt-14">
+              <Ornament />
+            </div>
+
+            <div data-reveal className="mt-14">
+              <h2 className="font-display text-2xl leading-tight md:text-3xl">مقروضنا بالتمر</h2>
+              <div className="mt-5 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
+                <p>
+                  عند لعزيز، المقروض بالتمر هو الكلاسيكي الكبير — اللي نحضّروه بأكبر كمية، كل يوم، في القيروان. هو
+                  جزء من فئة «الكلاسيكيات» عندنا، جنب إبداعاتنا الأخرى بالفواكه الجافة والفستق.
+                </p>
+                <p>
+                  اكتشفو كامل{' '}
+                  <Link to="/ar/collection" className="text-accent underline underline-offset-2">
+                    التشكيلة
+                  </Link>{' '}
+                  ديالنا وكوّنو{' '}
+                  <Link to="/ar/commande" className="text-accent underline underline-offset-2">
+                    طلبيتكم أونلاين
+                  </Link>
+                  ، للاستلام من المحل.
+                </p>
+              </div>
+            </div>
+
+            <div data-reveal className="mt-14 rounded-2xl bg-ink-deep p-8 text-center text-[#faf6f3] md:p-12">
+              <p className="font-display text-2xl md:text-3xl">المقروض الحقيقي بالتمر، صناعة يدوية</p>
+              <Link
+                to="/ar/commande"
+                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+              >
+                اطلب توّا
+              </Link>
+            </div>
+
+            <p data-reveal className="mt-10 text-xs uppercase tracking-[0.2em] text-ink/40">
+              اقرأو أيضًا:{' '}
+              <Link to="/ar/makroudh-tunisien" className="text-accent hover:underline">المقروض التونسي</Link>
+              {' · '}
+              <Link to="/ar/makroudh-kairouan" className="text-accent hover:underline">مقروض القيروان</Link>
+              {' · '}
+              <Link to="/ar/makroudh-fruits-secs" className="text-accent hover:underline">مقروض بالفواكه الجافة</Link>
+            </p>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">

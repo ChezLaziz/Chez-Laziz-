@@ -1,19 +1,111 @@
 import { Link } from 'react-router'
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
+import { useLang } from '@/lib/i18n'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import Ornament from '../components/Ornament'
 
 export default function MakroudhKairouanPage() {
   useReveal()
-  useSEO({
-    title: "Makroudh de Kairouan — L'Authentique Tradition Tunisienne | Chez Laziz",
-    description:
-      'Kairouan est réputée dans toute la Tunisie pour ses pâtisseries à la semoule. Découvrez le makroudh kairouanais tel que Chez Laziz le façonne à la main, chaque jour, dans sa ville d\'origine.',
-    path: '/makroudh-kairouan',
-    breadcrumb: 'Makroudh de Kairouan',
-  })
+  const isAr = useLang() === 'ar'
+  useSEO(
+    isAr
+      ? {
+          title: 'مقروض القيروان — التقليد التونسي الأصيل | عند لعزيز',
+          description:
+            'القيروان معروفة في كامل تونس بحلوياتها بالسميد. اكتشفو مقروض القيروان كيفاش عند لعزيز يشكّله باليد كل يوم، في مدينته الأصلية.',
+          path: '/ar/makroudh-kairouan',
+          breadcrumb: 'مقروض القيروان',
+        }
+      : {
+          title: "Makroudh de Kairouan — L'Authentique Tradition Tunisienne | Chez Laziz",
+          description:
+            'Kairouan est réputée dans toute la Tunisie pour ses pâtisseries à la semoule. Découvrez le makroudh kairouanais tel que Chez Laziz le façonne à la main, chaque jour, dans sa ville d\'origine.',
+          path: '/makroudh-kairouan',
+          breadcrumb: 'Makroudh de Kairouan',
+        },
+  )
+
+  if (isAr) {
+    return (
+      <div className="min-h-screen bg-[#faf6f3]">
+        <Header />
+        <main className="pt-16 md:pt-20">
+          <section className="mx-auto max-w-3xl px-5 py-24 md:px-10 md:py-32">
+            <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
+              القيروان، تونس
+            </p>
+            <h1 data-reveal className="font-display text-4xl leading-tight md:text-6xl">
+              مقروض القيروان — التقليد التونسي الأصيل
+            </h1>
+
+            <div data-reveal className="mt-10 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
+              <p>
+                القيروان، المدينة التاريخية في وسط تونس، معروفة في كامل البلاد بحرفة صناعة الحلويات بالسميد والتمر
+                والعسل. <strong className="font-medium text-ink">مقروض القيروان</strong> هو الرمز الأشهر لها:
+                معين ذهبي، مشكّل باليد في قالب خشبي منقوش، محشو بعجينة التمر ومنتهي بالعسل.
+              </p>
+              <p>
+                برشا من التونسيين يربطو اسم القيروان بالمقروض بشكل طبيعي — كيما مدن أخرى في البلاد مرتبطة
+                بتخصصاتها الخاصة. هذي السمعة اللي عند لعزيز يحملها، من محله المتواجد في القيروان بالذات.
+              </p>
+            </div>
+
+            <div data-reveal className="mt-14">
+              <Ornament />
+            </div>
+
+            <div data-reveal className="mt-14">
+              <h2 className="font-display text-2xl leading-tight md:text-3xl">صناعة في القيروان، كيما لازم</h2>
+              <div className="mt-5 space-y-5 text-[15px] font-light leading-relaxed text-ink/75">
+                <p>
+                  عند لعزيز موش حلويات تستوحي من القيروان عن بعد: محلنا في القيروان بالذات، مفتوح 7 أيام على 7 من
+                  07:00 إلى منتصف الليل. كل مقروض نبيعوه — في المحل ولا بالطلب أونلاين — يُشكّل في نفس المكان،
+                  نفس النهار.
+                </p>
+                <p>
+                  اكتشفو كامل تشكيلتنا في صفحة{' '}
+                  <Link to="/ar/collection" className="text-accent underline underline-offset-2">
+                    التشكيلة
+                  </Link>
+                  ، قصتنا وحرفتنا في{' '}
+                  <Link to="/la-maison" className="text-accent underline underline-offset-2">
+                    قصتنا
+                  </Link>
+                  ، أو العنوان الدقيق للمحل في{' '}
+                  <Link to="/ar/contact" className="text-accent underline underline-offset-2">
+                    تواصل معنا
+                  </Link>
+                  .
+                </p>
+              </div>
+            </div>
+
+            <div data-reveal className="mt-14 rounded-2xl bg-ink-deep p-8 text-center text-[#faf6f3] md:p-12">
+              <p className="font-display text-2xl md:text-3xl">زورو محلنا في القيروان</p>
+              <Link
+                to="/ar/contact"
+                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+              >
+                شوفو العنوان والطريق
+              </Link>
+            </div>
+
+            <p data-reveal className="mt-10 text-xs uppercase tracking-[0.2em] text-ink/40">
+              اقرأو أيضًا:{' '}
+              <Link to="/ar/makroudh-tunisien" className="text-accent hover:underline">المقروض التونسي</Link>
+              {' · '}
+              <Link to="/ar/makroudh-aux-dattes" className="text-accent hover:underline">مقروض بالتمر</Link>
+              {' · '}
+              <Link to="/ar/makroudh-fruits-secs" className="text-accent hover:underline">مقروض بالفواكه الجافة</Link>
+            </p>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">

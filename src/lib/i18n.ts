@@ -13,6 +13,10 @@ export const BILINGUAL_BASE_PATHS = [
   '/galerie',
   '/politique-de-confidentialite',
   '/conditions-generales',
+  '/makroudh-tunisien',
+  '/makroudh-kairouan',
+  '/makroudh-aux-dattes',
+  '/makroudh-fruits-secs',
 ] as const
 
 export type Lang = 'fr' | 'ar'

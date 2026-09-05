@@ -27,9 +27,13 @@ export const PUBLIC_ROUTES = [
   "/faq",
   "/ar/faq",
   "/makroudh-tunisien",
+  "/ar/makroudh-tunisien",
   "/makroudh-kairouan",
+  "/ar/makroudh-kairouan",
   "/makroudh-aux-dattes",
+  "/ar/makroudh-aux-dattes",
   "/makroudh-fruits-secs",
+  "/ar/makroudh-fruits-secs",
   "/journal",
   "/journal/*",
 ] as const;
