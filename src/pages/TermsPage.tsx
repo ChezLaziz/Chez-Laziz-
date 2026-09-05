@@ -2,14 +2,109 @@ import { Link } from 'react-router'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import { useSEO } from '../hooks/useSEO'
+import { useLang } from '@/lib/i18n'
 
 export default function TermsPage() {
-  useSEO({
-    title: 'Conditions générales — Chez Laziz',
-    description: 'Conditions générales de vente de Chez Laziz — Kairouan, Tunisie.',
-    path: '/conditions-generales',
-    breadcrumb: 'Conditions générales',
-  })
+  const isAr = useLang() === 'ar'
+  useSEO(
+    isAr
+      ? {
+          title: 'الشروط العامة — عند لعزيز',
+          description: 'الشروط العامة للبيع عند لعزيز — القيروان، تونس.',
+          path: '/ar/conditions-generales',
+          breadcrumb: 'الشروط العامة',
+        }
+      : {
+          title: 'Conditions générales — Chez Laziz',
+          description: 'Conditions générales de vente de Chez Laziz — Kairouan, Tunisie.',
+          path: '/conditions-generales',
+          breadcrumb: 'Conditions générales',
+        },
+  )
+
+  if (isAr) {
+    return (
+      <div className="min-h-screen bg-[#faf6f3]">
+        <Header />
+        <main className="mx-auto max-w-3xl px-5 py-28 md:px-10 md:py-36">
+          <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
+            Chez Laziz
+          </p>
+          <h1 className="font-display text-3xl leading-tight md:text-5xl">
+            الشروط العامة
+          </h1>
+          <p className="mt-4 text-sm text-ink/50">آخر تحديث: سبتمبر 2026</p>
+
+          <div className="mt-10 space-y-8 text-[15px] font-light leading-relaxed text-ink/80">
+            <section>
+              <h2 className="mb-2 font-display text-xl text-ink">نشاطنا</h2>
+              <p>
+                عند لعزيز (Chez Laziz) حرفة صناعة حلويات تقليدية متخصصة في المقروض
+                القيرواني، مقرها القيروان، تونس. المحل مفتوح 7 أيام على 7 من 07:00 إلى
+                منتصف الليل.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 font-display text-xl text-ink">الطلبيات</h2>
+              <p>
+                الطلبية اللي تُمر عبر هذا الموقع (صفحة «اطلب أونلاين») أو بالهاتف /
+                ماسنجر هي طلب حجز. فريقنا يأكدها بالهاتف أو ماسنجر قبل التحضير. الأثمان
+                المعروضة بالدينار التونسي (TND) ويمكن تتغير بلا سابق إعلام حسب الموسم
+                وتوفر المواد الأولية.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 font-display text-xl text-ink">الدفع</h2>
+              <p>
+                طريقتين للدفع: نقدًا عند التسليم، أو تحويل عبر D17 (صورة الدفع إجبارية
+                في هذه الحالة، ويتحقق منها فريقنا قبل التأكيد). ما نطلبوش ولا نعالجوش أي
+                بطاقة بنكية في هذا الموقع.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 font-display text-xl text-ink">التوصيل والاستلام</h2>
+              <p>
+                منتجاتنا تُحضّر نفس النهار. الطلبيات اللي تمر عبر هذا الموقع تتوصل
+                للمنزل في كل أنحاء تونس خلال 24 ساعة (8 د.ت مصاريف توصيل، شوفو صفحة{' '}
+                <Link to="/ar/livraison" className="text-accent underline underline-offset-2">التوصيل</Link>). تقدرو أيضًا تجيو مباشرة
+                لمحل القيروان، مفتوح 7 أيام على 7 من 07:00 إلى منتصف الليل، بلا مصاريف
+                توصيل.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 font-display text-xl text-ink">الإلغاء</h2>
+              <p>
+                تقدرو تلغيو أو تعدلو طلبيتكم بالتواصل معنا مباشرة بالهاتف قبل ما تتحضر.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 font-display text-xl text-ink">للتواصل</h2>
+              <p>
+                لأي سؤال حول هذه الشروط، تواصلو معنا على{' '}
+                <a href="tel:+21623691039" className="text-accent underline underline-offset-2" dir="ltr">+216 23 691 039</a>{' '}
+                أو بالبريد الإلكتروني{' '}
+                <a href="mailto:contact@chezlaziz.com" className="text-accent underline underline-offset-2" dir="ltr">contact@chezlaziz.com</a>.
+              </p>
+            </section>
+          </div>
+
+          <Link to="/ar" className="arrow-link mt-14 inline-flex">
+            الرجوع للرئيسية
+            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className="rotate-180">
+              <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+          </Link>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#faf6f3]">
       <Header />

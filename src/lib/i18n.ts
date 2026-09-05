@@ -3,7 +3,17 @@ import { useLocation } from 'react-router'
 /** Pages disponibles en arabe (préfixe /ar) — la liste s'étend au fur et à
  * mesure des pages traduites. Le sélecteur de langue ne s'affiche que sur
  * ces pages ; ailleurs, le site reste français uniquement pour l'instant. */
-export const BILINGUAL_BASE_PATHS = ['/', '/collection', '/commande'] as const
+export const BILINGUAL_BASE_PATHS = [
+  '/',
+  '/collection',
+  '/commande',
+  '/contact',
+  '/faq',
+  '/livraison',
+  '/galerie',
+  '/politique-de-confidentialite',
+  '/conditions-generales',
+] as const
 
 export type Lang = 'fr' | 'ar'
 

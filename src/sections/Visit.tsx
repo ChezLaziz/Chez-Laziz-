@@ -1,17 +1,24 @@
 import { trpc } from '@/providers/trpc'
+import { useLang } from '@/lib/i18n'
 
 const MAPS_URL =
   'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
 
 const DEFAULT_EYEBROW = 'Nous trouver'
+const DEFAULT_EYEBROW_AR = 'تواصل معنا'
 const DEFAULT_TITLE = 'La boutique vous attend à Kairouan'
+const DEFAULT_TITLE_AR = 'متجرنا بانتظاركم في القيروان'
 
 const DEFAULT_IMAGE = '/images/visit-lifestyle.webp'
 
 export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | 'h2' }) {
   const Heading = headingLevel
+  const lang = useLang()
+  const isAr = lang === 'ar'
   const { data } = trpc.content.pages.useQuery()
   const image = data?.contactImage || DEFAULT_IMAGE
+  const eyebrow = isAr ? data?.contactEyebrowAr || DEFAULT_EYEBROW_AR : data?.contactEyebrow || DEFAULT_EYEBROW
+  const title = isAr ? data?.contactTitleAr || DEFAULT_TITLE_AR : data?.contactTitle || DEFAULT_TITLE
 
   return (
     <section id="visite" className="bg-ink-deep py-24 text-[#faf6f3] md:py-36">
@@ -19,10 +26,10 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
         <div className="grid gap-12 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
             <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
-              {data?.contactEyebrow || DEFAULT_EYEBROW}
+              {eyebrow}
             </p>
             <Heading data-reveal className="font-display max-w-3xl text-4xl leading-[1.08] md:text-6xl">
-              {data?.contactTitle || DEFAULT_TITLE}
+              {title}
             </Heading>
           </div>
           <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">
@@ -38,16 +45,16 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
         <div className="mt-16 grid gap-12 border-t border-[#faf6f3]/15 pt-12 md:grid-cols-3">
           <div data-reveal>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
-              Adresse
+              {isAr ? 'العنوان' : 'Adresse'}
             </h3>
             <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
               M3MG+VJP
               <br />
-              Kairouan, Tunisie
+              {isAr ? 'القيروان، تونس' : 'Kairouan, Tunisie'}
             </p>
             <a href={MAPS_URL} target="_blank" rel="noreferrer" className="arrow-link mt-6">
-              Ouvrir dans Google Maps
-              <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+              {isAr ? 'افتح في خرائط جوجل' : 'Ouvrir dans Google Maps'}
+              <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
                 <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
               </svg>
             </a>
@@ -55,31 +62,32 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
 
           <div data-reveal style={{ transitionDelay: '0.12s' }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
-              Horaires
+              {isAr ? 'أوقات العمل' : 'Horaires'}
             </h3>
             <ul className="space-y-2 text-lg font-light text-[#faf6f3]/85">
               <li className="flex justify-between gap-6">
-                <span>Tous les jours</span>
-                <span>07h00 – 00h00</span>
+                <span>{isAr ? 'كل أيام الأسبوع' : 'Tous les jours'}</span>
+                <span dir="ltr">07h00 – 00h00</span>
               </li>
             </ul>
             <p className="mt-4 text-sm font-light text-[#faf6f3]/55">
-              Makroudh façonné et cuit chaque matin — venez tôt pour les
-              nouveautés du jour.
+              {isAr
+                ? 'المقروض يُحضّر ويُطهى كل صباح — تعالوا باكرًا لتجربة أحدث الأصناف.'
+                : 'Makroudh façonné et cuit chaque matin — venez tôt pour les nouveautés du jour.'}
             </p>
           </div>
 
           <div data-reveal style={{ transitionDelay: '0.24s' }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
-              Contact
+              {isAr ? 'للتواصل' : 'Contact'}
             </h3>
             <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
-              <a href="tel:+21623691039" className="transition-colors hover:text-[#b8912e]">
+              <a href="tel:+21623691039" className="transition-colors hover:text-[#b8912e]" dir="ltr">
                 +216 23 691 039
               </a>
             </p>
             <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
-              <a href="mailto:contact@chezlaziz.com" className="transition-colors hover:text-[#b8912e]">
+              <a href="mailto:contact@chezlaziz.com" className="transition-colors hover:text-[#b8912e]" dir="ltr">
                 contact@chezlaziz.com
               </a>
             </p>
@@ -99,8 +107,8 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
               </a>
             </div>
             <a href="tel:+21623691039" className="arrow-link mt-6">
-              Commander par téléphone
-              <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+              {isAr ? 'اطلب عبر الهاتف' : 'Commander par téléphone'}
+              <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
                 <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
               </svg>
             </a>

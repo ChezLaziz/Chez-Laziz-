@@ -12,15 +12,13 @@ import LanguageSwitch from '@/components/LanguageSwitch'
 // Sur grand écran, "Commander" est déjà le bouton doré à droite (plus le
 // panier) : le répéter en lien texte ferait trois entrées pour la même
 // page. Le menu mobile, lui, n'a pas ce bouton et garde le lien.
-// "Nous trouver" n'a pas encore de version arabe : le libellé se traduit
-// quand même (cohérence de la navigation), le lien pointe vers la page
-// française telle quelle.
 function links(lang: Lang) {
   const collection = lang === 'ar' ? '/ar/collection' : '/collection'
+  const contact = lang === 'ar' ? '/ar/contact' : '/contact'
   return [
     { href: lang === 'ar' ? '/ar' : '/', label: lang === 'ar' ? 'الرئيسية' : 'Accueil' },
     { href: collection, label: lang === 'ar' ? 'التشكيلة' : 'La Collection' },
-    { href: '/contact', label: lang === 'ar' ? 'تواصل معنا' : 'Nous trouver' },
+    { href: contact, label: lang === 'ar' ? 'تواصل معنا' : 'Nous trouver' },
   ]
 }
 function orderHref(lang: Lang) {

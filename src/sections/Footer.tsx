@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { DELIVERY_TIME_LABEL, DELIVERY_FEE_MILLIMES } from '@contracts/shop'
 import { formatTND } from '@/lib/shop'
-import { useLang } from '@/lib/i18n'
+import { useLang, BILINGUAL_BASE_PATHS } from '@/lib/i18n'
 
 const MAPS_URL =
   'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
@@ -21,16 +21,16 @@ const DEFAULT_VISIT_EYEBROW_AR = 'تواصل معنا'
 const DEFAULT_VISIT_TITLE = 'La boutique vous attend à Kairouan'
 const DEFAULT_VISIT_TITLE_AR = 'متجرنا بانتظاركم في القيروان'
 
-// Les pages sans version arabe pour l'instant (livraison, FAQ, journal,
-// makroudh-*, la-maison, galerie, contact, mentions légales) gardent leur
-// libellé traduit mais un lien vers la page française telle quelle —
-// cohérent avec le choix fait pour le header (voir Header.tsx).
+// Pour chaque page sans version arabe pour l'instant, le lien garde son
+// libellé traduit mais pointe vers la page française telle quelle — voir
+// `bilingual` (dérivé de BILINGUAL_BASE_PATHS) dans FooterColumn, qui
+// bascule automatiquement dès qu'une page rejoint cette liste.
 const SHOP_LINKS = [
-  ['/', 'Accueil', 'الرئيسية', true],
-  ['/collection', 'La Collection', 'التشكيلة', true],
-  ['/commande', 'Commander en ligne', 'اطلب أونلاين', true],
-  ['/livraison', 'Livraison', 'التوصيل', false],
-  ['/faq', 'Questions fréquentes', 'الأسئلة الشائعة', false],
+  ['/', 'Accueil', 'الرئيسية'],
+  ['/collection', 'La Collection', 'التشكيلة'],
+  ['/commande', 'Commander en ligne', 'اطلب أونلاين'],
+  ['/livraison', 'Livraison', 'التوصيل'],
+  ['/faq', 'Questions fréquentes', 'الأسئلة الشائعة'],
 ] as const
 
 const HOUSE_LINKS = [
@@ -197,8 +197,9 @@ function KairouanSkyline({ className = '' }: { className?: string }) {
   )
 }
 
-/** `bilingual`: chemins existant aussi sous /ar (voir BILINGUAL_BASE_PATHS) —
- * le lien pointe alors vers la version arabe quand lang === 'ar'. */
+/** Le lien pointe vers la version arabe quand lang === 'ar' et que le
+ * chemin existe dans les deux langues (voir BILINGUAL_BASE_PATHS) —
+ * sinon il reste vers la page française telle quelle. */
 function FooterColumn({
   title,
   links,
@@ -206,18 +207,19 @@ function FooterColumn({
   className = '',
 }: {
   title: string
-  links: readonly (readonly [string, string, string] | readonly [string, string, string, boolean])[]
+  links: readonly (readonly [string, string, string])[]
   lang: 'fr' | 'ar'
   className?: string
 }) {
+  const bilingualPaths: readonly string[] = BILINGUAL_BASE_PATHS
   return (
     <div className={className}>
       <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">{title}</p>
       <ul className="space-y-3 text-sm font-light text-[#faf6f3]/75">
-        {links.map(([to, labelFr, labelAr, bilingual]) => (
+        {links.map(([to, labelFr, labelAr]) => (
           <li key={to}>
             <Link
-              to={lang === 'ar' && bilingual ? (to === '/' ? '/ar' : `/ar${to}`) : to}
+              to={lang === 'ar' && bilingualPaths.includes(to) ? (to === '/' ? '/ar' : `/ar${to}`) : to}
               className="transition-colors hover:text-[#b8912e]"
             >
               {lang === 'ar' ? labelAr : labelFr}
@@ -414,7 +416,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
           </div>
 
           <FooterColumn title={lang === 'ar' ? 'المتجر' : 'Boutique'} links={SHOP_LINKS} lang={lang} className="lg:col-span-2" />
-          <FooterColumn title={lang === 'ar' ? 'عن الدار' : 'La Maison'} links={HOUSE_LINKS.map(([to, fr, ar]) => [to, fr, ar, false] as const)} lang={lang} className="lg:col-span-3" />
+          <FooterColumn title={lang === 'ar' ? 'عن الدار' : 'La Maison'} links={HOUSE_LINKS} lang={lang} className="lg:col-span-3" />
 
           <div className="lg:col-span-3">
             <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
@@ -474,7 +476,11 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
           <p>{lang === 'ar' ? DEFAULT_COPYRIGHT_AR : data?.copyright || DEFAULT_COPYRIGHT}</p>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em]">
             {LEGAL_LINKS.map(([to, labelFr, labelAr]) => (
-              <Link key={to} to={to} className="transition-colors hover:text-[#b8912e]">
+              <Link
+                key={to}
+                to={lang === 'ar' && (BILINGUAL_BASE_PATHS as readonly string[]).includes(to) ? `/ar${to}` : to}
+                className="transition-colors hover:text-[#b8912e]"
+              >
                 {lang === 'ar' ? labelAr : labelFr}
               </Link>
             ))}
