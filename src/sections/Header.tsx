@@ -214,12 +214,6 @@ export default function Header() {
             </a>
           ),
         )}
-        <div
-          className="transition-all duration-500"
-          style={{ transitionDelay: open ? `${120 + MOBILE_LINKS.length * 60}ms` : '0ms', opacity: open ? 1 : 0, transform: open ? 'none' : 'translateY(16px)' }}
-        >
-          <LanguageSwitch tone="dark" size="lg" />
-        </div>
         <a
           href="tel:+21623691039"
           className="mt-4 rounded-full bg-[#b8912e] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"

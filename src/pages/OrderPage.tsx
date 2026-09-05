@@ -653,7 +653,7 @@ export default function OrderPage() {
                     ['100%', 'صناعة يدوية'],
                     [formatDinars(DELIVERY_FEE_MILLIMES), 'د.ت توصيل'],
                     [DELIVERY_TIME_LABEL === '24h' ? '24 س' : DELIVERY_TIME_LABEL, 'كل تونس'],
-                    ['COD / D17', 'الدفع'],
+                    ['نقدًا / D17', 'الدفع'],
                   ]
                 : [
                     ['100%', 'Fait main'],
