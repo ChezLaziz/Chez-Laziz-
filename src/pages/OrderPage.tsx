@@ -189,7 +189,6 @@ export default function OrderPage() {
             'اطلبوا مقروض Chez Laziz: بالوزن (500 غ إلى 2.5 كغ)، حزم لعزيز الملكية والفاخرة والشهية والكلاسيكية، أو حزمة على مقاسكم (4 × 500 غ). توصيل في جميع أنحاء تونس خلال 24 ساعة، الدفع عند التسليم أو عبر D17.',
           path: '/ar/commande',
           breadcrumb: 'اطلبوا',
-          alternates: { fr: '/commande', ar: '/ar/commande' },
         }
       : {
           title: 'Commander — Chez Laziz | Makroudh au poids, packs et pack sur mesure',
@@ -197,7 +196,6 @@ export default function OrderPage() {
             'Commandez vos makroudh Chez Laziz : à la carte (500 g à 2,5 kg), packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement à la livraison ou D17.',
           path: '/commande',
           breadcrumb: 'Commander',
-          alternates: { fr: '/commande', ar: '/ar/commande' },
         },
   )
   const { data: products, isLoading } = trpc.products.list.useQuery()

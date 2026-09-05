@@ -19,7 +19,6 @@ export default function CollectionPage() {
       : 'Le catalogue Chez Laziz : makroudh aux dattes, fruits secs, pistache et nos nouveautés — façonnés à la main chaque jour à Kairouan. Prix en dinars tunisiens.',
     path: isAr ? '/ar/collection' : '/collection',
     breadcrumb: isAr ? 'التشكيلة' : 'La Collection',
-    alternates: { fr: '/collection', ar: '/ar/collection' },
   })
   return (
     <>
