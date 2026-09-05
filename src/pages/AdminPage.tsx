@@ -1109,6 +1109,21 @@ function ProductsTab({ token }: { token: string }) {
               >
                 {p.available ? 'Rupture' : 'Remettre en ligne'}
               </button>
+              {/* Bascule rapide du ™ (nom exclusif Chez Laziz) — même geste
+                  en un clic que la rupture de stock, sans ouvrir le formulaire. */}
+              <button
+                onClick={() => update.mutate({ token, id: p.id, data: { isExclusiveCreation: !p.isExclusiveCreation } })}
+                disabled={update.isPending}
+                aria-pressed={p.isExclusiveCreation}
+                title="Nom/recette inventé par nous, absent du marché — affiche ™ à côté du nom sur le site"
+                className={`min-h-11 rounded-full border px-4 text-xs font-semibold uppercase tracking-wide transition-colors disabled:opacity-40 ${
+                  p.isExclusiveCreation
+                    ? 'border-[#b8912e] bg-[#f5ece5] text-accent'
+                    : 'border-ink/25 text-ink/70 hover:border-[#b8912e] hover:text-accent'
+                }`}
+              >
+                {p.isExclusiveCreation ? '™ Exclusif' : 'Marquer ™ Exclusif'}
+              </button>
               <button onClick={() => startEdit(p)} className="min-h-11 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
                 Modifier
               </button>
