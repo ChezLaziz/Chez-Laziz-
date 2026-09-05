@@ -39,12 +39,12 @@ export type DisplayLine = {
 }
 
 /** "2 KG" / "1,5 KG" pour les totaux de pack, "500 g" pour un produit. */
-export function kgLabel(kg: number): string {
-  if (kg >= 1) return `${String(kg).replace('.', ',')} KG`
-  return `${Math.round(kg * 1000)} g`
+export function kgLabel(kg: number, lang: 'fr' | 'ar' = 'fr'): string {
+  if (kg >= 1) return `${String(kg).replace('.', ',')} ${lang === 'ar' ? 'كغ' : 'KG'}`
+  return `${Math.round(kg * 1000)} ${lang === 'ar' ? 'غ' : 'g'}`
 }
 
-export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[]): DisplayLine[] {
+export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], lang: 'fr' | 'ar' = 'fr'): DisplayLine[] {
   const out: DisplayLine[] = []
   for (const line of lines) {
     const key = cartLineKey(line)
@@ -61,7 +61,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[]):
         contents: [],
         packagingMillimes: 0,
         analyticsId: String(p.id),
-        variant: formatWeight(line.weightKg),
+        variant: formatWeight(line.weightKg, lang),
       })
     } else if (line.kind === 'pack') {
       const pack = getFixedPack(line.packId)
@@ -73,10 +73,10 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[]):
         qty: line.qty,
         weightKg: packWeightKg(pack),
         unitPriceMillimes: pack.priceMillimes,
-        contents: pack.contents.map((n) => `${n} — ${formatWeight(PACK_ITEM_WEIGHT_KG)}`),
+        contents: pack.contents.map((n) => `${n} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`),
         packagingMillimes: 0,
         analyticsId: `pack:${pack.id}`,
-        variant: kgLabel(packWeightKg(pack)),
+        variant: kgLabel(packWeightKg(pack), lang),
       })
     } else {
       const products = line.productIds.map((id) => catalog.find((c) => c.id === id))
@@ -89,10 +89,10 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[]):
         qty: line.qty,
         weightKg: CUSTOM_PACK_WEIGHT_KG,
         unitPriceMillimes: customPackTotal(found.map((p) => p.priceMillimes)),
-        contents: found.map((p) => `${p.name} — ${formatWeight(PACK_ITEM_WEIGHT_KG)}`),
+        contents: found.map((p) => `${p.name} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`),
         packagingMillimes: CUSTOM_PACK_PACKAGING_MILLIMES,
         analyticsId: `custom:${line.productIds.join('-')}`,
-        variant: kgLabel(CUSTOM_PACK_WEIGHT_KG),
+        variant: kgLabel(CUSTOM_PACK_WEIGHT_KG, lang),
       })
     }
   }

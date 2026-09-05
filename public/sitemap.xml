@@ -49,6 +49,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://chezlaziz.com/ar/commande</loc>
+    <lastmod>2026-09-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://chezlaziz.com/livraison</loc>
     <lastmod>2026-09-03</lastmod>
     <changefreq>monthly</changefreq>

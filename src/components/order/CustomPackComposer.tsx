@@ -14,6 +14,14 @@ import {
   formatPriceDT,
   packItemPrice,
 } from '@contracts/packs'
+import { useLang, type Lang } from '@/lib/i18n'
+
+// CUSTOM_PACK_NAME/SUBTITLE/PACKAGING_LABEL (contracts/packs.ts) restent en
+// français : ce sont aussi des libellés de données (ex. nom de ligne dans
+// le panier, l'email de commande), pas seulement du texte d'affichage —
+// les traductions ci-dessous ne couvrent que ce qui est purement visuel
+// sur cette page.
+const CUSTOM_PACK_SUBTITLE_AR = 'كوّنوا الحزمة الخاصة بكم'
 
 /** Carte produit sélectionnable (500 g). Tout le bloc est le bouton :
  * grande cible tactile, état sélectionné très visible. */
@@ -23,6 +31,7 @@ function ProductPickCard({
   position,
   disabled,
   onToggle,
+  lang,
 }: {
   product: CatalogProduct
   selected: boolean
@@ -30,15 +39,17 @@ function ProductPickCard({
   position: number | null
   disabled: boolean
   onToggle: () => void
+  lang: Lang
 }) {
+  const isAr = lang === 'ar'
   return (
     <button
       type="button"
       onClick={onToggle}
       disabled={disabled}
       aria-pressed={selected}
-      aria-label={`${product.name}, ${formatWeight(PACK_ITEM_WEIGHT_KG)}, ${formatPriceDT(packItemPrice(product.priceMillimes))}${
-        selected ? ', sélectionné' : ''
+      aria-label={`${product.name}, ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}, ${formatPriceDT(packItemPrice(product.priceMillimes), lang)}${
+        selected ? (isAr ? '، مُختار' : ', sélectionné') : ''
       }`}
       className={`group flex min-w-0 flex-col overflow-hidden whitespace-normal rounded-2xl border bg-white text-left shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 ${
         selected
@@ -57,16 +68,16 @@ function ProductPickCard({
       <div className="flex flex-1 flex-col p-3.5 md:p-4">
         <p className="break-words font-medium leading-snug">{product.name}</p>
         <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-ink/50">
-          {formatWeight(PACK_ITEM_WEIGHT_KG)}
+          {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
         </p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
-          <span className="whitespace-nowrap font-display text-lg text-accent">{formatPriceDT(packItemPrice(product.priceMillimes))}</span>
+          <span className="whitespace-nowrap font-display text-lg text-accent">{formatPriceDT(packItemPrice(product.priceMillimes), lang)}</span>
           <span
             className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors ${
               selected ? 'bg-[#b8912e] text-white' : 'border border-ink/20 text-ink group-hover:border-[#b8912e] group-hover:text-accent'
             }`}
           >
-            {selected ? '✓ Sélectionné' : '+ Ajouter'}
+            {selected ? (isAr ? '✓ مُختار' : '✓ Sélectionné') : isAr ? '+ أضف' : '+ Ajouter'}
           </span>
         </div>
       </div>
@@ -92,6 +103,8 @@ export default function CustomPackComposer({
   onAdd: () => void
   justAdded: boolean
 }) {
+  const lang = useLang()
+  const isAr = lang === 'ar'
   const chosen = selected.map((id) => products.find((p) => p.id === id)).filter((p): p is CatalogProduct => !!p)
   const count = chosen.length
   const complete = count === CUSTOM_PACK_SIZE
@@ -99,15 +112,18 @@ export default function CustomPackComposer({
   const bases = chosen.map((p) => p.priceMillimes)
   const productsTotal = customPackProductsTotal(bases)
   const total = customPackTotal(bases)
+  const ordinalsAr = ['الأول', 'الثاني', 'الثالث', 'الرابع']
+  const ordinalsFr = ['premier', 'deuxième', 'troisième', 'quatrième']
 
   return (
     <div id="composer" className="scroll-mt-24">
       <div className="text-center">
         <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{CUSTOM_PACK_NAME}</p>
-        <h2 className="mt-3 font-display text-3xl md:text-4xl">{CUSTOM_PACK_SUBTITLE}</h2>
+        <h2 className="mt-3 font-display text-3xl md:text-4xl">{isAr ? CUSTOM_PACK_SUBTITLE_AR : CUSTOM_PACK_SUBTITLE}</h2>
         <p className="mx-auto mt-3 max-w-md text-[15px] font-light leading-relaxed text-ink/65">
-          Choisissez vos {CUSTOM_PACK_SIZE} saveurs — {formatWeight(PACK_ITEM_WEIGHT_KG)} chacune,{' '}
-          {kgLabel(CUSTOM_PACK_WEIGHT_KG)} au total. Le prix se calcule automatiquement.
+          {isAr
+            ? `اختاروا ${CUSTOM_PACK_SIZE} نكهات — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)} لكل واحدة، ${kgLabel(CUSTOM_PACK_WEIGHT_KG, lang)} بالمجموع. السعر يُحسب تلقائيًا.`
+            : `Choisissez vos ${CUSTOM_PACK_SIZE} saveurs — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)} chacune, ${kgLabel(CUSTOM_PACK_WEIGHT_KG, lang)} au total. Le prix se calcule automatiquement.`}
         </p>
       </div>
 
@@ -116,11 +132,15 @@ export default function CustomPackComposer({
         <div className="min-w-0 lg:col-span-7">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-ink/70">
-              Choisissez vos {CUSTOM_PACK_SIZE} saveurs
+              {isAr ? `اختاروا ${CUSTOM_PACK_SIZE} نكهات` : `Choisissez vos ${CUSTOM_PACK_SIZE} saveurs`}
             </p>
             <p className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-sm" aria-live="polite">
               {complete ? (
-                <span className="font-semibold text-accent">Pack complet ✓</span>
+                <span className="font-semibold text-accent">{isAr ? 'الحزمة مكتملة ✓' : 'Pack complet ✓'}</span>
+              ) : isAr ? (
+                <>
+                  <span className="font-semibold">{count}</span> / {CUSTOM_PACK_SIZE} مُختارة
+                </>
               ) : (
                 <>
                   <span className="font-semibold">{count}</span> / {CUSTOM_PACK_SIZE} sélectionnés
@@ -128,7 +148,7 @@ export default function CustomPackComposer({
               )}
             </p>
           </div>
-          <ol className="mb-6 grid grid-cols-4 gap-2" aria-label="Progression">
+          <ol className="mb-6 grid grid-cols-4 gap-2" aria-label={isAr ? 'التقدم' : 'Progression'}>
             {Array.from({ length: CUSTOM_PACK_SIZE }).map((_, i) => (
               <li
                 key={i}
@@ -163,6 +183,7 @@ export default function CustomPackComposer({
                     position={isSelected ? idx + 1 : null}
                     disabled={!isSelected && complete}
                     onToggle={() => onToggle(p.id)}
+                    lang={lang}
                   />
                 )
               })}
@@ -174,9 +195,9 @@ export default function CustomPackComposer({
         <div className="min-w-0 lg:col-span-5">
           <div className="rounded-2xl bg-ink-deep p-6 text-[#faf6f3] md:p-8 lg:sticky lg:top-8">
             <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[#b8912e]">{CUSTOM_PACK_NAME}</p>
-            <h3 className="mt-2 font-display text-2xl">Votre Pack</h3>
+            <h3 className="mt-2 font-display text-2xl">{isAr ? 'حزمتكم' : 'Votre Pack'}</h3>
             <p className="mt-1 text-sm text-[#faf6f3]/60" aria-live="polite">
-              {count} / {CUSTOM_PACK_SIZE} sélectionnés
+              {isAr ? `${count} / ${CUSTOM_PACK_SIZE} مُختارة` : `${count} / ${CUSTOM_PACK_SIZE} sélectionnés`}
             </p>
 
             <ol className="mt-5 space-y-2.5">
@@ -195,12 +216,12 @@ export default function CustomPackComposer({
                           ✓
                         </span>
                         <span className="min-w-0 flex-1 truncate">
-                          {p.name} <span className="text-[#faf6f3]/55">— {formatWeight(PACK_ITEM_WEIGHT_KG)}</span>
+                          {p.name} <span className="text-[#faf6f3]/55">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
                         </span>
-                        <span className="font-display text-[#b8912e]">{formatPriceDT(packItemPrice(p.priceMillimes))}</span>
+                        <span className="font-display text-[#b8912e]">{formatPriceDT(packItemPrice(p.priceMillimes), lang)}</span>
                         <button
                           type="button"
-                          aria-label={`Retirer ${p.name} du pack`}
+                          aria-label={isAr ? `إزالة ${p.name} من الحزمة` : `Retirer ${p.name} du pack`}
                           onClick={() => onRemove(p.id)}
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#faf6f3]/50 transition-colors hover:bg-[#faf6f3]/10 hover:text-[#faf6f3]"
                         >
@@ -210,7 +231,11 @@ export default function CustomPackComposer({
                     ) : (
                       <>
                         <span className="font-display">{i + 1}</span>
-                        <span>Choisissez votre {['premier', 'deuxième', 'troisième', 'quatrième'][i]} produit</span>
+                        <span>
+                          {isAr
+                            ? `اختاروا منتجكم ${ordinalsAr[i]}`
+                            : `Choisissez votre ${ordinalsFr[i]} produit`}
+                        </span>
                       </>
                     )}
                   </li>
@@ -220,26 +245,30 @@ export default function CustomPackComposer({
 
             <div className="mt-5 space-y-1.5 border-t border-[#faf6f3]/15 pt-4 text-sm font-light text-[#faf6f3]/75">
               <div className="flex items-baseline justify-between">
-                <span>Poids</span>
+                <span>{isAr ? 'الوزن' : 'Poids'}</span>
                 <span>
-                  {count} × {formatWeight(PACK_ITEM_WEIGHT_KG)}
-                  {complete ? ` · ${kgLabel(CUSTOM_PACK_WEIGHT_KG)}` : ` (sur ${kgLabel(CUSTOM_PACK_WEIGHT_KG)})`}
+                  {count} × {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
+                  {complete
+                    ? ` · ${kgLabel(CUSTOM_PACK_WEIGHT_KG, lang)}`
+                    : isAr
+                      ? ` (من ${kgLabel(CUSTOM_PACK_WEIGHT_KG, lang)})`
+                      : ` (sur ${kgLabel(CUSTOM_PACK_WEIGHT_KG, lang)})`}
                 </span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span>Produits</span>
-                <span>{formatPriceDT(productsTotal)}</span>
+                <span>{isAr ? 'المنتجات' : 'Produits'}</span>
+                <span>{formatPriceDT(productsTotal, lang)}</span>
               </div>
               <div className="flex items-baseline justify-between">
                 <span>{CUSTOM_PACK_PACKAGING_LABEL}</span>
-                <span>+ {formatPriceDT(CUSTOM_PACK_PACKAGING_MILLIMES)}</span>
+                <span>+ {formatPriceDT(CUSTOM_PACK_PACKAGING_MILLIMES, lang)}</span>
               </div>
             </div>
             <div className="mt-3 flex items-baseline border-t border-[#faf6f3]/15 pt-4">
-              <span className="text-sm uppercase tracking-[0.2em]">Total</span>
+              <span className="text-sm uppercase tracking-[0.2em]">{isAr ? 'المجموع' : 'Total'}</span>
               <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
               <span className="font-display text-2xl text-[#b8912e]" aria-live="polite">
-                {formatPriceDT(total)}
+                {formatPriceDT(total, lang)}
               </span>
             </div>
 
@@ -249,14 +278,20 @@ export default function CustomPackComposer({
               disabled={!complete}
               className="gold-cta mt-5 h-12 w-full rounded-full text-sm font-semibold uppercase tracking-[0.14em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Ajouter au panier
+              {isAr ? 'أضف إلى السلة' : 'Ajouter au panier'}
             </button>
             <p className="mt-3 text-center text-xs font-light text-[#faf6f3]/60" aria-live="polite">
               {justAdded && count === 0
-                ? 'Custom Pack ajouté à votre commande ✓'
+                ? isAr
+                  ? 'أُضيفت الحزمة الخاصة إلى طلبكم ✓'
+                  : 'Custom Pack ajouté à votre commande ✓'
                 : complete
-                  ? 'Pack complet ✓ — ajoutez-le à votre commande.'
-                  : `Choisissez encore ${remaining} produit${remaining > 1 ? 's' : ''} pour compléter votre pack.`}
+                  ? isAr
+                    ? 'الحزمة مكتملة ✓ — أضيفوها إلى طلبكم.'
+                    : 'Pack complet ✓ — ajoutez-le à votre commande.'
+                  : isAr
+                    ? `اختاروا ${remaining} منتج${remaining > 1 ? 'ات' : ''} إضافي${remaining > 1 ? 'ة' : ''} لإكمال حزمتكم.`
+                    : `Choisissez encore ${remaining} produit${remaining > 1 ? 's' : ''} pour compléter votre pack.`}
             </p>
           </div>
         </div>

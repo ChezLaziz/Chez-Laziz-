@@ -13,7 +13,7 @@ const FAQ: { q: string; a: string }[] = [
   { q: 'Où est basé Chez Laziz ?', a: 'À Kairouan, en Tunisie — boutique ouverte 7j/7 de 07h00 à minuit.' },
   {
     q: 'Quels poids sont disponibles ?',
-    a: `Chaque makroudh se commande par poids : ${ALLOWED_WEIGHTS_KG.map(formatWeight).join(', ')}. Le prix affiché sur la collection est le prix pour 1 kg.`,
+    a: `Chaque makroudh se commande par poids : ${ALLOWED_WEIGHTS_KG.map((w) => formatWeight(w)).join(', ')}. Le prix affiché sur la collection est le prix pour 1 kg.`,
   },
   { q: 'Combien coûte la livraison ?', a: `${formatTND(DELIVERY_FEE_MILLIMES)} TND, frais fixes, quel que soit le nombre de produits.` },
   { q: 'Livrez-vous partout en Tunisie ?', a: 'Oui, dans les 24 gouvernorats, à domicile (porte-à-porte).' },

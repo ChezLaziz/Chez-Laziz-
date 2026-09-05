@@ -2,6 +2,7 @@ import ProductImage from '@/components/ProductImage'
 import { kgLabel } from '@/lib/orderLines'
 import { formatWeight } from '@contracts/shop'
 import { PACK_ITEM_WEIGHT_KG, formatPriceDT, packWeightKg, type FixedPack } from '@contracts/packs'
+import { useLang } from '@/lib/i18n'
 
 const stepperBtnCls =
   'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
@@ -17,7 +18,13 @@ function CrownIcon() {
 /** Carte d'un pack prêt : mosaïque des produits inclus (vraies photos du
  * catalogue), liste du contenu, poids total, prix fixe et bouton Commander.
  * Une fois ajouté, la carte affiche la quantité et un raccourci vers la
- * commande. */
+ * commande.
+ *
+ * pack.name / pack.tagline / pack.contents viennent de contracts/packs.ts
+ * (données catalogue, testées exhaustivement dans packs.test.ts) et restent
+ * en français pour l'instant — même limitation connue que les noms/
+ * descriptions produits ailleurs sur le site. Seul le texte d'interface
+ * autour (boutons, libellés) se traduit. */
 export default function PackCard({
   pack,
   photos,
@@ -34,6 +41,8 @@ export default function PackCard({
   onSetQty: (qty: number) => void
   onGoToOrder: () => void
 }) {
+  const lang = useLang()
+  const isAr = lang === 'ar'
   const highlight = pack.id === 'vip'
   const weight = packWeightKg(pack)
   const n = pack.contents.length
@@ -43,7 +52,7 @@ export default function PackCard({
       className={`relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
         highlight ? 'border-[#b8912e] ring-1 ring-[#b8912e]/40' : 'border-sand/80'
       } ${qty > 0 ? 'ring-2 ring-[#b8912e]/50' : ''}`}
-      aria-label={`${pack.name} — ${formatPriceDT(pack.priceMillimes)}`}
+      aria-label={`${pack.name} — ${formatPriceDT(pack.priceMillimes, lang)}`}
     >
       {pack.badge && (
         <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-[#2e2a27] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#e9c766]">
@@ -79,7 +88,7 @@ export default function PackCard({
                 ✓
               </span>
               <span>
-                {name} <span className="text-ink/45">— {formatWeight(PACK_ITEM_WEIGHT_KG)}</span>
+                {name} <span className="text-ink/45">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
               </span>
             </li>
           ))}
@@ -88,11 +97,11 @@ export default function PackCard({
         <div className="mt-5 flex items-end justify-between gap-3 border-t border-sand/70 pt-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-ink/50">
-              {n} × {formatWeight(PACK_ITEM_WEIGHT_KG)}
+              {n} × {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
             </p>
-            <p className="mt-0.5 font-display text-xl">{kgLabel(weight)}</p>
+            <p className="mt-0.5 font-display text-xl">{kgLabel(weight, lang)}</p>
           </div>
-          <p className="font-display text-2xl text-accent md:text-[1.7rem]">{formatPriceDT(pack.priceMillimes)}</p>
+          <p className="font-display text-2xl text-accent md:text-[1.7rem]">{formatPriceDT(pack.priceMillimes, lang)}</p>
         </div>
 
         {qty === 0 ? (
@@ -101,18 +110,18 @@ export default function PackCard({
             onClick={onAdd}
             className="gold-cta mt-5 h-12 w-full rounded-full text-sm font-semibold uppercase tracking-[0.14em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60"
           >
-            Commander
+            {isAr ? 'اطلب' : 'Commander'}
           </button>
         ) : (
           <div className="mt-5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2" role="group" aria-label={`Quantité — ${pack.name}`}>
-              <button type="button" aria-label={`Retirer un ${pack.name}`} onClick={() => onSetQty(qty - 1)} className={stepperBtnCls}>
+            <div className="flex items-center gap-2" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${pack.name}`}>
+              <button type="button" aria-label={isAr ? `إنقاص ${pack.name}` : `Retirer un ${pack.name}`} onClick={() => onSetQty(qty - 1)} className={stepperBtnCls}>
                 −
               </button>
               <span className="w-7 text-center font-display text-lg" aria-live="polite">
                 {qty}
               </span>
-              <button type="button" aria-label={`Ajouter un ${pack.name}`} onClick={() => onSetQty(qty + 1)} className={stepperBtnCls}>
+              <button type="button" aria-label={isAr ? `زيادة ${pack.name}` : `Ajouter un ${pack.name}`} onClick={() => onSetQty(qty + 1)} className={stepperBtnCls}>
                 +
               </button>
             </div>
@@ -121,7 +130,7 @@ export default function PackCard({
               onClick={onGoToOrder}
               className="text-xs font-semibold uppercase tracking-[0.14em] text-accent underline-offset-4 hover:underline"
             >
-              Ajouté ✓ · Voir la commande
+              {isAr ? 'أُضيف ✓ · شاهد الطلب' : 'Ajouté ✓ · Voir la commande'}
             </button>
           </div>
         )}
