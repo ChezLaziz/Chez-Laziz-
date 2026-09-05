@@ -17,6 +17,7 @@ type Product = {
   category: string
   badge: string | null
   imageUrl: string | null
+  isExclusiveCreation: boolean
 }
 
 /** Jusqu'à 4 produits mis en avant sur l'accueil : d'abord les signatures
@@ -97,7 +98,14 @@ export default function Signatures() {
                 )}
               </div>
               <div className="flex flex-1 flex-col p-4 md:p-5">
-                <h3 className="font-display text-base leading-snug md:text-lg">{productName(p, lang)}</h3>
+                <h3 className="font-display text-base leading-snug md:text-lg">
+                  {productName(p, lang)}
+                  {p.isExclusiveCreation && (
+                    <sup className="ms-0.5 text-[10px] font-normal text-ink/40" title={lang === 'ar' ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+                      ™
+                    </sup>
+                  )}
+                </h3>
                 {productDescription(p, lang) && (
                   <p className="mt-1 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
                     {productDescription(p, lang)}

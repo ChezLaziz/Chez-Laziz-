@@ -58,7 +58,14 @@ export default function Order() {
               <ul className="mt-8 space-y-3 border-t border-[#faf6f3]/15 pt-8">
                 {quick.map((q) => (
                   <li key={q.id} className="flex items-baseline text-[15px] font-light">
-                    <span>{productName(q, lang)}</span>
+                    <span>
+                      {productName(q, lang)}
+                      {q.isExclusiveCreation && (
+                        <sup className="ms-0.5 text-xs font-normal text-[#faf6f3]/40" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+                          ™
+                        </sup>
+                      )}
+                    </span>
                     <span
                       className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25"
                       aria-hidden="true"

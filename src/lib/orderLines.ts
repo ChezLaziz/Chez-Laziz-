@@ -41,6 +41,10 @@ export type DisplayLine = {
   packagingMillimes: number
   analyticsId: string
   variant: string
+  /** Vrai seulement pour une ligne "produit" dont le nom est une création
+   * exclusive Chez Laziz (voir CatalogProduct) — jamais pour un pack, dont
+   * le nom n'est pas lui-même l'une de ces créations. */
+  isExclusiveCreation: boolean
 }
 
 /** "2 KG" / "1,5 KG" pour les totaux de pack, "500 g" pour un produit. */
@@ -67,6 +71,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         packagingMillimes: 0,
         analyticsId: String(p.id),
         variant: formatWeight(line.weightKg, lang),
+        isExclusiveCreation: p.isExclusiveCreation,
       })
     } else if (line.kind === 'pack') {
       const pack = getFixedPack(line.packId)
@@ -86,6 +91,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         packagingMillimes: 0,
         analyticsId: `pack:${pack.id}`,
         variant: kgLabel(packWeightKg(pack), lang),
+        isExclusiveCreation: false,
       })
     } else {
       const products = line.productIds.map((id) => catalog.find((c) => c.id === id))
@@ -102,6 +108,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         packagingMillimes: CUSTOM_PACK_PACKAGING_MILLIMES,
         analyticsId: `custom:${line.productIds.join('-')}`,
         variant: kgLabel(CUSTOM_PACK_WEIGHT_KG, lang),
+        isExclusiveCreation: false,
       })
     }
   }
