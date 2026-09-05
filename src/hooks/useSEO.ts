@@ -77,6 +77,7 @@ export function useSEO({
   noindex = false,
   article,
   alternates,
+  image,
 }: {
   title: string
   description: string
@@ -93,8 +94,13 @@ export function useSEO({
    * PAS dans BILINGUAL_BASE_PATHS (sinon déduits automatiquement) — ou pour
    * forcer des chemins différents dans un cas particulier. */
   alternates?: { fr: string; ar: string }
+  /** Chemin (ex. "/images/hero.webp") de l'image à utiliser pour og:image /
+   * twitter:image et le schéma Article — sinon l'image par défaut du site
+   * (index.html) reste affichée pour tout partage de cette page. */
+  image?: string
 }) {
   const resolvedAlternates = alternates ?? deriveAlternates(path)
+  const resolvedImage = image ? `https://chezlaziz.com${image}` : 'https://chezlaziz.com/images/hero.jpg'
   useEffect(() => {
     const articleId = 'seo-article-jsonld'
     if (article) {
@@ -105,7 +111,7 @@ export function useSEO({
         description,
         inLanguage: 'fr',
         mainEntityOfPage: `https://chezlaziz.com${path}`,
-        image: 'https://chezlaziz.com/images/hero.jpg',
+        image: resolvedImage,
         datePublished: article.datePublished,
         dateModified: article.dateModified ?? article.datePublished,
         author: { '@type': 'Organization', name: 'Chez Laziz', url: 'https://chezlaziz.com/' },
@@ -114,7 +120,7 @@ export function useSEO({
     } else {
       document.getElementById(articleId)?.remove()
     }
-  }, [article, title, description, path])
+  }, [article, title, description, path, resolvedImage])
 
   useEffect(() => {
     document.title = title
@@ -122,8 +128,10 @@ export function useSEO({
     setMeta('property', 'og:title', title)
     setMeta('property', 'og:description', description)
     setMeta('property', 'og:url', `https://chezlaziz.com${path}`)
+    setMeta('property', 'og:image', resolvedImage)
     setMeta('name', 'twitter:title', title)
     setMeta('name', 'twitter:description', description)
+    setMeta('name', 'twitter:image', resolvedImage)
 
     const robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
     if (noindex) {
@@ -161,5 +169,5 @@ export function useSEO({
     } else {
       document.getElementById(scriptId)?.remove()
     }
-  }, [title, description, path, breadcrumb, noindex, resolvedAlternates])
+  }, [title, description, path, breadcrumb, noindex, resolvedAlternates, resolvedImage])
 }

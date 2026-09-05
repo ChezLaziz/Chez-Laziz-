@@ -4,6 +4,10 @@ import { useSEO } from '../../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
+import { ARTICLES } from './articles'
+import RelatedArticles from './RelatedArticles'
+
+const META = ARTICLES.find((a) => a.slug === 'prix-makroudh-tunisie')!
 
 export default function PrixMakroudhPage() {
   useReveal()
@@ -16,6 +20,7 @@ export default function PrixMakroudhPage() {
           path: '/ar/journal/prix-makroudh-tunisie',
           breadcrumb: 'ثمن المقروض في تونس',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         }
       : {
           title: 'Prix du makroudh en Tunisie : à quoi ça dépend vraiment — Journal Chez Laziz',
@@ -24,6 +29,7 @@ export default function PrixMakroudhPage() {
           path: '/journal/prix-makroudh-tunisie',
           breadcrumb: 'Prix du makroudh en Tunisie',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         },
   )
 
@@ -35,6 +41,13 @@ export default function PrixMakroudhPage() {
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
             <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">المدونة</p>
             <h1 className="font-display text-3xl leading-tight md:text-5xl">ثمن المقروض في تونس: على شنو يتوقف بالضبط</h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">بقلم فريق عند لعزيز</p>
+            <img
+              src={META.image}
+              alt={META.imageAltAr}
+              loading="lazy"
+              className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+            />
 
             <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
               <p>
@@ -71,6 +84,8 @@ export default function PrixMakroudhPage() {
               </p>
             </div>
 
+            <RelatedArticles slugs={META.related} isAr={true} />
+
             <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
               <p className="font-display text-xl text-ink">شوفوا أسعارنا وتشكيلتنا الكاملة</p>
               <Link to="/ar/collection" className="arrow-link mt-4 inline-flex justify-center">
@@ -101,6 +116,13 @@ export default function PrixMakroudhPage() {
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
           <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Le Journal</p>
           <h1 className="font-display text-3xl leading-tight md:text-5xl">Prix du makroudh en Tunisie : à quoi ça dépend vraiment</h1>
+          <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">Par l'équipe Chez Laziz</p>
+          <img
+            src={META.image}
+            alt={META.imageAlt}
+            loading="lazy"
+            className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
 
           <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
             <p>
@@ -140,6 +162,8 @@ export default function PrixMakroudhPage() {
               fabrication artisanale — c'est ce qui fait réellement la différence de goût.
             </p>
           </div>
+
+          <RelatedArticles slugs={META.related} isAr={false} />
 
           <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
             <p className="font-display text-xl text-ink">Découvrez nos tarifs et notre collection complète</p>

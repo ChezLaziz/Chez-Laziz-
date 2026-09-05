@@ -4,6 +4,10 @@ import { useSEO } from '../../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
+import { ARTICLES } from './articles'
+import RelatedArticles from './RelatedArticles'
+
+const META = ARTICLES.find((a) => a.slug === 'quest-ce-que-le-makroudh-tunisien')!
 
 export default function QuestCeQueLeMakroudhPage() {
   useReveal()
@@ -16,6 +20,7 @@ export default function QuestCeQueLeMakroudhPage() {
           path: '/ar/journal/quest-ce-que-le-makroudh-tunisien',
           breadcrumb: 'شنية المقروض التونسي؟',
           article: { datePublished: '2026-09-03' },
+          image: META.image,
         }
       : {
           title: 'Qu\'est-ce que le makroudh tunisien ? — Journal Chez Laziz',
@@ -24,6 +29,7 @@ export default function QuestCeQueLeMakroudhPage() {
           path: '/journal/quest-ce-que-le-makroudh-tunisien',
           breadcrumb: 'Qu\'est-ce que le makroudh tunisien ?',
           article: { datePublished: '2026-09-03' },
+          image: META.image,
         },
   )
 
@@ -37,6 +43,13 @@ export default function QuestCeQueLeMakroudhPage() {
             <h1 className="font-display text-3xl leading-tight md:text-5xl">
               شنية المقروض التونسي؟
             </h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">بقلم فريق عند لعزيز</p>
+            <img
+              src={META.image}
+              alt={META.imageAltAr}
+              loading="lazy"
+              className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+            />
 
             <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
               <p>
@@ -73,6 +86,8 @@ export default function QuestCeQueLeMakroudhPage() {
               </Link>
             </div>
 
+            <RelatedArticles slugs={META.related} isAr={true} />
+
             <Link to="/ar/journal" className="arrow-link mt-14 inline-flex">
               الرجوع للمدونة
               <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className="rotate-180">
@@ -95,6 +110,13 @@ export default function QuestCeQueLeMakroudhPage() {
           <h1 className="font-display text-3xl leading-tight md:text-5xl">
             Qu'est-ce que le makroudh tunisien ?
           </h1>
+          <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">Par l'équipe Chez Laziz</p>
+          <img
+            src={META.image}
+            alt={META.imageAlt}
+            loading="lazy"
+            className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
 
           <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
             <p>
@@ -135,6 +157,8 @@ export default function QuestCeQueLeMakroudhPage() {
               </svg>
             </Link>
           </div>
+
+          <RelatedArticles slugs={META.related} isAr={false} />
 
           <Link to="/journal" className="arrow-link mt-14 inline-flex">
             Retour au Journal

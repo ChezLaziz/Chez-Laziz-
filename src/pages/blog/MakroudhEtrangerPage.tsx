@@ -4,6 +4,10 @@ import { useSEO } from '../../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
+import { ARTICLES } from './articles'
+import RelatedArticles from './RelatedArticles'
+
+const META = ARTICLES.find((a) => a.slug === 'makroudh-tunisiens-etranger')!
 
 export default function MakroudhEtrangerPage() {
   useReveal()
@@ -16,6 +20,7 @@ export default function MakroudhEtrangerPage() {
           path: '/ar/journal/makroudh-tunisiens-etranger',
           breadcrumb: 'المقروض للتوانسة بره تونس',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         }
       : {
           title: "Makroudh pour les Tunisiens de l'étranger : comment en trouver du vrai — Journal Chez Laziz",
@@ -24,6 +29,7 @@ export default function MakroudhEtrangerPage() {
           path: '/journal/makroudh-tunisiens-etranger',
           breadcrumb: "Makroudh pour les Tunisiens de l'étranger",
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         },
   )
 
@@ -35,6 +41,13 @@ export default function MakroudhEtrangerPage() {
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
             <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">المدونة</p>
             <h1 className="font-display text-3xl leading-tight md:text-5xl">المقروض للتوانسة بره تونس: كيفاش تلقى الأصلي</h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">بقلم فريق عند لعزيز</p>
+            <img
+              src={META.image}
+              alt={META.imageAltAr}
+              loading="lazy"
+              className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+            />
 
             <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
               <p>
@@ -63,6 +76,8 @@ export default function MakroudhEtrangerPage() {
                 تطلب ليهم مباشرة وهما يتلذذو بالطازج — ولا تخزنو لك كمية باش تاخدها معاك في السفرة الجاية.
               </p>
             </div>
+
+            <RelatedArticles slugs={META.related} isAr={true} />
 
             <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
               <p className="font-display text-xl text-ink">اطلبوا مقروض طازج لعائلتكم في تونس</p>
@@ -94,6 +109,13 @@ export default function MakroudhEtrangerPage() {
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
           <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Le Journal</p>
           <h1 className="font-display text-3xl leading-tight md:text-5xl">Makroudh pour les Tunisiens de l'étranger : comment en trouver du vrai</h1>
+          <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">Par l'équipe Chez Laziz</p>
+          <img
+            src={META.image}
+            alt={META.imageAlt}
+            loading="lazy"
+            className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
 
           <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
             <p>
@@ -127,6 +149,8 @@ export default function MakroudhEtrangerPage() {
               produit frais — ou leur demander de vous en garder pour votre prochain voyage.
             </p>
           </div>
+
+          <RelatedArticles slugs={META.related} isAr={false} />
 
           <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
             <p className="font-display text-xl text-ink">Commandez du makroudh frais pour votre famille en Tunisie</p>

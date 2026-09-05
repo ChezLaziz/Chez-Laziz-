@@ -4,6 +4,10 @@ import { useSEO } from '../../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
 import Header from '../../sections/Header'
 import Footer from '../../sections/Footer'
+import { ARTICLES } from './articles'
+import RelatedArticles from './RelatedArticles'
+
+const META = ARTICLES.find((a) => a.slug === 'makroudh-idee-cadeau')!
 
 export default function MakroudhIdeeCadeauPage() {
   useReveal()
@@ -16,6 +20,7 @@ export default function MakroudhIdeeCadeauPage() {
           path: '/ar/journal/makroudh-idee-cadeau',
           breadcrumb: 'المقروض كهدية',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         }
       : {
           title: 'Le makroudh, une idée cadeau tunisienne par excellence — Journal Chez Laziz',
@@ -24,6 +29,7 @@ export default function MakroudhIdeeCadeauPage() {
           path: '/journal/makroudh-idee-cadeau',
           breadcrumb: 'Le makroudh comme cadeau',
           article: { datePublished: '2026-09-05' },
+          image: META.image,
         },
   )
 
@@ -35,6 +41,13 @@ export default function MakroudhIdeeCadeauPage() {
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
             <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">المدونة</p>
             <h1 className="font-display text-3xl leading-tight md:text-5xl">المقروض، فكرة هدية تونسية بامتياز</h1>
+            <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">بقلم فريق عند لعزيز</p>
+            <img
+              src={META.image}
+              alt={META.imageAltAr}
+              loading="lazy"
+              className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+            />
 
             <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
               <p>
@@ -63,6 +76,8 @@ export default function MakroudhIdeeCadeauPage() {
               </p>
               <p>عندك مناسبة وبدك كمية كبيرة؟ تواصل معنا ونرتبولك الطلب حسب احتياجك.</p>
             </div>
+
+            <RelatedArticles slugs={META.related} isAr={true} />
 
             <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
               <p className="font-display text-xl text-ink">فرّحوا حد بهدية مقروض أصيلة من القيروان</p>
@@ -94,6 +109,13 @@ export default function MakroudhIdeeCadeauPage() {
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
           <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">Le Journal</p>
           <h1 className="font-display text-3xl leading-tight md:text-5xl">Le makroudh, une idée cadeau tunisienne par excellence</h1>
+          <p className="mt-2 text-xs uppercase tracking-widest text-ink/40">Par l'équipe Chez Laziz</p>
+          <img
+            src={META.image}
+            alt={META.imageAlt}
+            loading="lazy"
+            className="mt-8 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
 
           <div className="mt-10 space-y-6 text-[15px] font-light leading-relaxed text-ink/80">
             <p>
@@ -130,6 +152,8 @@ export default function MakroudhIdeeCadeauPage() {
               votre commande selon vos besoins.
             </p>
           </div>
+
+          <RelatedArticles slugs={META.related} isAr={false} />
 
           <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
             <p className="font-display text-xl text-ink">Faites plaisir avec un vrai makroudh de Kairouan</p>
