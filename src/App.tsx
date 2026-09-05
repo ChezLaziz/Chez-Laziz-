@@ -71,14 +71,20 @@ export default function App() {
       <Route path="/collection" element={<Lazy Component={CollectionPage} />} />
       <Route path="/ar/collection" element={<Lazy Component={CollectionPage} />} />
       <Route path="/galerie" element={<Lazy Component={GaleriePage} />} />
+      <Route path="/ar/galerie" element={<Lazy Component={GaleriePage} />} />
       <Route path="/contact" element={<Lazy Component={ContactPage} />} />
+      <Route path="/ar/contact" element={<Lazy Component={ContactPage} />} />
       <Route path="/commande" element={<Lazy Component={OrderPage} />} />
       <Route path="/ar/commande" element={<Lazy Component={OrderPage} />} />
       <Route path="/admin" element={<Lazy Component={AdminPage} />} />
       <Route path="/politique-de-confidentialite" element={<Lazy Component={PrivacyPage} />} />
+      <Route path="/ar/politique-de-confidentialite" element={<Lazy Component={PrivacyPage} />} />
       <Route path="/conditions-generales" element={<Lazy Component={TermsPage} />} />
+      <Route path="/ar/conditions-generales" element={<Lazy Component={TermsPage} />} />
       <Route path="/livraison" element={<Lazy Component={LivraisonPage} />} />
+      <Route path="/ar/livraison" element={<Lazy Component={LivraisonPage} />} />
       <Route path="/faq" element={<Lazy Component={FAQPage} />} />
+      <Route path="/ar/faq" element={<Lazy Component={FAQPage} />} />
       <Route path="/makroudh-tunisien" element={<Lazy Component={MakroudhTunisienPage} />} />
       <Route path="/makroudh-kairouan" element={<Lazy Component={MakroudhKairouanPage} />} />
       <Route path="/makroudh-aux-dattes" element={<Lazy Component={MakroudhDattesPage} />} />

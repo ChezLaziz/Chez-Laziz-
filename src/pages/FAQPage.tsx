@@ -3,9 +3,10 @@ import { Link } from 'react-router'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import { useSEO, setJsonLd } from '../hooks/useSEO'
+import { useLang } from '@/lib/i18n'
 import { formatTND, PHONE_DISPLAY, PHONE_TEL, D17_NUMBER_DISPLAY, ALLOWED_WEIGHTS_KG, DELIVERY_FEE_MILLIMES, formatWeight } from '@/lib/shop'
 
-const FAQ: { q: string; a: string }[] = [
+const FAQ_FR: { q: string; a: string }[] = [
   {
     q: "Qu'est-ce que le makroudh ?",
     a: "Une pâtisserie tunisienne traditionnelle à base de semoule et de miel, généralement fourrée de pâte de dattes, originaire de Kairouan.",
@@ -28,14 +29,49 @@ const FAQ: { q: string; a: string }[] = [
   { q: 'Chez Laziz m\'appelle-t-il après ma commande ?', a: 'Oui, nous vous appelons systématiquement pour confirmer les produits, l\'adresse et le paiement avant préparation.' },
 ]
 
+const FAQ_AR: { q: string; a: string }[] = [
+  {
+    q: 'شنية المقروض؟',
+    a: 'حلوى تونسية تقليدية أساسها السميد والعسل، محشوة عادة بعجينة التمر، أصلها من القيروان.',
+  },
+  { q: 'وين موجودة عند لعزيز؟', a: 'في القيروان، تونس — المحل مفتوح 7 أيام على 7 من 07:00 إلى منتصف الليل.' },
+  {
+    q: 'شنية الأوزان المتوفرة؟',
+    a: `كل مقروض يُطلب بالوزن: ${ALLOWED_WEIGHTS_KG.map((w) => formatWeight(w, 'ar')).join('، ')}. الثمن المعروض في التشكيلة هو ثمن الكيلو الواحد.`,
+  },
+  { q: 'قداش ثمن التوصيل؟', a: `${formatTND(DELIVERY_FEE_MILLIMES)} د.ت، مصاريف ثابتة، مهما كان عدد المنتجات.` },
+  { q: 'توصلو لكل تونس؟', a: 'إي، في الـ24 ولاية، توصيل للمنزل.' },
+  { q: 'قداش مدة التوصيل؟', a: 'حوالي 24 ساعة من وقت تأكيد الطلبية بالهاتف.' },
+  { q: 'شنية طرق الدفع المتوفرة؟', a: 'طريقتين: الدفع نقدًا عند التسليم، أو تحويل عبر D17.' },
+  {
+    q: 'كيفاش يخدم الدفع عبر D17؟',
+    a: `تبعثو المبلغ الكامل لـ${D17_NUMBER_DISPLAY}، وبعدها ترفقو صورة الدفع مع الطلبية. فريقنا يتحقق من الصورة قبل ما يأكد الطلبية.`,
+  },
+  { q: 'صورة الدفع D17 إجبارية؟', a: 'إي — ما نقدروش نأكدو طلبية D17 بلا صورة الدفع.' },
+  { q: 'كيفاش يخدم الدفع عند التسليم؟', a: 'تخلصو نقدًا مباشرة للموزع، وقت ما توصلكم الطلبية.' },
+  { q: 'عند لعزيز يتصل بيا بعد الطلبية؟', a: 'إي، نتصلو بيكم ديمة لتأكيد المنتجات والعنوان وطريقة الدفع قبل التحضير.' },
+]
+
 export default function FAQPage() {
-  useSEO({
-    title: 'FAQ — Chez Laziz | Livraison, paiement, commande',
-    description:
-      'Questions fréquentes Chez Laziz : livraison en Tunisie, délai, paiement à la livraison ou D17, poids disponibles.',
-    path: '/faq',
-    breadcrumb: 'FAQ',
-  })
+  const lang = useLang()
+  const isAr = lang === 'ar'
+  const FAQ = isAr ? FAQ_AR : FAQ_FR
+  useSEO(
+    isAr
+      ? {
+          title: 'الأسئلة الشائعة — عند لعزيز | التوصيل، الدفع، الطلب',
+          description: 'الأسئلة الشائعة عند لعزيز: التوصيل في تونس، المدة، الدفع عند التسليم أو D17، الأوزان المتوفرة.',
+          path: '/ar/faq',
+          breadcrumb: 'الأسئلة الشائعة',
+        }
+      : {
+          title: 'FAQ — Chez Laziz | Livraison, paiement, commande',
+          description:
+            'Questions fréquentes Chez Laziz : livraison en Tunisie, délai, paiement à la livraison ou D17, poids disponibles.',
+          path: '/faq',
+          breadcrumb: 'FAQ',
+        },
+  )
 
   useEffect(
     () =>
@@ -48,7 +84,7 @@ export default function FAQPage() {
           acceptedAnswer: { '@type': 'Answer', text: item.a },
         })),
       }),
-    [],
+    [FAQ],
   )
 
   return (
@@ -58,7 +94,7 @@ export default function FAQPage() {
         <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
           Chez Laziz
         </p>
-        <h1 className="font-display text-3xl leading-tight md:text-5xl">Questions fréquentes</h1>
+        <h1 className="font-display text-3xl leading-tight md:text-5xl">{isAr ? 'الأسئلة الشائعة' : 'Questions fréquentes'}</h1>
 
         <div className="mt-10 divide-y divide-sand/70 border-y border-sand/70">
           {FAQ.map((item) => (
@@ -73,13 +109,13 @@ export default function FAQPage() {
         </div>
 
         <p className="mt-10 text-sm font-light text-ink/60">
-          Une autre question ? Appelez-nous au{' '}
-          <a href={PHONE_TEL} className="text-accent underline underline-offset-2">{PHONE_DISPLAY}</a>.
+          {isAr ? 'عندك سؤال آخر؟ اتصل بينا على ' : 'Une autre question ? Appelez-nous au '}
+          <a href={PHONE_TEL} className="text-accent underline underline-offset-2" dir="ltr">{PHONE_DISPLAY}</a>.
         </p>
 
-        <Link to="/commande" className="arrow-link mt-10 inline-flex">
-          Passer commande
-          <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+        <Link to={isAr ? '/ar/commande' : '/commande'} className="arrow-link mt-10 inline-flex">
+          {isAr ? 'اطلب توّا' : 'Passer commande'}
+          <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
             <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
           </svg>
         </Link>
