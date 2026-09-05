@@ -124,6 +124,7 @@ export default function Hero() {
         </p>
 
         <h1
+          dir="ltr"
           className={`font-display leading-[0.95] text-[#faf6f3] ${on ? 'hero-title-on' : ''}`}
           aria-label={title}
           style={{
