@@ -26,6 +26,12 @@ export const BILINGUAL_BASE_PATHS = [
   '/journal/comment-choisir-son-makroudh',
   '/journal/duree-conservation-makroudh',
   '/journal/makroudh-idee-cadeau',
+  '/journal/makroudh-el-louz-vs-traditionnel',
+  '/journal/prix-makroudh-tunisie',
+  '/journal/makroudh-tunisiens-etranger',
+  '/journal/faq-makroudh',
+  '/journal/pourquoi-kairouan-makroudh',
+  '/journal/nouvelles-saveurs-makroudh-blanc',
 ] as const
 
 export type Lang = 'fr' | 'ar'

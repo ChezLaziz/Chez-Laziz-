@@ -58,4 +58,52 @@ export const ARTICLES = [
       "Pour l'Aïd, un mariage ou simplement pour faire plaisir : pourquoi le makroudh reste l'un des cadeaux les plus appréciés en Tunisie.",
     excerptAr: 'للعيد، لعرس، ولا بس باش تفرّح حد: ليش المقروض يبقى من أكثر الهدايا المحبوبة في تونس.',
   },
+  {
+    slug: 'makroudh-el-louz-vs-traditionnel',
+    title: "Makroudh el louz ou makroudh traditionnel : lequel choisir ?",
+    titleAr: 'مقروض اللوز ولا المقروض التقليدي: شنو تختار؟',
+    excerpt:
+      "Semoule frite au miel ou pâte d'amande non frite : deux makroudh très différents, pour deux envies différentes.",
+    excerptAr: 'سميد مقلي بالعسل ولا عجينة لوز بلا قلي: مقروضان مختلفان بزاف، لكل وحد رغبته.',
+  },
+  {
+    slug: 'prix-makroudh-tunisie',
+    title: 'Prix du makroudh en Tunisie : à quoi ça dépend vraiment',
+    titleAr: 'ثمن المقروض في تونس: على شنو يتوقف بالضبط',
+    excerpt:
+      "Qualité des dattes, miel réel ou sirop de sucre, fait main ou industriel : ce qui explique les écarts de prix.",
+    excerptAr: 'جودة التمر، عسل حقيقي ولا شراب سكر، صناعة يدوية ولا صناعية: شنية اللي يفسّر فرق الأسعار.',
+  },
+  {
+    slug: 'makroudh-tunisiens-etranger',
+    title: "Makroudh pour les Tunisiens de l'étranger : comment en trouver du vrai",
+    titleAr: 'المقروض للتوانسة بره تونس: كيفاش تلقى الأصلي',
+    excerpt:
+      "Nostalgie du pays, cadeaux à la famille en visite : ce qu'il faut savoir pour retrouver le goût du vrai makroudh loin de la Tunisie.",
+    excerptAr: 'حنين للبلاد، هدايا للعائلة في الزيارة: شنو لازم تعرفو باش تلقاو طعم المقروض الأصلي بعيد على تونس.',
+  },
+  {
+    slug: 'faq-makroudh',
+    title: 'FAQ makroudh : toutes les réponses aux questions les plus posées',
+    titleAr: 'أسئلة شائعة عن المقروض: كل الأجوبة',
+    excerpt:
+      "Ingrédients, gluten, calories, conservation, origine : les réponses courtes et claires aux questions qu'on nous pose le plus souvent.",
+    excerptAr: 'المكونات، الغلوتين، السعرات، الحفظ، الأصل: أجوبة قصيرة وواضحة على الأسئلة اللي نتلقاوها أكثر.',
+  },
+  {
+    slug: 'pourquoi-kairouan-makroudh',
+    title: 'Pourquoi Kairouan est la capitale historique du makroudh',
+    titleAr: 'ليش القيروان عاصمة المقروض التاريخية',
+    excerpt:
+      "Ce qui a fait de Kairouan, bien avant les autres villes tunisiennes, la référence incontournable du makroudh.",
+    excerptAr: 'شنية اللي خلّى القيروان، قبل كل المدن التونسية الأخرى، المرجع الأول للمقروض.',
+  },
+  {
+    slug: 'nouvelles-saveurs-makroudh-blanc',
+    title: 'Makroudh blanc : nos nouvelles saveurs exclusives',
+    titleAr: 'المقروض الأبيض: نكهاتنا الجديدة الحصرية',
+    excerpt:
+      'Pistache, vanille, figues, ananas, fraise, noisette, café et zgougou : la nouvelle collection Chez Laziz, jamais vue ailleurs.',
+    excerptAr: 'فستق، فانيليا، تين، أناناس، فراولة، بندق، قهوة وزقوقو: التشكيلة الجديدة عند لعزيز، ما شفتوهاش في مكان آخر.',
+  },
 ] as const
