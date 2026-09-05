@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLang } from '@/lib/i18n'
 
 const REEL_URL = 'https://www.instagram.com/chezlaziz'
 
 export default function InstagramReel() {
+  const lang = useLang()
+  const isAr = lang === 'ar'
   const videoRef = useRef<HTMLVideoElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [inView, setInView] = useState(false)
@@ -88,7 +91,7 @@ export default function InstagramReel() {
             {inView && (
               <button
                 type="button"
-                aria-label={muted ? 'Activer le son' : 'Couper le son'}
+                aria-label={isAr ? (muted ? 'تشغيل الصوت' : 'كتم الصوت') : muted ? 'Activer le son' : 'Couper le son'}
                 onClick={(e) => {
                   e.stopPropagation()
                   setMuted((m) => !m)
@@ -126,18 +129,29 @@ export default function InstagramReel() {
         </div>
 
         {/* Text */}
-        <div className="text-center md:text-left">
+        <div className={`text-center ${isAr ? 'md:text-right' : 'md:text-left'}`}>
           <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
-            Vu sur Instagram
+            {isAr ? 'شاهدونا على إنستغرام' : 'Vu sur Instagram'}
           </p>
           <h2 className="font-display text-3xl leading-tight text-[#faf6f3] md:text-5xl">
-            Le makroudh goût fraise,
-            <br />
-            en direct de notre atelier.
+            {isAr ? (
+              <>
+                مقروض بطعم الفراولة،
+                <br />
+                مباشرة من مطبخنا.
+              </>
+            ) : (
+              <>
+                Le makroudh goût fraise,
+                <br />
+                en direct de notre atelier.
+              </>
+            )}
           </h2>
           <p className="mx-auto mt-5 max-w-md text-[15px] font-light leading-relaxed text-[#faf6f3]/70 md:mx-0">
-            Une nouveauté façonnée à la main comme toujours, dévoilée pour la
-            première fois à Kairouan. Suivez-nous pour ne rien manquer.
+            {isAr
+              ? 'صنف جديد مصنوع يدويًا كالعادة، كُشف عنه لأول مرة في القيروان. تابعونا حتى لا يفوتكم شيء.'
+              : 'Une nouveauté façonnée à la main comme toujours, dévoilée pour la première fois à Kairouan. Suivez-nous pour ne rien manquer.'}
           </p>
           <a
             href={REEL_URL}
@@ -145,8 +159,8 @@ export default function InstagramReel() {
             rel="noreferrer"
             className="arrow-link !text-[#faf6f3] mt-8 inline-flex"
           >
-            Voir sur Instagram
-            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true">
+            {isAr ? 'شاهد على إنستغرام' : 'Voir sur Instagram'}
+            <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />
             </svg>
           </a>
