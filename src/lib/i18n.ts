@@ -17,6 +17,7 @@ export const BILINGUAL_BASE_PATHS = [
   '/makroudh-kairouan',
   '/makroudh-aux-dattes',
   '/makroudh-fruits-secs',
+  '/la-maison',
 ] as const
 
 export type Lang = 'fr' | 'ar'

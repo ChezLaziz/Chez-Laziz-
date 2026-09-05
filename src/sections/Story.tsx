@@ -85,7 +85,7 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
               </div>
 
               <Link
-                to="/makroudh-kairouan"
+                to={isAr ? '/ar/makroudh-kairouan' : '/makroudh-kairouan'}
                 className="arrow-link mt-6 inline-flex text-sm text-[#faf6f3]/85 hover:text-[#b8912e]"
               >
                 {isAr ? 'لماذا القيروان هي مرجع المقروض' : 'Pourquoi Kairouan est la référence du makroudh'}
