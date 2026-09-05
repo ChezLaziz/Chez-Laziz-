@@ -64,7 +64,14 @@ function ProductPickCard({
         )}
       </div>
       <div className="flex flex-1 flex-col p-3.5 md:p-4">
-        <p className="break-words font-medium leading-snug">{displayName}</p>
+        <p className="break-words font-medium leading-snug">
+          {displayName}
+          {product.isExclusiveCreation && (
+            <sup className="ms-0.5 text-[10px] font-normal text-ink/40" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
+              ™
+            </sup>
+          )}
+        </p>
         <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-ink/50">
           {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
         </p>
