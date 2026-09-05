@@ -31,7 +31,12 @@ export function isMetaConversionsApiConfigured(): boolean {
 
 export type ReportableOrder = {
   paymentMethod: "cod" | "d17";
-  paymentStatus: "pending" | "pending_verification" | "approved" | "rejected";
+  paymentStatus:
+    | "pending"
+    | "pending_verification"
+    | "approved"
+    | "rejected"
+    | "paid";
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
   metaPurchaseReportedAt: Date | null;
 };
@@ -42,6 +47,11 @@ export type ReportableOrder = {
 export function shouldReportMetaPurchase(order: ReportableOrder): boolean {
   if (order.metaPurchaseReportedAt) return false;
   if (order.status === "annulee") return false;
+  // "paid" (encaissement d'une commande en espèces) ne change RIEN ici :
+  // pour le COD, le signal reste l'avancement du statut après confirmation
+  // téléphonique, comme avant. Marquer l'argent encaissé est une écriture
+  // de gestion, pas un nouvel évènement publicitaire — et une commande
+  // déjà signalée l'est de toute façon une seule fois.
   if (order.paymentMethod === "cod") return order.status !== "nouvelle";
   return order.paymentStatus === "approved";
 }

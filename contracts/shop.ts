@@ -31,8 +31,22 @@ export function priceForWeight(
   return Math.round(basePricePerKgMillimes * weightKg);
 }
 
+/** Montant en millimes → dinars lisibles, sans zéros inutiles :
+ * 8000 → "8", 69900 → "69,9", 8050 → "8,05", 0 → "0".
+ * Source unique de l'affichage des prix (site public, admin, e-mails) —
+ * ne jamais utiliser pour une valeur de données (analytics, JSON-LD,
+ * base) qui doit rester un nombre brut. */
+export function formatDinars(millimes: number): string {
+  const sign = millimes < 0 ? "-" : "";
+  const abs = Math.abs(Math.round(millimes));
+  const mill = abs % 1000;
+  const dinars = Math.floor(abs / 1000);
+  if (mill === 0) return `${sign}${dinars}`;
+  return `${sign}${dinars},${String(mill).padStart(3, "0").replace(/0+$/, "")}`;
+}
+
 // ---- Livraison ----
-export const DELIVERY_FEE_MILLIMES = 8000; // 8.000 TND, fixe, toute la Tunisie
+export const DELIVERY_FEE_MILLIMES = 8000; // 8 DT, fixe, toute la Tunisie
 export const DELIVERY_REGION = "Toute la Tunisie";
 export const DELIVERY_TIME_LABEL = "24h";
 export const DELIVERY_METHOD_LABEL = "Livraison à domicile (porte-à-porte)";
@@ -88,3 +102,39 @@ export const TUNISIA_GOVERNORATES = [
   "Tunis",
   "Zaghouan",
 ] as const;
+
+/** Libellé arabe de chaque gouvernorat — AFFICHAGE UNIQUEMENT.
+ * La valeur envoyée au serveur reste le nom français de
+ * TUNISIA_GOVERNORATES : c'est lui qui est validé à la commande et stocké
+ * en base. Traduire les valeurs (et pas seulement les libellés) ferait
+ * échouer toute commande passée depuis la version arabe. */
+export const GOVERNORATE_LABELS_AR: Record<string, string> = {
+  Ariana: "أريانة",
+  "Béja": "باجة",
+  "Ben Arous": "بن عروس",
+  Bizerte: "بنزرت",
+  "Gabès": "قابس",
+  Gafsa: "قفصة",
+  Jendouba: "جندوبة",
+  Kairouan: "القيروان",
+  Kasserine: "القصرين",
+  "Kébili": "قبلي",
+  "Le Kef": "الكاف",
+  Mahdia: "المهدية",
+  "La Manouba": "منوبة",
+  "Médenine": "مدنين",
+  Monastir: "المنستير",
+  Nabeul: "نابل",
+  Sfax: "صفاقس",
+  "Sidi Bouzid": "سيدي بوزيد",
+  Siliana: "سليانة",
+  Sousse: "سوسة",
+  Tataouine: "تطاوين",
+  Tozeur: "توزر",
+  Tunis: "تونس",
+  Zaghouan: "زغوان",
+};
+
+export function governorateLabel(value: string, lang: "fr" | "ar"): string {
+  return lang === "ar" ? (GOVERNORATE_LABELS_AR[value] ?? value) : value;
+}

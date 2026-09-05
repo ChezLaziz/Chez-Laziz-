@@ -15,6 +15,7 @@ const DEFAULT_TAGLINE =
   'Pâtisserie artisanale — Kairouan, Tunisie. Le makroudh kairouanais authentique, fait main chaque jour.'
 const DEFAULT_TAGLINE_AR = 'حرفة صناعة الحلويات — القيروان، تونس. المقروض القيرواني الأصيل، صناعة يدوية كل يوم.'
 const DEFAULT_COPYRIGHT = '© 2026 Chez Laziz — عند لعزيز · Kairouan. Tous droits réservés.'
+const DEFAULT_COPYRIGHT_AR = '© 2026 Chez Laziz — عند لعزيز · القيروان. جميع الحقوق محفوظة.'
 const DEFAULT_VISIT_EYEBROW = 'Nous trouver'
 const DEFAULT_VISIT_EYEBROW_AR = 'تواصل معنا'
 const DEFAULT_VISIT_TITLE = 'La boutique vous attend à Kairouan'
@@ -470,7 +471,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
       {/* ── Barre légale ── */}
       <div className="border-t border-[#faf6f3]/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-6 text-center text-xs font-light text-[#faf6f3]/45 md:flex-row md:px-10 md:text-left">
-          <p>{data?.copyright || DEFAULT_COPYRIGHT}</p>
+          <p>{lang === 'ar' ? DEFAULT_COPYRIGHT_AR : data?.copyright || DEFAULT_COPYRIGHT}</p>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em]">
             {LEGAL_LINKS.map(([to, labelFr, labelAr]) => (
               <Link key={to} to={to} className="transition-colors hover:text-[#b8912e]">

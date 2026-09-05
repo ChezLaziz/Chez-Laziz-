@@ -8,14 +8,26 @@ const CHANGE_EVENT = 'laziz:consent-change'
 
 export type ConsentValue = 'accepted' | 'declined'
 
+// localStorage lève une exception en navigation privée iOS et quand le
+// navigateur bloque les données de site : sans garde, le bandeau de cookies
+// et la connexion admin plantaient au lieu de simplement ne rien mémoriser.
 export function getConsent(): ConsentValue | null {
   if (typeof window === 'undefined') return null
-  const value = window.localStorage.getItem(STORAGE_KEY)
-  return value === 'accepted' || value === 'declined' ? value : null
+  try {
+    const value = window.localStorage.getItem(STORAGE_KEY)
+    return value === 'accepted' || value === 'declined' ? value : null
+  } catch {
+    return null
+  }
 }
 
 export function setConsent(value: ConsentValue) {
-  window.localStorage.setItem(STORAGE_KEY, value)
+  try {
+    window.localStorage.setItem(STORAGE_KEY, value)
+  } catch {
+    // Choix non mémorisé (stockage indisponible) — il s'applique quand même
+    // pour cette visite, le bandeau réapparaîtra à la prochaine.
+  }
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 

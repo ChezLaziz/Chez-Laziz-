@@ -21,8 +21,11 @@ import {
 
 const TOKEN_KEY = 'laziz_admin_token'
 
+// text-base (16px) et non text-sm : en dessous de 16px, iOS Safari zoome
+// automatiquement la page à chaque fois qu'un champ reçoit le focus, et
+// l'admin se remplit surtout depuis un téléphone.
 const inputCls =
-  'w-full rounded-lg border border-sand bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e]'
+  'w-full rounded-lg border border-sand bg-white px-4 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e] md:text-sm'
 
 /** Champ mot de passe avec bascule afficher/masquer — évite les erreurs de
  * saisie invisibles (espace en trop, faute de frappe) qui bloquent la connexion. */
@@ -109,12 +112,14 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending_verification: 'D17 à vérifier',
   approved: 'D17 approuvé',
   rejected: 'D17 rejeté',
+  paid: 'Encaissé',
 }
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-ink/5 text-ink/50 border-ink/15',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
   pending_verification: 'bg-amber-50 text-amber-700 border-amber-200',
   approved: 'bg-green-50 text-green-700 border-green-200',
   rejected: 'bg-red-50 text-red-600 border-red-200',
+  paid: 'bg-green-50 text-green-700 border-green-200',
 }
 
 type OrderItem = {
@@ -309,19 +314,31 @@ function OrdersTab({
   onClearFilter?: () => void
 }) {
   const utils = trpc.useUtils()
-  const { data: orders, isLoading } = trpc.orders.list.useQuery({ token })
+  // Les commandes arrivent pendant que le tableau de bord est ouvert :
+  // sans rafraîchissement automatique, rien ne le signalait.
+  const { data: orders, isLoading } = trpc.orders.list.useQuery(
+    { token },
+    { refetchInterval: 30000, refetchOnWindowFocus: true },
+  )
+  // Un échec (réseau mobile faible, jeton expiré) était totalement
+  // silencieux : le bouton semblait avoir marché. On affiche l'erreur.
+  const [actionError, setActionError] = useState<string | null>(null)
+  const onMutationError = (e: { message: string }) => setActionError(e.message)
   const setStatus = trpc.orders.setStatus.useMutation({
-    onSuccess: () => utils.orders.list.invalidate(),
+    onSuccess: () => { setActionError(null); utils.orders.list.invalidate() },
+    onError: onMutationError,
   })
   const setPaymentStatus = trpc.orders.setPaymentStatus.useMutation({
-    onSuccess: () => utils.orders.list.invalidate(),
+    onSuccess: () => { setActionError(null); utils.orders.list.invalidate() },
+    onError: onMutationError,
   })
   const removeOrder = trpc.orders.delete.useMutation({
-    onSuccess: () => utils.orders.list.invalidate(),
+    onSuccess: () => { setActionError(null); utils.orders.list.invalidate() },
+    onError: onMutationError,
   })
 
   const [search, setSearch] = useState('')
-  const [payFilter, setPayFilter] = useState<'all' | 'cod' | 'd17' | 'd17_pending'>('all')
+  const [payFilter, setPayFilter] = useState<'all' | 'cod' | 'd17' | 'd17_pending' | 'to_collect'>('all')
 
   const query = search.trim().toLowerCase()
   const filtered = (orders ?? []).filter((o) => {
@@ -329,8 +346,10 @@ function OrdersTab({
     if (payFilter === 'cod' && o.paymentMethod !== 'cod') return false
     if (payFilter === 'd17' && o.paymentMethod !== 'd17') return false
     if (payFilter === 'd17_pending' && !(o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification')) return false
+    // Argent pas encore rentré : espèces non encaissées, hors commandes annulées.
+    if (payFilter === 'to_collect' && !(o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee')) return false
     if (query) {
-      const hay = `#${o.id} ${o.customerName} ${o.phone} ${o.city} ${o.governorate}`.toLowerCase()
+      const hay = `#${o.id} ${o.customerName} ${o.phone} ${o.city} ${o.governorate} ${o.address}`.toLowerCase()
       if (!hay.includes(query)) return false
     }
     return true
@@ -338,6 +357,10 @@ function OrdersTab({
   const d17Pending = (orders ?? []).filter(
     (o) => o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification',
   ).length
+  const toCollect = (orders ?? []).filter(
+    (o) => o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee',
+  )
+  const toCollectMillimes = toCollect.reduce((s, o) => s + o.totalMillimes, 0)
 
   if (isLoading) return <p className="text-sm text-ink/50">Chargement…</p>
 
@@ -361,13 +384,14 @@ function OrdersTab({
               ['cod', 'Espèces'],
               ['d17', 'D17'],
               ['d17_pending', `D17 à vérifier${d17Pending ? ` (${d17Pending})` : ''}`],
+              ['to_collect', `À encaisser${toCollect.length ? ` (${toCollect.length})` : ''}`],
             ] as const
           ).map(([value, label]) => (
             <button
               key={value}
               type="button"
               onClick={() => setPayFilter(value)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+              className={`min-h-11 rounded-full border px-4 text-xs font-semibold uppercase tracking-wide transition-colors ${
                 payFilter === value
                   ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#8a5527]'
                   : 'border-sand text-ink/55 hover:border-[#b8912e]/50'
@@ -378,6 +402,32 @@ function OrdersTab({
           ))}
         </div>
       </div>
+
+      {actionError && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          <span className="flex-1">
+            L'action n'a pas été enregistrée : {actionError}
+            <br />
+            <span className="text-red-600/80">Vérifiez votre connexion, puis réessayez. Si le problème persiste, reconnectez-vous.</span>
+          </span>
+          <button type="button" onClick={() => setActionError(null)} aria-label="Fermer" className="min-h-8 min-w-8 shrink-0 rounded-full text-lg leading-none text-red-500 hover:bg-red-100">
+            ×
+          </button>
+        </div>
+      )}
+
+      {toCollect.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setPayFilter(payFilter === 'to_collect' ? 'all' : 'to_collect')}
+          className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
+        >
+          <span className="text-sm text-amber-800">
+            Argent à encaisser · {toCollect.length} commande{toCollect.length > 1 ? 's' : ''} en espèces
+          </span>
+          <span className="font-display text-lg text-amber-900">{formatTND(toCollectMillimes)} DT</span>
+        </button>
+      )}
 
       {statusFilter && (
         <div className="flex items-center gap-3 rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/10 px-5 py-3 text-sm">
@@ -433,7 +483,7 @@ function OrdersTab({
                       status: e.target.value as typeof o.status,
                     })
                   }
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide outline-none ${STATUS_COLORS[o.status]}`}
+                  className={`min-h-11 rounded-full border px-3 text-xs font-semibold uppercase tracking-wide outline-none ${STATUS_COLORS[o.status]}`}
                 >
                   {Object.entries(STATUS_LABELS).map(([v, l]) => (
                     <option key={v} value={v}>
@@ -476,6 +526,48 @@ function OrdersTab({
               </p>
             )}
 
+            {/* Espèces à la livraison : enregistrer l'encaissement. Sans ce
+                bouton, une commande payée en liquide restait "à encaisser"
+                pour toujours et l'admin n'avait aucune trace de l'argent
+                réellement rentré. */}
+            {o.paymentMethod === 'cod' && o.status !== 'annulee' && (
+              <div
+                className={`mt-4 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 ${
+                  o.paymentStatus === 'paid'
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-amber-200 bg-amber-50'
+                }`}
+              >
+                {o.paymentStatus === 'paid' ? (
+                  <>
+                    <span className="text-sm font-medium text-green-700">✓ Encaissé</span>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'pending' })}
+                      disabled={setPaymentStatus.isPending}
+                      className="ml-auto min-h-11 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/60 hover:border-ink/40 disabled:opacity-40"
+                    >
+                      Annuler l'encaissement
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm text-amber-800">
+                      À encaisser : <strong className="font-display">{formatTND(o.totalMillimes)} DT</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'paid' })}
+                      disabled={setPaymentStatus.isPending}
+                      className="ml-auto min-h-11 rounded-full bg-green-600 px-5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-green-700 disabled:opacity-40"
+                    >
+                      {setPaymentStatus.isPending ? 'Enregistrement…' : 'Encaissé ✓'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
             {o.paymentMethod === 'd17' && o.paymentProofKey && (
               <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
                 <PaymentProofViewer token={token} proofKey={o.paymentProofKey} />
@@ -483,13 +575,13 @@ function OrdersTab({
                   <>
                     <button
                       onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'approved' })}
-                      className="ml-auto rounded-full bg-green-600 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-green-700"
+                      className="ml-auto min-h-11 rounded-full bg-green-600 px-5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-green-700"
                     >
                       Approuver
                     </button>
                     <button
                       onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'rejected' })}
-                      className="rounded-full bg-red-500 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-red-600"
+                      className="min-h-11 rounded-full bg-red-500 px-5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-red-600"
                     >
                       Rejeter
                     </button>
@@ -502,18 +594,18 @@ function OrdersTab({
               <div className="flex items-baseline">
                 <span>Sous-total</span>
                 <span className="mx-3 flex-1" />
-                <span>{formatTND(o.subtotalMillimes)} TND</span>
+                <span>{formatTND(o.subtotalMillimes)} DT</span>
               </div>
               <div className="flex items-baseline">
                 <span>Livraison</span>
                 <span className="mx-3 flex-1" />
-                <span>{formatTND(o.deliveryFeeMillimes)} TND</span>
+                <span>{formatTND(o.deliveryFeeMillimes)} DT</span>
               </div>
             </div>
             <div className="mt-2 flex items-baseline">
               <span className="text-xs uppercase tracking-[0.2em] text-ink/50">Total</span>
               <span className="mx-3 flex-1" />
-              <span className="font-display text-xl text-accent">{formatTND(o.totalMillimes)} TND</span>
+              <span className="font-display text-xl text-accent">{formatTND(o.totalMillimes)} DT</span>
               <button
                 onClick={() => {
                   if (window.confirm(`Supprimer la commande #${o.id} ?`)) {
@@ -537,6 +629,8 @@ function OrdersTab({
 type ProductForm = {
   name: string
   description: string
+  nameAr: string
+  descriptionAr: string
   priceTND: string
   category: string
   badge: string
@@ -547,6 +641,8 @@ type ProductForm = {
 const EMPTY_FORM: ProductForm = {
   name: '',
   description: '',
+  nameAr: '',
+  descriptionAr: '',
   priceTND: '',
   category: 'Les classiques',
   badge: '',
@@ -588,9 +684,12 @@ function ProductsTab({ token }: { token: string }) {
     utils.products.listAll.invalidate()
     utils.products.list.invalidate()
   }
-  const create = trpc.products.create.useMutation({ onSuccess: invalidate })
-  const update = trpc.products.update.useMutation({ onSuccess: invalidate })
-  const remove = trpc.products.delete.useMutation({ onSuccess: invalidate })
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const onSaved = () => { setSaveError(null); invalidate() }
+  const onSaveError = (e: { message: string }) => setSaveError(e.message)
+  const create = trpc.products.create.useMutation({ onSuccess: onSaved, onError: onSaveError })
+  const update = trpc.products.update.useMutation({ onSuccess: onSaved, onError: onSaveError })
+  const remove = trpc.products.delete.useMutation({ onSuccess: onSaved, onError: onSaveError })
 
   const toMillimes = (tnd: string) => Math.round(parseFloat(tnd.replace(',', '.')) * 1000)
 
@@ -599,6 +698,8 @@ function ProductsTab({ token }: { token: string }) {
     setForm({
       name: p.name,
       description: p.description ?? '',
+      nameAr: p.nameAr ?? '',
+      descriptionAr: p.descriptionAr ?? '',
       priceTND: formatTND(p.priceMillimes),
       category: p.category,
       badge: p.badge ?? '',
@@ -614,6 +715,8 @@ function ProductsTab({ token }: { token: string }) {
     const data = {
       name: form.name.trim(),
       description: form.description.trim() || null,
+      nameAr: form.nameAr.trim() || null,
+      descriptionAr: form.descriptionAr.trim() || null,
       priceMillimes: toMillimes(form.priceTND),
       category: form.category.trim() || 'Les classiques',
       badge: form.badge.trim() || null,
@@ -653,11 +756,41 @@ function ProductsTab({ token }: { token: string }) {
       {showForm && (
         <form onSubmit={submit} className="mb-8 space-y-4 rounded-xl border border-[#b8912e]/50 bg-[#f5ece5] p-6">
           <p className="font-display text-xl">{editingId ? 'Modifier le produit' : 'Nouveau produit'}</p>
+          {saveError && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700" role="alert">
+              Enregistrement impossible : {saveError}
+            </p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nom du produit" className={inputCls} />
-            <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix en TND (ex : 8.000)" inputMode="decimal" className={inputCls} />
+            <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix en dinars (ex : 8 ou 8,5)" inputMode="decimal" className={inputCls} />
           </div>
           <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (facultative)" rows={2} className={`${inputCls} resize-none`} />
+
+          <div className="rounded-lg border border-[#b8912e]/30 bg-white/60 p-4">
+            <p className="mb-3 text-xs font-semibold text-ink/70">
+              Version arabe <span className="font-normal text-ink/50">— laissez vide pour afficher le texte français sur le site arabe</span>
+            </p>
+            <div className="space-y-3">
+              <input
+                value={form.nameAr}
+                onChange={(e) => setForm({ ...form, nameAr: e.target.value })}
+                placeholder="اسم المنتج بالعربية"
+                dir="rtl"
+                lang="ar"
+                className={inputCls}
+              />
+              <textarea
+                value={form.descriptionAr}
+                onChange={(e) => setForm({ ...form, descriptionAr: e.target.value })}
+                placeholder="وصف المنتج بالعربية (اختياري)"
+                dir="rtl"
+                lang="ar"
+                rows={2}
+                className={`${inputCls} resize-none`}
+              />
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-sand bg-white">
@@ -735,20 +868,39 @@ function ProductsTab({ token }: { token: string }) {
                     </span>
                   )}
                 </div>
+                {p.nameAr ? (
+                  <p className="mt-0.5 text-xs text-ink/55" dir="rtl" lang="ar">{p.nameAr}</p>
+                ) : (
+                  <p className="mt-0.5 text-[11px] font-medium text-amber-700">Pas encore traduit en arabe</p>
+                )}
                 <p className="mt-0.5 text-xs text-ink/45">
-                  {p.category} · <span className="font-display text-accent">{formatTND(p.priceMillimes)} TND</span>
+                  {p.category} · <span className="font-display text-accent">{formatTND(p.priceMillimes)} DT</span>
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <button onClick={() => startEdit(p)} className="rounded-full border border-ink/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {/* Rupture de stock : un seul geste. Il fallait auparavant
+                  ouvrir le formulaire, décocher "Visible", puis enregistrer. */}
+              <button
+                onClick={() => update.mutate({ token, id: p.id, data: { available: !p.available } })}
+                disabled={update.isPending}
+                aria-pressed={!p.available}
+                className={`min-h-11 rounded-full border px-4 text-xs font-semibold uppercase tracking-wide transition-colors disabled:opacity-40 ${
+                  p.available
+                    ? 'border-ink/25 text-ink/70 hover:border-amber-400 hover:text-amber-700'
+                    : 'border-amber-300 bg-amber-50 text-amber-800'
+                }`}
+              >
+                {p.available ? 'Rupture' : 'Remettre en ligne'}
+              </button>
+              <button onClick={() => startEdit(p)} className="min-h-11 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent">
                 Modifier
               </button>
               <button
                 onClick={() => {
                   if (window.confirm(`Supprimer « ${p.name} » ?`)) remove.mutate({ token, id: p.id })
                 }}
-                className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-red-600 transition-colors hover:bg-red-50"
+                className="min-h-11 rounded-full border border-red-200 px-4 text-xs font-semibold uppercase tracking-wide text-red-600 transition-colors hover:bg-red-50"
               >
                 Supprimer
               </button>
@@ -984,22 +1136,24 @@ function UsersCard({ token }: { token: string }) {
 }
 
 function ExportCard({ token }: { token: string }) {
-  const [downloading, setDownloading] = useState(false)
+  const [downloading, setDownloading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const download = async () => {
-    setDownloading(true)
+  const download = async (kind: 'json' | 'csv') => {
+    setDownloading(kind)
     setError(null)
+    const date = new Date().toISOString().slice(0, 10)
+    const path = kind === 'csv' ? '/api/admin/export/orders.csv' : '/api/admin/export'
+    const filename =
+      kind === 'csv' ? `chez-laziz-commandes-${date}.csv` : `chez-laziz-export-${date}.json`
     try {
-      const res = await fetch('/api/admin/export', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok) throw new Error("Échec de l'export")
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `chez-laziz-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -1007,25 +1161,35 @@ function ExportCard({ token }: { token: string }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Échec de l'export")
     } finally {
-      setDownloading(false)
+      setDownloading(null)
     }
   }
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-sand/70 bg-white shadow-sm p-6 md:p-8">
-      <p className="font-display text-xl">Sauvegarde des données</p>
+    <div className="w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm md:p-8">
+      <p className="font-display text-xl">Exporter vos données</p>
       <p className="mt-2 text-sm font-light text-ink/60">
-        Télécharge un fichier avec tous vos produits, commandes, messages, photos de galerie
-        et statistiques réseaux sociaux — à garder en lieu sûr.
+        Le fichier Excel liste vos commandes ligne par ligne, prix en dinars — c'est celui
+        à donner à votre comptable. La sauvegarde complète, elle, contient tout (produits,
+        commandes, messages, galerie, statistiques) et sert à ne rien perdre.
       </p>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      <button
-        onClick={download}
-        disabled={downloading}
-        className="mt-4 rounded-full border border-ink/25 px-6 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-50"
-      >
-        {downloading ? 'Préparation…' : 'Exporter les données'}
-      </button>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <button
+          onClick={() => download('csv')}
+          disabled={downloading !== null}
+          className="min-h-11 rounded-full bg-ink px-6 text-xs font-semibold uppercase tracking-wide text-[#faf6f3] transition-colors hover:bg-ink-deep disabled:opacity-50"
+        >
+          {downloading === 'csv' ? 'Préparation…' : 'Commandes (Excel)'}
+        </button>
+        <button
+          onClick={() => download('json')}
+          disabled={downloading !== null}
+          className="min-h-11 rounded-full border border-ink/25 px-6 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-50"
+        >
+          {downloading === 'json' ? 'Préparation…' : 'Sauvegarde complète'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -1392,7 +1556,9 @@ function GalleryManager({ token }: { token: string }) {
               onClick={() => {
                 if (window.confirm('Retirer cette photo de la galerie ?')) removePhoto.mutate({ token, id: p.id })
               }}
-              className="absolute inset-x-0 bottom-0 bg-[#2e2a27]/80 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100"
+              // Toujours visible sur écran tactile (aucun survol possible) ;
+              // révélé au survol seulement à partir du desktop.
+              className="absolute inset-x-0 bottom-0 min-h-11 bg-[#2e2a27]/80 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition-opacity md:opacity-0 md:group-hover:opacity-100"
             >
               Supprimer
             </button>
@@ -1514,8 +1680,14 @@ function FooterEditor({ token }: { token: string }) {
 function FooterEditorForm({ token, initial }: { token: string; initial: FooterForm }) {
   const update = trpc.content.updateFooter.useMutation()
   const utils = trpc.useUtils()
-  const [form, setForm] = useState<FooterForm>(initial)
+  const [formState, setFormState] = useState<FooterForm>(initial)
   const [done, setDone] = useState(false)
+  const form = formState
+  // Voir PagesEditorForm : toute frappe invalide le "Enregistré ✓".
+  const setForm = (next: FooterForm | ((f: FooterForm) => FooterForm)) => {
+    setDone(false)
+    setFormState(next)
+  }
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -1573,10 +1745,19 @@ function FooterEditorForm({ token, initial }: { token: string; initial: FooterFo
         <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Texte de copyright</label>
         <input value={form.copyright} onChange={(e) => setForm({ ...form, copyright: e.target.value })} className={inputCls} />
       </div>
-      {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
-      <button type="submit" disabled={update.isPending} className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
-        {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
-      </button>
+      {/* Barre collante : ce formulaire fait plusieurs écrans de haut sur un
+          téléphone, le bouton d'enregistrement ne doit pas être au fond. */}
+      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#faf6f3]/95 px-1 py-3 backdrop-blur">
+        <button type="submit" disabled={update.isPending} className="min-h-11 rounded-full bg-ink px-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
+          {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+        {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
+        {update.isError && (
+          <p className="text-sm text-red-600" role="alert">
+            Non enregistré : {update.error.message}
+          </p>
+        )}
+      </div>
     </form>
   )
 }
@@ -1647,18 +1828,35 @@ function PagesEditor({ token }: { token: string }) {
 
 function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm }) {
   const update = trpc.content.updatePages.useMutation()
+  const utils = trpc.useUtils()
   const [form, setForm] = useState<PagesForm>({ ...EMPTY_PAGES_FORM, ...initial })
   const [done, setDone] = useState(false)
 
   const field = (key: keyof PagesForm) => ({
     value: form[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm({ ...form, [key]: e.target.value }),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      // Dès qu'on retape, le "Enregistré ✓" précédent ne décrit plus l'état
+      // de l'écran : il laissait croire que les nouvelles modifications
+      // étaient déjà sauvegardées.
+      setDone(false)
+      setForm({ ...form, [key]: e.target.value })
+    },
   })
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    update.mutate({ token, ...form }, { onSuccess: () => setDone(true) })
+    setDone(false)
+    update.mutate(
+      { token, ...form },
+      {
+        onSuccess: () => {
+          setDone(true)
+          // Sans invalidation, le site continuait d'afficher l'ancien texte
+          // jusqu'au prochain rechargement complet.
+          utils.content.pages.invalidate()
+        },
+      },
+    )
   }
 
   return (
@@ -1731,10 +1929,17 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
         </div>
       </div>
 
-      {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
-      <button type="submit" disabled={update.isPending} className="rounded-full bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
-        {update.isPending ? 'Enregistrement…' : 'Enregistrer les titres'}
-      </button>
+      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#faf6f3]/95 px-1 py-3 backdrop-blur">
+        <button type="submit" disabled={update.isPending} className="min-h-11 rounded-full bg-ink px-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
+          {update.isPending ? 'Enregistrement…' : 'Enregistrer les titres'}
+        </button>
+        {done && <p className="text-sm text-green-700">Enregistré ✓</p>}
+        {update.isError && (
+          <p className="text-sm text-red-600" role="alert">
+            Non enregistré : {update.error.message}
+          </p>
+        )}
+      </div>
     </form>
   )
 }
@@ -1830,7 +2035,7 @@ function OverviewTab({
         <div className="grid gap-4 sm:grid-cols-3">
           {revenueCards.map((c) => (
             <div key={c.label} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-center">
-              <p className="font-display text-3xl text-accent">{formatTND(c.value)} <span className="text-base">TND</span></p>
+              <p className="font-display text-3xl text-accent">{formatTND(c.value)} <span className="text-base">DT</span></p>
               <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
                 {c.label}
               </p>
@@ -1925,7 +2130,7 @@ function OverviewTab({
                   </span>
                   <span className="flex-1 text-sm">{p.name}</span>
                   <span className="text-xs text-ink/45">{p.qtySold} vendus</span>
-                  <span className="font-display text-accent">{formatTND(p.revenueMillimes)} TND</span>
+                  <span className="font-display text-accent">{formatTND(p.revenueMillimes)} DT</span>
                 </li>
               ))}
             </ul>
@@ -2161,11 +2366,16 @@ export default function AdminPage() {
             {TABS.map((t) => (
               <button
                 key={t.id}
+                // 8 onglets = ~2,5 largeurs d'écran sur un téléphone :
+                // sans ceci, l'onglet actif pouvait rester hors du champ.
+                ref={(el) => {
+                  if (el && tab === t.id) el.scrollIntoView({ block: 'nearest', inline: 'center' })
+                }}
                 onClick={() => {
                   setOrderFilter(null)
                   setTab(t.id)
                 }}
-                className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors ${
                   tab === t.id
                     ? 'bg-ink text-[#faf6f3] shadow-sm'
                     : 'text-ink/55 hover:bg-ink/5 hover:text-ink'

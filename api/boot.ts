@@ -10,6 +10,9 @@ import { rateLimit } from "./lib/rateLimit";
 import { assertAdmin } from "./queries/admin";
 import { getUploadedImage, uploadProductImage, uploadPaymentProof } from "./lib/r2";
 import { getFullExport } from "./queries/backup";
+import { listOrders, type OrderItem } from "./queries/orders";
+import { toCsv, csvResponse } from "./lib/csv";
+import { formatDinars } from "@contracts/shop";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -174,6 +177,73 @@ app.get("/api/admin/export", async (c) => {
       "Content-Disposition": `attachment; filename="chez-laziz-export-${date}.json"`,
     },
   });
+});
+
+// Export des commandes en CSV — ouvrable directement dans Excel, contrairement
+// au dump JSON ci-dessus qui est une sauvegarde technique (prix en millimes,
+// lignes de commande en JSON brut). Une ligne par commande, montants en dinars.
+app.get("/api/admin/export/orders.csv", async (c) => {
+  const token = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  try {
+    await assertAdmin(token);
+  } catch {
+    return c.json({ error: "Non autorisé" }, 401);
+  }
+
+  const orders = await listOrders();
+  const rows = orders.map((o) => {
+    let items: OrderItem[] = [];
+    try {
+      items = JSON.parse(o.items) as OrderItem[];
+    } catch {
+      items = [];
+    }
+    const detail = items
+      .map((it) => `${it.qty} x ${it.name}`)
+      .join(" | ");
+    return [
+      o.id,
+      o.createdAt.toISOString().slice(0, 10),
+      o.createdAt.toISOString().slice(11, 16),
+      o.customerName,
+      o.phone,
+      o.governorate,
+      o.city,
+      o.address,
+      detail,
+      formatDinars(o.subtotalMillimes),
+      formatDinars(o.deliveryFeeMillimes),
+      formatDinars(o.totalMillimes),
+      o.paymentMethod === "d17" ? "D17" : "Espèces",
+      o.paymentStatus,
+      o.status,
+      o.note ?? "",
+    ];
+  });
+
+  const csv = toCsv(
+    [
+      "N° commande",
+      "Date",
+      "Heure",
+      "Client",
+      "Téléphone",
+      "Gouvernorat",
+      "Ville",
+      "Adresse",
+      "Articles",
+      "Sous-total (DT)",
+      "Livraison (DT)",
+      "Total (DT)",
+      "Paiement",
+      "État du paiement",
+      "Statut",
+      "Note",
+    ],
+    rows,
+  );
+  const date = new Date().toISOString().slice(0, 10);
+  return csvResponse(`chez-laziz-commandes-${date}.csv`, csv);
 });
 
 // 1 Mo suffit largement pour ce type de requêtes (commandes, messages,

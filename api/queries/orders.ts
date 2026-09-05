@@ -102,17 +102,32 @@ export async function updateOrderStatus(
   return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
 }
 
-/** Approuve/rejette une preuve de paiement D17 — n'a de sens que pour une
- * commande payée par D17, jamais pour une commande "cash on delivery". */
+/** Met à jour l'état de paiement d'une commande.
+ *
+ * D17 : "approved"/"rejected" = décision de l'admin sur la capture d'écran.
+ * Espèces à la livraison : "paid"/"pending" = argent encaissé ou non, ce
+ * qui était jusqu'ici impossible à enregistrer (la fonction sortait
+ * immédiatement pour toute commande non-D17, donc une commande en espèces
+ * restait "pending" pour toujours). Chaque moyen de paiement n'accepte que
+ * les valeurs qui ont un sens pour lui. */
 export async function updatePaymentStatus(
   id: number,
-  paymentStatus: "approved" | "rejected",
+  paymentStatus: "approved" | "rejected" | "paid" | "pending",
 ) {
   const order = await getDb().query.orders.findFirst({ where: eq(orders.id, id) });
-  if (!order || order.paymentMethod !== "d17") return order ?? null;
+  if (!order) return null;
+  const allowed =
+    order.paymentMethod === "d17"
+      ? ["approved", "rejected"]
+      : ["paid", "pending"];
+  if (!allowed.includes(paymentStatus)) return order;
   await getDb()
     .update(orders)
-    .set({ paymentStatus, updatedAt: new Date() })
+    .set({
+      paymentStatus,
+      paidAt: paymentStatus === "paid" ? new Date() : null,
+      updatedAt: new Date(),
+    })
     .where(eq(orders.id, id));
   return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
 }

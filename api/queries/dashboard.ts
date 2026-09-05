@@ -3,11 +3,28 @@ import { orders } from "@db/schema";
 import { ne } from "drizzle-orm";
 
 type OrderItem = {
-  productId: number;
+  kind?: "product" | "pack" | "custom";
+  productId?: number;
+  packId?: string;
   name: string;
   qty: number;
   unitPriceMillimes: number;
 };
+
+/** Clé de regroupement d'une ligne de commande.
+ *
+ * Une ligne de pack ne porte pas de productId et une ligne de Custom Pack
+ * n'en porte aucun des deux : regrouper sur le seul productId faisait
+ * tomber TOUS les packs et tous les Custom Packs dans la même entrée
+ * `undefined`, fusionnés sous le nom du premier rencontré — le classement
+ * des meilleures ventes devenait faux dès qu'un pack se vendait, et les
+ * packs sont justement les articles les plus chers. */
+function itemKey(it: OrderItem): string {
+  if (it.packId) return `pack:${it.packId}`;
+  if (it.productId != null) return `product:${it.productId}`;
+  // Custom Pack (et anciennes lignes sans identifiant) : le nom fait foi.
+  return `name:${it.name}`;
+}
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -69,22 +86,22 @@ export type TopProduct = {
   revenueMillimes: number;
 };
 
-/** Produits les plus vendus, par quantité (commandes annulées exclues). */
-export async function getTopProducts(limit = 5): Promise<TopProduct[]> {
-  const rows = await getDb().query.orders.findMany({
-    where: ne(orders.status, "annulee"),
-  });
-
-  const map = new Map<number, TopProduct>();
-  for (const o of rows) {
-    for (const it of parseItems(o.items)) {
-      const existing = map.get(it.productId);
+/** Agrégation pure (testable sans base) des lignes de toutes les commandes. */
+export function aggregateTopProducts(
+  itemsPerOrder: OrderItem[][],
+  limit = 5,
+): TopProduct[] {
+  const map = new Map<string, TopProduct>();
+  for (const items of itemsPerOrder) {
+    for (const it of items) {
+      const key = itemKey(it);
+      const existing = map.get(key);
       if (existing) {
         existing.qtySold += it.qty;
         existing.revenueMillimes += it.qty * it.unitPriceMillimes;
       } else {
-        map.set(it.productId, {
-          productId: it.productId,
+        map.set(key, {
+          productId: it.productId ?? 0,
           name: it.name,
           qtySold: it.qty,
           revenueMillimes: it.qty * it.unitPriceMillimes,
@@ -95,4 +112,12 @@ export async function getTopProducts(limit = 5): Promise<TopProduct[]> {
   return Array.from(map.values())
     .sort((a, b) => b.qtySold - a.qtySold)
     .slice(0, limit);
+}
+
+/** Produits les plus vendus, par quantité (commandes annulées exclues). */
+export async function getTopProducts(limit = 5): Promise<TopProduct[]> {
+  const rows = await getDb().query.orders.findMany({
+    where: ne(orders.status, "annulee"),
+  });
+  return aggregateTopProducts(rows.map((o) => parseItems(o.items)), limit);
 }

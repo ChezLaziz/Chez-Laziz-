@@ -10,7 +10,7 @@
 // ADMIN_NOTIFY_EMAIL (destinataire, ex. contact@chezlaziz.com).
 
 import type { OrderItem } from "../queries/orders";
-import { formatWeight } from "@contracts/shop";
+import { formatDinars, formatWeight } from "@contracts/shop";
 
 type NotifiableOrder = {
   id: number;
@@ -30,7 +30,7 @@ type NotifiableOrder = {
 };
 
 function tnd(millimes: number): string {
-  return `${(millimes / 1000).toFixed(3)} TND`;
+  return `${formatDinars(millimes)} DT`;
 }
 
 function escapeHtml(s: string): string {

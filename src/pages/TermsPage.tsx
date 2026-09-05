@@ -57,7 +57,7 @@ export default function TermsPage() {
             <h2 className="mb-2 font-display text-xl text-ink">Livraison et retrait</h2>
             <p>
               Nos produits sont préparés le jour même. Les commandes passées via ce
-              site sont livrées à domicile partout en Tunisie sous 24h (8.000 TND de
+              site sont livrées à domicile partout en Tunisie sous 24h (8 DT de
               frais de livraison, voir la page{' '}
               <Link to="/livraison" className="text-accent underline underline-offset-2">Livraison</Link>). Vous pouvez aussi passer
               directement à la boutique de Kairouan, ouverte 7j/7 de 07h00 à minuit,

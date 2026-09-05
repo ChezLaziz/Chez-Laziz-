@@ -8,11 +8,14 @@ import { setJsonLd } from '@/hooks/useSEO'
 import ProductImage from '@/components/ProductImage'
 import { useLang } from '@/lib/i18n'
 import { CATEGORY_LABELS_AR } from '@/lib/categories'
+import { productName, productDescription } from '@contracts/productText'
 
 type DbProduct = {
   id: number
   name: string
   description: string | null
+  nameAr?: string | null
+  descriptionAr?: string | null
   priceMillimes: number
   category: string
   badge: string | null
@@ -56,12 +59,14 @@ function ProductCard({
   lang: 'fr' | 'ar'
 }) {
   const isAr = lang === 'ar'
+  const displayName = productName(product, lang)
+  const displayDescription = productDescription(product, lang)
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-sand bg-white transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgba(46,42,39,0.25)]">
       <div className="relative aspect-square overflow-hidden">
         <ProductImage
           src={product.imageUrl}
-          alt={product.name}
+          alt={displayName}
           className="transition-transform duration-500 hover:scale-105"
         />
         {product.badge && (
@@ -73,19 +78,19 @@ function ProductCard({
 
       <div className="flex flex-1 flex-col p-5">
         {/* Titre court */}
-        <h4 className="font-display text-lg leading-snug">{product.name}</h4>
+        <h4 className="font-display text-lg leading-snug">{displayName}</h4>
 
         {/* Description courte */}
-        {product.description && (
+        {displayDescription && (
           <p className="mt-1.5 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
-            {product.description}
+            {displayDescription}
           </p>
         )}
 
         {/* Prix — sous le titre/description. Prix pour 1 kg ; le poids
             (500 g à 2,5 kg) se choisit à l'étape de la commande. */}
         <p className="mt-3 font-display text-xl text-accent">
-          {formatTND(product.priceMillimes)} <span className="text-xs">{isAr ? 'د.ت / كغ' : 'TND / kg'}</span>
+          {formatTND(product.priceMillimes)} <span className="text-xs">{isAr ? 'د.ت / كغ' : 'DT / kg'}</span>
         </p>
 
         {/* Action — ajoute 1 kg ; le poids se change ensuite sur la page Commander */}
@@ -102,7 +107,7 @@ function ProductCard({
             <div className="flex items-center justify-between rounded-full border border-[#b8912e] bg-[#f5ece5] px-2 py-1">
               <button
                 type="button"
-                aria-label={isAr ? `إنقاص ${product.name}` : `Retirer un ${product.name}`}
+                aria-label={isAr ? `إنقاص ${displayName}` : `Retirer un ${displayName}`}
                 onClick={() => onSetQty(qty - 1)}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-[#b8912e]/15"
               >
@@ -113,7 +118,7 @@ function ProductCard({
               </span>
               <button
                 type="button"
-                aria-label={isAr ? `زيادة ${product.name}` : `Ajouter un ${product.name}`}
+                aria-label={isAr ? `زيادة ${displayName}` : `Ajouter un ${displayName}`}
                 onClick={onAdd}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-[#b8912e]/15"
               >
@@ -163,21 +168,23 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
         position: i + 1,
         item: {
           '@type': 'Product',
-          name: p.name,
+          // Les données structurées décrivent la page telle qu'elle est
+          // affichée : nom arabe sur /ar/collection, français ailleurs.
+          name: productName(p, lang),
           category: p.category,
-          ...(p.description ? { description: p.description } : {}),
+          ...(productDescription(p, lang) ? { description: productDescription(p, lang) } : {}),
           ...(p.imageUrl ? { image: `https://chezlaziz.com${p.imageUrl}` } : {}),
           offers: {
             '@type': 'Offer',
             price: (p.priceMillimes / 1000).toFixed(3),
             priceCurrency: 'TND',
             availability: 'https://schema.org/InStock',
-            url: 'https://chezlaziz.com/collection',
+            url: lang === 'ar' ? 'https://chezlaziz.com/ar/collection' : 'https://chezlaziz.com/collection',
           },
         },
       })),
     })
-  }, [products])
+  }, [products, lang])
 
   return (
     <section id="collection" className="bg-cream py-24 md:py-36">

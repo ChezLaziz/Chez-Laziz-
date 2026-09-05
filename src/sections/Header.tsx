@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useCart } from '@/providers/cart'
-import { useLang, useIsBilingualPage, altLangPath, type Lang } from '@/lib/i18n'
+import { useLang, type Lang } from '@/lib/i18n'
+import LanguageSwitch from '@/components/LanguageSwitch'
 
 // Navigation volontairement courte : le parcours principal est
 // Accueil → Collection → Commander → Nous trouver. La Maison et la
@@ -45,33 +46,9 @@ function NavLink({ href, label, onClick }: { href: string; label: string; onClic
   )
 }
 
-/** Bouton FR / عربي — visible seulement sur les pages qui existent dans les
- * deux langues (voir BILINGUAL_BASE_PATHS). Conserve la page équivalente
- * et la chaîne de requête (utile pour ?produit=… par ex.). */
-function LanguageSwitch({ tone }: { tone: 'light' | 'dark' }) {
-  const { pathname, search } = useLocation()
-  const lang = useLang()
-  const target = lang === 'ar' ? 'fr' : 'ar'
-  const href = altLangPath(pathname, search, target)
-  return (
-    <Link
-      to={href}
-      lang={target}
-      className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors ${
-        tone === 'light'
-          ? 'border-ink/20 text-ink/70 hover:border-[#b8912e] hover:text-accent'
-          : 'border-[#faf6f3]/50 text-[#faf6f3] hover:bg-[#faf6f3] hover:text-ink'
-      }`}
-    >
-      {target === 'ar' ? 'عربي' : 'FR'}
-    </Link>
-  )
-}
-
 export default function Header() {
   const { pathname } = useLocation()
   const lang = useLang()
-  const isBilingual = useIsBilingualPage()
   const isHome = pathname === '/' || pathname === '/ar'
   const [scrolledState, setScrolled] = useState(false)
   // Sur les pages sans photo en fond (tout sauf l'accueil), le header doit
@@ -117,11 +94,11 @@ export default function Header() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
           <Link
             to={lang === 'ar' ? '/ar' : '/'}
-            className="flex items-center gap-2.5"
+            className="flex min-w-0 items-center gap-2 md:gap-2.5"
           >
-            <img src="/images/logo.webp" alt="Chez Laziz" className="h-10 w-10 md:h-12 md:w-12" />
+            <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 shrink-0 md:h-12 md:w-12" />
             <span
-              className={`font-display text-xl tracking-[0.14em] md:text-2xl ${
+              className={`truncate font-display text-base tracking-[0.08em] sm:text-xl sm:tracking-[0.14em] md:text-2xl ${
                 scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
               }`}
             >
@@ -137,7 +114,7 @@ export default function Header() {
             {LINKS.map((l) => (
               <NavLink key={l.href} {...l} />
             ))}
-            {isBilingual && <LanguageSwitch tone={scrolled ? 'light' : 'dark'} />}
+            <LanguageSwitch tone={scrolled ? 'light' : 'dark'} />
             <Link
               to={orderHref(lang)}
               aria-label={lang === 'ar' ? 'عربة التسوق' : 'Voir le panier'}
@@ -166,7 +143,8 @@ export default function Header() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-1 md:hidden">
+          <div className="flex items-center gap-1.5 md:hidden">
+            <LanguageSwitch tone={scrolled || open ? 'light' : 'dark'} />
             <Link
               to={orderHref(lang)}
               aria-label={lang === 'ar' ? 'عربة التسوق' : 'Voir le panier'}
@@ -236,14 +214,12 @@ export default function Header() {
             </a>
           ),
         )}
-        {isBilingual && (
-          <div
-            className="transition-all duration-500"
-            style={{ transitionDelay: open ? `${120 + MOBILE_LINKS.length * 60}ms` : '0ms', opacity: open ? 1 : 0, transform: open ? 'none' : 'translateY(16px)' }}
-          >
-            <LanguageSwitch tone="dark" />
-          </div>
-        )}
+        <div
+          className="transition-all duration-500"
+          style={{ transitionDelay: open ? `${120 + MOBILE_LINKS.length * 60}ms` : '0ms', opacity: open ? 1 : 0, transform: open ? 'none' : 'translateY(16px)' }}
+        >
+          <LanguageSwitch tone="dark" size="lg" />
+        </div>
         <a
           href="tel:+21623691039"
           className="mt-4 rounded-full bg-[#b8912e] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"

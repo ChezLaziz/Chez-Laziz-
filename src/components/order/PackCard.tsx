@@ -20,14 +20,15 @@ function CrownIcon() {
  * Une fois ajouté, la carte affiche la quantité et un raccourci vers la
  * commande.
  *
- * pack.name / pack.tagline / pack.contents viennent de contracts/packs.ts
- * (données catalogue, testées exhaustivement dans packs.test.ts) et restent
- * en français pour l'instant — même limitation connue que les noms/
- * descriptions produits ailleurs sur le site. Seul le texte d'interface
- * autour (boutons, libellés) se traduit. */
+ * pack.contents liste les produits par leur nom français exact — c'est la
+ * clé qui relie un pack au catalogue (voir packPhotos dans OrderPage) et
+ * elle ne doit jamais être traduite. Le nom affiché, lui, vient du produit
+ * correspondant (contentsAr) pour que la carte arabe soit entièrement en
+ * arabe sans casser cette liaison. */
 export default function PackCard({
   pack,
   photos,
+  contentsAr,
   qty,
   onAdd,
   onSetQty,
@@ -36,6 +37,8 @@ export default function PackCard({
   pack: FixedPack
   /** Photo de chaque produit inclus, dans l'ordre (null = pas encore de photo). */
   photos: { src: string | null; alt: string }[]
+  /** Nom affiché de chaque produit inclus, dans l'ordre — déjà traduit. */
+  contentsAr: string[]
   qty: number
   onAdd: () => void
   onSetQty: (qty: number) => void
@@ -43,6 +46,8 @@ export default function PackCard({
 }) {
   const lang = useLang()
   const isAr = lang === 'ar'
+  const packName = isAr ? pack.nameAr : pack.name
+  const packBadge = isAr ? pack.badgeAr : pack.badge
   const highlight = pack.id === 'vip'
   const weight = packWeightKg(pack)
   const n = pack.contents.length
@@ -52,12 +57,18 @@ export default function PackCard({
       className={`relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
         highlight ? 'border-[#b8912e] ring-1 ring-[#b8912e]/40' : 'border-sand/80'
       } ${qty > 0 ? 'ring-2 ring-[#b8912e]/50' : ''}`}
-      aria-label={`${pack.name} — ${formatPriceDT(pack.priceMillimes, lang)}`}
+      aria-label={`${packName} — ${formatPriceDT(pack.priceMillimes, lang)}`}
     >
-      {pack.badge && (
-        <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-[#2e2a27] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#e9c766]">
+      {packBadge && (
+        // tracking-[0.2em] casse les ligatures de l'écriture arabe : la
+        // pastille passe en interlettrage normal sur la version arabe.
+        <span
+          className={`absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-[#2e2a27] px-3 py-1.5 text-[10px] font-semibold text-[#e9c766] ${
+            isAr ? 'tracking-normal' : 'uppercase tracking-[0.2em]'
+          }`}
+        >
           <CrownIcon />
-          {pack.badge}
+          {packBadge}
         </span>
       )}
 
@@ -78,17 +89,18 @@ export default function PackCard({
       </div>
 
       <div className="flex flex-1 flex-col p-5 md:p-6">
-        <h3 className="font-display text-2xl leading-tight">{pack.name}</h3>
-        <p className="mt-1.5 text-sm font-light leading-relaxed text-ink/60">{pack.tagline}</p>
+        <h3 className="font-display text-2xl leading-tight">{packName}</h3>
+        <p className="mt-1.5 text-sm font-light leading-relaxed text-ink/60">{isAr ? pack.taglineAr : pack.tagline}</p>
 
         <ul className="mt-4 space-y-2 text-[15px]">
-          {pack.contents.map((name) => (
+          {pack.contents.map((name, i) => (
             <li key={name} className="flex items-start gap-2.5">
               <span className="mt-[3px] text-accent" aria-hidden="true">
                 ✓
               </span>
               <span>
-                {name} <span className="text-ink/45">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
+                {isAr ? (contentsAr[i] ?? name) : name}{' '}
+                <span className="text-ink/45">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
               </span>
             </li>
           ))}
@@ -114,14 +126,14 @@ export default function PackCard({
           </button>
         ) : (
           <div className="mt-5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${pack.name}`}>
-              <button type="button" aria-label={isAr ? `إنقاص ${pack.name}` : `Retirer un ${pack.name}`} onClick={() => onSetQty(qty - 1)} className={stepperBtnCls}>
+            <div className="flex items-center gap-2" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${packName}`}>
+              <button type="button" aria-label={isAr ? `إنقاص ${packName}` : `Retirer un ${packName}`} onClick={() => onSetQty(qty - 1)} className={stepperBtnCls}>
                 −
               </button>
               <span className="w-7 text-center font-display text-lg" aria-live="polite">
                 {qty}
               </span>
-              <button type="button" aria-label={isAr ? `زيادة ${pack.name}` : `Ajouter un ${pack.name}`} onClick={() => onSetQty(qty + 1)} className={stepperBtnCls}>
+              <button type="button" aria-label={isAr ? `زيادة ${packName}` : `Ajouter un ${packName}`} onClick={() => onSetQty(qty + 1)} className={stepperBtnCls}>
                 +
               </button>
             </div>

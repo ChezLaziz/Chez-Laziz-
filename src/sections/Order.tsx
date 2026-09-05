@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND, MESSENGER_URL, PHONE_TEL, PHONE_DISPLAY } from '@/lib/shop'
 import { useLang } from '@/lib/i18n'
+import { productName } from '@contracts/productText'
 
 export default function Order() {
   const lang = useLang()
@@ -49,21 +50,21 @@ export default function Order() {
               </h2>
               <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-[#faf6f3]/80">
                 {isAr
-                  ? "اختاروا المقروض ووزنه، أدخلوا عنوانكم — التوصيل لكل الجمهوريات التونسية خلال 24 ساعة (8.000 د.ت)، والدفع عند الاستلام أو عبر D17. تفضّلون التحدث مع أحد؟ اتصلوا بنا أو راسلونا عبر ماسنجر. نرحّب بالطلبات الخاصة للأعراس والحفلات والأعياد."
-                  : "Choisissez vos makroudh et leur poids, indiquez votre adresse — livraison partout en Tunisie sous 24h (8.000 TND), paiement à la livraison ou par D17. Vous préférez parler à quelqu'un ? Appelez-nous ou écrivez-nous sur Messenger. Commandes spéciales pour mariages, fêtes et Aïd bienvenues."}
+                  ? "اختاروا المقروض ووزنه، أدخلوا عنوانكم — التوصيل لكل الجمهوريات التونسية خلال 24 ساعة (8 د.ت)، والدفع عند الاستلام أو عبر D17. تفضّلون التحدث مع أحد؟ اتصلوا بنا أو راسلونا عبر ماسنجر. نرحّب بالطلبات الخاصة للأعراس والحفلات والأعياد."
+                  : "Choisissez vos makroudh et leur poids, indiquez votre adresse — livraison partout en Tunisie sous 24h (8 DT), paiement à la livraison ou par D17. Vous préférez parler à quelqu'un ? Appelez-nous ou écrivez-nous sur Messenger. Commandes spéciales pour mariages, fêtes et Aïd bienvenues."}
               </p>
 
               {/* Quick price recap — prix pour 1 kg */}
               <ul className="mt-8 space-y-3 border-t border-[#faf6f3]/15 pt-8">
                 {quick.map((q) => (
                   <li key={q.id} className="flex items-baseline text-[15px] font-light">
-                    <span>{q.name}</span>
+                    <span>{productName(q, lang)}</span>
                     <span
                       className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25"
                       aria-hidden="true"
                     />
                     <span className="font-display text-[#b8912e]">
-                      {formatTND(q.priceMillimes)} <span className="text-xs">{isAr ? 'د.ت / كغ' : 'TND / kg'}</span>
+                      {formatTND(q.priceMillimes)} <span className="text-xs">{isAr ? 'د.ت / كغ' : 'DT / kg'}</span>
                     </span>
                   </li>
                 ))}
