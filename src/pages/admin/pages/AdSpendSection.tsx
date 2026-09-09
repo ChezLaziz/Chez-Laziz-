@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import type { inferRouterOutputs } from '@trpc/server'
 import { trpc } from '@/providers/trpc'
+import type { AppRouter } from '../../../../api/router'
 import { formatTND } from '@/lib/shop'
 import { Card } from '../ui/Card'
 import { Cell, Row, Table } from '../ui/Table'
@@ -176,9 +178,12 @@ export default function AdSpendSection({ token }: { token: string }) {
   )
 }
 
-type MonthPerf = NonNullable<
-  ReturnType<typeof trpc.marketing.adPerformance.useQuery>['data']
->['months'][number]
+/** Le mois tel que le serveur le renvoie.
+ *
+ * Déduit du routeur, pas redéclaré à la main : si le calcul côté serveur
+ * change de forme, c'est ici que la compilation échoue — pas l'affichage
+ * en production. */
+type MonthPerf = inferRouterOutputs<AppRouter>['marketing']['adPerformance']['months'][number]
 
 function fr(n: number, digits = 2): string {
   return n.toFixed(digits).replace('.', ',')
@@ -297,7 +302,7 @@ function MonthCard({
                   <button
                     type="button"
                     onClick={() => onRemove(s.source)}
-                    disabled={removing?.source === s.source && removing.month === month.month}
+                    disabled={removing?.source === s.source && removing?.month === month.month}
                     className="text-[11px] text-ink/35 transition-colors hover:text-red-600 disabled:opacity-40"
                     title="Supprimer cette dépense"
                   >
