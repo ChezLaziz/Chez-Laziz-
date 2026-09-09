@@ -6,7 +6,17 @@ import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
 import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL, WHATSAPP_DIGITS } from '@/lib/shop'
 import { whatsAppOrderMessage, whatsAppOrderUrl } from '@contracts/whatsappOrder'
-import { CUSTOMER_MEMORY_KEY, parseRememberedCustomer, serializeRememberedCustomer } from '@contracts/customerMemory'
+import { orderErrorMessage } from '@contracts/orderErrors'
+import { unresolvableLines } from '@contracts/cartPruning'
+import { orderIdempotencyKey } from '@contracts/orderKey'
+import { itemsLabelAr } from '@contracts/arabicPlural'
+import { isValidTunisianPhone } from '@contracts/phone'
+import {
+  CUSTOMER_DRAFT_KEY,
+  CUSTOMER_MEMORY_KEY,
+  parseRememberedCustomer,
+  serializeRememberedCustomer,
+} from '@contracts/customerMemory'
 import ProductImage from '@/components/ProductImage'
 import { track } from '@/lib/analytics'
 import { trackMeta, type MetaContentItem } from '@/lib/metaPixel'
@@ -34,6 +44,7 @@ import {
 } from '@contracts/shop'
 import {
   CUSTOM_PACK_PACKAGING_LABEL,
+  CUSTOM_PACK_PACKAGING_LABEL_AR,
   CUSTOM_PACK_SIZE,
   CUSTOM_PACK_WEIGHT_KG,
   FIXED_PACKS,
@@ -51,7 +62,11 @@ import {
 function readRememberedCustomer() {
   let saved: ReturnType<typeof parseRememberedCustomer> = null
   try {
-    saved = parseRememberedCustomer(localStorage.getItem(CUSTOMER_MEMORY_KEY))
+    // Le brouillon d'abord : s'il existe, c'est ce que le client était en
+    // train d'écrire à l'instant, et il prime sur la commande d'avant-hier.
+    saved =
+      parseRememberedCustomer(localStorage.getItem(CUSTOMER_DRAFT_KEY)) ??
+      parseRememberedCustomer(localStorage.getItem(CUSTOMER_MEMORY_KEY))
   } catch {
     return null
   }
@@ -66,8 +81,9 @@ function readRememberedCustomer() {
   return saved
 }
 
-function TopBar({ whatsAppHref }: { whatsAppHref: string }) {
-  const { count } = useCart()
+/** `count` vient de la page, pas du panier brut : voir « le panier fantôme »
+ * plus bas. Le badge doit dire ce que la commande contient vraiment. */
+function TopBar({ whatsAppHref, count }: { whatsAppHref: string; count: number }) {
   const lang = useLang()
   const isAr = lang === 'ar'
   return (
@@ -112,7 +128,7 @@ function TopBar({ whatsAppHref }: { whatsAppHref: string }) {
           <a
             href="#recap"
             className="relative flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent"
-            aria-label={isAr ? `طلبكم، ${count} عنصر` : `Votre commande, ${count} article${count > 1 ? 's' : ''}`}
+            aria-label={isAr ? `طلبكم، ${itemsLabelAr(count)}` : `Votre commande, ${count} article${count > 1 ? 's' : ''}`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.6a1 1 0 0 0 1-.8L21 8H7" strokeLinecap="round" strokeLinejoin="round" />
@@ -137,6 +153,9 @@ const inputCls =
 const stepperBtnCls =
   'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
 
+/** Au-delà, on rend son bouton au client plutôt que de le laisser attendre. */
+const SUBMIT_STALL_MS = 20_000
+
 const GENERIC_ERROR = `Une erreur est survenue — réessayez, ou appelez-nous au ${PHONE_DISPLAY}.`
 const GENERIC_ERROR_AR = `حدث خطأ — أعيدوا المحاولة، أو اتصلوا بنا على ⁦${PHONE_DISPLAY}⁩.`
 const MAPS_URL =
@@ -145,15 +164,16 @@ const MAPS_URL =
 /** Les messages métier du serveur ("preuve D17 obligatoire", "produit
  * indisponible") sont lisibles tels quels ; une erreur de validation
  * technique (JSON, zod) est remplacée par un message humain. */
+/** Ce que le client lit quand ça rate.
+ *
+ * Liste BLANCHE, pas noire : seuls les refus que NOUS avons écrits sont
+ * affichés, traduits dans sa langue ; tout le reste devient le message
+ * générique. L'ancienne liste noire laissait passer ce qu'elle n'avait pas
+ * prévu — un vrai navigateur affichait « Unable to transform response from
+ * server » à la place de la commande. Voir contracts/orderErrors.ts. */
 function friendlyError(message: string | undefined, isAr: boolean): string {
   const generic = isAr ? GENERIC_ERROR_AR : GENERIC_ERROR
-  if (!message) return generic
-  const technical =
-    message.startsWith('[') ||
-    message.startsWith('{') ||
-    /invalid_type|expected|received|zod|undefined|null/i.test(message) ||
-    message.length > 180
-  return technical ? generic : message
+  return orderErrorMessage(message, isAr ? 'ar' : 'fr', generic)
 }
 
 function newIdempotencyKey(): string {
@@ -163,17 +183,7 @@ function newIdempotencyKey(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`
 }
 
-function digitsOnly(s: string) {
-  return s.replace(/\D/g, '')
-}
-
 /** Numéro tunisien : 8 chiffres (fixe/mobile), avec ou sans indicatif +216. */
-function isValidTunisianPhone(phone: string): boolean {
-  const digits = digitsOnly(phone)
-  const local = digits.startsWith('216') ? digits.slice(3) : digits
-  return local.length === 8
-}
-
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
@@ -274,12 +284,13 @@ export default function OrderPage() {
           breadcrumb: 'Commander',
         },
   )
-  const { data: products, isLoading } = trpc.products.list.useQuery()
+  const { data: products, isLoading, isError: catalogError } = trpc.products.list.useQuery()
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
   const catalog = useMemo(() => (products ?? []) as CatalogProduct[], [products])
 
-  const { lines, count, add, setQty, packQty, addPack, addCustom, setLineQty, removeLine, clear } = useCart()
+  const { lines, add, setQty, packQty, addPack, addCustom, setLineQty, removeLine, dropUnresolvable, clear } =
+    useCart()
 
   const [tab, setTab] = useState<Tab>(() =>
     typeof window !== 'undefined' ? tabFromHash(window.location.hash) : 'produits',
@@ -365,7 +376,8 @@ export default function OrderPage() {
   const [proofPreview, setProofPreview] = useState<string | null>(null)
   const [proofUploading, setProofUploading] = useState(false)
   const [proofError, setProofError] = useState<string | null>(null)
-  const [idempotencyKey, setIdempotencyKey] = useState(() => newIdempotencyKey())
+  // Renouvelé après chaque commande réussie ; voir orderIdempotencyKey.
+  const [idempotencySalt, setIdempotencySalt] = useState(() => newIdempotencyKey())
   const [placed, setPlaced] = useState<Placed | null>(null)
   const [recapCopied, setRecapCopied] = useState(false)
   const checkoutStartedRef = useRef(false)
@@ -419,6 +431,45 @@ export default function OrderPage() {
   }, [placed])
 
   const items: DisplayLine[] = useMemo(() => buildDisplayLines(lines, catalog, lang), [lines, catalog, lang])
+  /** Le panier fantôme.
+   *
+   * Un panier vit des jours dans le navigateur. Si un produit est supprimé
+   * ou masqué depuis l'admin entre-temps, sa ligne devient introuvable :
+   * elle disparaît du récapitulatif MAIS restait comptée dans le panier. Le
+   * client voyait « 1 article », un total de 8 DT — les frais de port seuls —
+   * et, en dessous, « votre commande est vide ». Constaté dans un vrai
+   * navigateur, capture à l'appui : plus aucun moyen d'avancer.
+   *
+   * Ici, tout ce que la page affiche est DÉRIVÉ des lignes réellement
+   * chiffrées. Le fantôme ne peut donc plus apparaître nulle part. On le
+   * signale au client et on lui laisse le geste : retirer une ligne de son
+   * panier sans qu'il l'ait demandé est une décision qui lui appartient.
+   *
+   * La garde compte : rien n'est déclaré orphelin tant que le catalogue n'a
+   * pas réellement répondu — sinon une panne réseau accuserait un panier
+   * parfaitement valide. */
+  const catalogReady = !isLoading && !catalogError && catalog.length > 0
+  const orphelines = useMemo(
+    () => (catalogReady ? unresolvableLines(lines, catalog.map((p) => p.id)) : []),
+    [catalogReady, lines, catalog],
+  )
+  const orphanCount = orphelines.reduce((s, l) => s + l.qty, 0)
+  /** Ce que le client a VRAIMENT dans sa commande, fantômes exclus. */
+  const itemCount = items.reduce((s, l) => s + l.qty, 0)
+
+  /** La clé d'idempotence suit le CONTENU du panier.
+   *
+   * Elle protège du double envoi : même clé, même commande côté serveur.
+   * Mais elle n'était renouvelée qu'APRÈS un succès. Si l'envoi échouait,
+   * que le client modifiait son panier puis réessayait, le serveur
+   * retrouvait la clé et renvoyait la PREMIÈRE commande — pendant que
+   * l'écran affichait le nouveau panier. Le client recevait et payait autre
+   * chose que ce qu'on venait de lui confirmer. Voir contracts/orderKey.ts. */
+  const idempotencyKey = useMemo(
+    () => orderIdempotencyKey(idempotencySalt, JSON.stringify(lines)),
+    [idempotencySalt, lines],
+  )
+
   const subtotal = items.reduce((s, l) => s + l.qty * l.unitPriceMillimes, 0)
   const total = subtotal + DELIVERY_FEE_MILLIMES
   const totalWeightKg = items.reduce((s, l) => s + l.qty * l.weightKg, 0)
@@ -567,7 +618,14 @@ export default function OrderPage() {
   const addressValid =
     name.trim().length >= 2 && phoneValid && !!governorate && city.trim().length > 0 && address.trim().length >= 5
   const paymentValid = paymentMethod === 'cod' || !!proofKey
-  const canSubmit = items.length > 0 && addressValid && paymentValid && !createOrder.isPending && !proofUploading
+  /** La commande est-elle COMPLÈTE ? Rien d'autre.
+   *
+   * Elle contenait aussi `!createOrder.isPending`. Résultat : une fois le
+   * bouton rendu au client après un envoi qui traîne, son second appui
+   * repartait en silence — un bouton mort de plus, à l'endroit exact où on
+   * venait d'en supprimer un. L'envoi en cours se garde à l'entrée de
+   * submit(), pas ici. */
+  const canSubmit = items.length > 0 && addressValid && paymentValid
 
   /** Le premier champ qui manque, avec de quoi le montrer.
    *
@@ -607,6 +665,18 @@ export default function OrderPage() {
       }
     return null
   }
+  /** L'envoi qui n'en finit pas.
+   *
+   * Piloté dans un navigateur : requête laissée sans réponse, le bouton
+   * affichait « ENVOI… » indéfiniment. Sur du mobile tunisien, une requête
+   * qui n'aboutit jamais est banale ; le client attend, puis s'en va, et il
+   * n'a AUCUN moyen de savoir quoi faire. Passé le délai, on lui rend son
+   * bouton et on lui montre la sortie. Réessayer est sans danger : la clé
+   * d'idempotence est liée au contenu du panier, donc une commande partie
+   * deux fois n'en crée qu'une (voir contracts/orderKey.ts). */
+  const [submitStalled, setSubmitStalled] = useState(false)
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [missingHint, setMissingHint] = useState<{
     id: string
     message: string
@@ -652,6 +722,31 @@ export default function OrderPage() {
         {activeHint.message}
       </p>
     ) : null
+
+  /** Range le brouillon à chaque frappe.
+   *
+   * Écrit dans un gestionnaire d'événement, jamais dans un effet : c'est le
+   * geste du client qui déclenche l'enregistrement. Le stockage peut être
+   * refusé (navigation privée, quota) — on continue sans, la commande
+   * compte plus que le confort. */
+  const saveDraft = (champs: Partial<Parameters<typeof serializeRememberedCustomer>[0]>) => {
+    try {
+      localStorage.setItem(
+        CUSTOMER_DRAFT_KEY,
+        serializeRememberedCustomer({
+          name,
+          phone,
+          governorate,
+          city,
+          delegationId,
+          address,
+          ...champs,
+        }),
+      )
+    } catch {
+      // stockage indisponible — tant pis, rien de vital n'en dépend
+    }
+  }
 
   const goToMissing = (miss: { id: string; message: string }) => {
     setMissingHint(miss)
@@ -722,7 +817,7 @@ export default function OrderPage() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (createOrder.isPending || proofUploading) return
+    if ((createOrder.isPending && !submitStalled) || proofUploading) return
     const miss = firstMissing()
     if (miss) {
       goToMissing(miss)
@@ -730,6 +825,9 @@ export default function OrderPage() {
     }
     setMissingHint(null)
     if (!canSubmit) return
+    setSubmitStalled(false)
+    if (stallTimerRef.current) clearTimeout(stallTimerRef.current)
+    stallTimerRef.current = setTimeout(() => setSubmitStalled(true), SUBMIT_STALL_MS)
     const snapshot = items.map((l) => ({
       key: l.key,
       label: `${l.qty} × ${l.name} (${kgLabel(l.weightKg, lang)})`,
@@ -779,10 +877,14 @@ export default function OrderPage() {
       },
       {
         onSuccess: (order) => {
+          if (stallTimerRef.current) clearTimeout(stallTimerRef.current)
+          setSubmitStalled(false)
           // Rangé seulement après une commande RÉELLEMENT acceptée : une
           // adresse que le serveur a refusée n'a rien à revenir toute seule
           // dans le formulaire de la prochaine.
           try {
+            // Le brouillon a fait son office : la commande est enregistrée.
+            localStorage.removeItem(CUSTOMER_DRAFT_KEY)
             localStorage.setItem(
               CUSTOMER_MEMORY_KEY,
               serializeRememberedCustomer({
@@ -832,8 +934,20 @@ export default function OrderPage() {
             },
           })
           clear()
-          setIdempotencyKey(newIdempotencyKey())
+          setIdempotencySalt(newIdempotencyKey())
           window.scrollTo({ top: 0 })
+        },
+        // LE DÉFAUT LE PLUS COÛTEUX DE TOUT LE TUNNEL, constaté à l'écran :
+        // le message de refus s'affiche sous le bouton « Commander ». Or
+        // depuis la barre flottante, ce bouton est HORS ÉCRAN par
+        // construction — c'est même la seule raison d'être de la barre. Le
+        // client appuyait, le serveur refusait, et il ne voyait STRICTEMENT
+        // RIEN. Il appuyait encore, puis partait. On le ramène donc au
+        // message, comme on le fait déjà pour un champ manquant.
+        onError: () => {
+          if (stallTimerRef.current) clearTimeout(stallTimerRef.current)
+          setSubmitStalled(false)
+          scrollToId('cl-submit')
         },
       },
     )
@@ -873,7 +987,7 @@ export default function OrderPage() {
   if (placed) {
     return (
       <div className="min-h-screen bg-[#faf6f3]">
-        <TopBar whatsAppHref={whatsAppHref} />
+        <TopBar whatsAppHref={whatsAppHref} count={itemCount} />
         <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-20 text-center md:py-28">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#b8912e]/15 text-accent">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -973,11 +1087,11 @@ export default function OrderPage() {
   const customBarTotal = customPackTotal(chosenForBar.map((p) => p.priceMillimes))
   // La barre reste tant que le bouton final n'est pas sous les yeux du
   // client — pas seulement avant d'atteindre le récapitulatif.
-  const showBar = composing || (count > 0 && !submitVisible)
+  const showBar = composing || (itemCount > 0 && !submitVisible)
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">
-      <TopBar whatsAppHref={whatsAppHref} />
+      <TopBar whatsAppHref={whatsAppHref} count={itemCount} />
 
       {/* ── En-tête ──
           COURT PAR NÉCESSITÉ. Mesuré sur un téléphone de 844 px : l'ancienne
@@ -1251,6 +1365,28 @@ export default function OrderPage() {
         <section id="recap" ref={recapRef} className="mt-12 scroll-mt-20 border-t border-sand/60 pt-8 md:mt-20 md:scroll-mt-24 md:pt-12">
           <h2 className="text-center font-display text-2xl md:text-3xl">{isAr ? 'إتمام الطلب' : 'Votre commande'}</h2>
 
+          {/* On le dit, on ne le fait pas en douce : un article qui s'évapore
+              sans un mot passe pour un bug et fait fuir. */}
+          {orphanCount > 0 && (
+            <div
+              className="mx-auto mt-4 max-w-xl rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/10 px-4 py-3 text-center text-[13px] text-ink/80"
+              role="status"
+            >
+              <p>
+                {isAr
+                  ? `${orphanCount > 1 ? `${orphanCount} عناصر لم تعد متوفّرة` : 'عنصر لم يعد متوفّرًا'} ولا يمكن طلبها. اتصلوا بنا على ⁦${PHONE_DISPLAY}⁩ إذا كنتم تريدونها.`
+                  : `${orphanCount > 1 ? `${orphanCount} articles ne sont plus disponibles` : "Un article n'est plus disponible"} et ne peut plus être commandé. Appelez-nous au ${PHONE_DISPLAY} si vous y tenez.`}
+              </p>
+              <button
+                type="button"
+                onClick={() => dropUnresolvable(catalog.map((p) => p.id))}
+                className="mt-2 min-h-9 rounded-full border border-ink/25 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:border-[#b8912e] hover:text-accent"
+              >
+                {isAr ? 'أزيلوه من السلة' : 'Retirer de mon panier'}
+              </button>
+            </div>
+          )}
+
           {items.length === 0 ? (
             <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-sand bg-white p-8 text-center">
               <p className="font-display text-xl">{isAr ? 'طلبكم فارغ' : 'Votre commande est vide'}</p>
@@ -1332,8 +1468,8 @@ export default function OrderPage() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium text-ink">
                       {isAr
-                        ? `${count} عنصر · ${kgLabel(totalWeightKg, lang)}`
-                        : `${count} article${count > 1 ? 's' : ''} · ${kgLabel(totalWeightKg, lang)}`}
+                        ? `${itemsLabelAr(itemCount)} · ${kgLabel(totalWeightKg, lang)}`
+                        : `${itemCount} article${itemCount > 1 ? 's' : ''} · ${kgLabel(totalWeightKg, lang)}`}
                     </span>
                     <span className="block text-[11px] text-ink/50">
                       {linesOpen
@@ -1394,7 +1530,8 @@ export default function OrderPage() {
                           )}
                           {l.packagingMillimes > 0 && (
                             <p className="mt-2 text-xs text-ink/50">
-                              {isAr ? 'المنتجات' : 'Produits'} {formatPriceDT(l.unitPriceMillimes - l.packagingMillimes, lang)} + {CUSTOM_PACK_PACKAGING_LABEL}{' '}
+                              {isAr ? 'المنتجات' : 'Produits'} {formatPriceDT(l.unitPriceMillimes - l.packagingMillimes, lang)} +{' '}
+                              {isAr ? CUSTOM_PACK_PACKAGING_LABEL_AR : CUSTOM_PACK_PACKAGING_LABEL}{' '}
                               {formatPriceDT(l.packagingMillimes, lang)}
                             </p>
                           )}
@@ -1458,10 +1595,31 @@ export default function OrderPage() {
                     <span className="font-display text-2xl text-accent">{formatPriceDT(total, lang)}</span>
                   </div>
                 </div>
+                {/* DEUX DÉFAUTS SUR LA MÊME LIGNE.
+                    En arabe, ces liens menaient aux pages FRANÇAISES.
+                    Et c'étaient des <Link> : suivre l'un d'eux démontait la
+                    page de commande, donc effaçait tout le formulaire déjà
+                    rempli. Un client qui va vérifier les frais de port ne
+                    doit pas revenir devant un formulaire vide. Nouvel onglet,
+                    le tunnel reste intact derrière. */}
                 <p className="mt-3 text-xs font-light text-ink/50">
-                  <Link to="/livraison" className="text-accent underline underline-offset-2">{isAr ? 'تفاصيل التوصيل' : 'Détails livraison'}</Link>
+                  <a
+                    href={isAr ? '/ar/livraison' : '/livraison'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent underline underline-offset-2"
+                  >
+                    {isAr ? 'تفاصيل التوصيل' : 'Détails livraison'}
+                  </a>
                   {' · '}
-                  <Link to="/faq" className="text-accent underline underline-offset-2">{isAr ? 'الأسئلة الشائعة' : 'Questions fréquentes'}</Link>
+                  <a
+                    href={isAr ? '/ar/faq' : '/faq'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent underline underline-offset-2"
+                  >
+                    {isAr ? 'الأسئلة الشائعة' : 'Questions fréquentes'}
+                  </a>
                 </p>
               </div>
 
@@ -1478,7 +1636,10 @@ export default function OrderPage() {
                         id="f-name"
                         required
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          setName(e.target.value)
+                          saveDraft({ name: e.target.value })
+                        }}
                         onFocus={onCheckoutStart}
                         placeholder={isAr ? 'اسمكم' : 'Votre nom'}
                         aria-label={isAr ? 'اسمكم' : 'Votre nom'}
@@ -1492,7 +1653,10 @@ export default function OrderPage() {
                         id="f-phone"
                         required
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onChange={(e) => {
+                          setPhone(e.target.value)
+                          saveDraft({ phone: e.target.value })
+                        }}
                         onFocus={onCheckoutStart}
                         placeholder={isAr ? 'الهاتف (مثال: 23 691 039)' : 'Téléphone (ex : 23 691 039)'}
                         aria-label={isAr ? 'الهاتف' : 'Téléphone'}
@@ -1522,6 +1686,7 @@ export default function OrderPage() {
                           // changer invalide le choix précédent.
                           setDelegationId('')
                           setCity('')
+                          saveDraft({ governorate: e.target.value, delegationId: '', city: '' })
                         }}
                         aria-label={isAr ? 'الولاية' : 'Gouvernorat'}
                         autoComplete="address-level1"
@@ -1556,6 +1721,7 @@ export default function OrderPage() {
                             const chosen = delegations.find((d) => d.externalId === e.target.value)
                             setDelegationId(e.target.value)
                             setCity(chosen?.name ?? '')
+                            saveDraft({ delegationId: e.target.value, city: chosen?.name ?? '' })
                           }}
                           aria-label={isAr ? 'المعتمدية' : 'Délégation'}
                           autoComplete="address-level2"
@@ -1583,7 +1749,10 @@ export default function OrderPage() {
                           id="f-city"
                           required
                           value={city}
-                          onChange={(e) => setCity(e.target.value)}
+                          onChange={(e) => {
+                            setCity(e.target.value)
+                            saveDraft({ city: e.target.value })
+                          }}
                           placeholder={isAr ? 'المدينة / المعتمدية' : 'Ville / délégation'}
                           aria-label={isAr ? 'المدينة أو المعتمدية' : 'Ville ou délégation'}
                           autoComplete="address-level2"
@@ -1597,7 +1766,10 @@ export default function OrderPage() {
                         id="f-address"
                         required
                         value={address}
-                        onChange={(e) => setAddress(e.target.value)}
+                        onChange={(e) => {
+                          setAddress(e.target.value)
+                          saveDraft({ address: e.target.value })
+                        }}
                         placeholder={
                           isAr
                             ? 'العنوان الكامل (الشارع، الرقم، معلم قريب…)'
@@ -1668,7 +1840,14 @@ export default function OrderPage() {
                             : "Puis joignez ci-dessous la capture d'écran du paiement (obligatoire)."}
                         </p>
                         <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#faf6f3]/30 bg-[#faf6f3]/5 px-4 py-4 text-sm text-[#faf6f3]/70 transition-colors hover:border-[#b8912e] focus-within:border-[#b8912e] focus-within:ring-2 focus-within:ring-[#b8912e]/40">
+                          {/* L'identifiant compte : firstMissing() envoie le
+                              client sur « f-proof », et il n'existait sur
+                              AUCUN élément. getElementById rendait null,
+                              goToMissing sortait sans rien faire, et le
+                              client D17 sans capture appuyait sur un bouton
+                              parfaitement muet. */}
                           <input
+                            id="f-proof"
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
                             className="sr-only"
@@ -1697,7 +1876,11 @@ export default function OrderPage() {
                             className="mt-3 max-h-40 rounded-lg border border-[#faf6f3]/20 object-contain"
                           />
                         )}
-                        {proofError && <p className="mt-2 text-xs text-red-300" role="alert">{proofError}</p>}
+                        {proofError ? (
+                          <p className="mt-2 text-xs text-red-300" role="alert">{proofError}</p>
+                        ) : (
+                          hintFor('f-proof')
+                        )}
                       </div>
                     )}
                   </fieldset>
@@ -1708,19 +1891,33 @@ export default function OrderPage() {
                     <span className="font-display text-2xl text-[#b8912e]">{formatPriceDT(total, lang)}</span>
                   </div>
                   {/* Jamais grisé, sauf pendant l'envoi : voir firstMissing. */}
-                  <div ref={attachSubmit} className="mt-5">
+                  <div id="cl-submit" ref={attachSubmit} className="mt-5">
                     <button
                       type="submit"
-                      disabled={createOrder.isPending || proofUploading}
+                      disabled={(createOrder.isPending && !submitStalled) || proofUploading}
                       className="gold-cta h-13 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      {createOrder.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'اطلب الآن' : 'Commander'}
+                      {createOrder.isPending && !submitStalled
+                        ? isAr
+                          ? 'إرسال…'
+                          : 'Envoi…'
+                        : isAr
+                          ? 'اطلب الآن'
+                          : 'Commander'}
                     </button>
                   </div>
 
                   {activeHint && (
                     <p className="mt-2.5 text-center text-xs font-medium text-amber-200" role="alert">
                       {activeHint.message}
+                    </p>
+                  )}
+
+                  {submitStalled && !createOrder.isError && (
+                    <p className="mt-2.5 text-center text-xs font-medium text-amber-200" role="alert">
+                      {isAr
+                        ? 'الشبكة بطيئة. أعيدوا المحاولة — الطلب ما يتضاعفش — ولا ابعثولنا على واتساب.'
+                        : 'Le réseau traîne. Réessayez — la commande ne sera pas doublée — ou écrivez-nous sur WhatsApp.'}
                     </p>
                   )}
 
@@ -1921,8 +2118,8 @@ export default function OrderPage() {
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.18em] text-ink/50">
                     {isAr
-                      ? `${count} عنصر · ${kgLabel(totalWeightKg, lang)} · التوصيل مشمول`
-                      : `${count} article${count > 1 ? 's' : ''} · ${kgLabel(totalWeightKg, lang)} · livraison incluse`}
+                      ? `${itemsLabelAr(itemCount)} · ${kgLabel(totalWeightKg, lang)} · التوصيل مشمول`
+                      : `${itemCount} article${itemCount > 1 ? 's' : ''} · ${kgLabel(totalWeightKg, lang)} · livraison incluse`}
                   </p>
                   <p className="font-display text-lg text-accent">{formatPriceDT(total, lang)}</p>
                 </div>
@@ -1932,14 +2129,24 @@ export default function OrderPage() {
                     firstMissing). Le client n'a jamais à chercher où valider. */}
                 <button
                   type="button"
-                  disabled={createOrder.isPending || proofUploading}
+                  disabled={(createOrder.isPending && !submitStalled) || proofUploading}
                   onClick={() => {
-                    if (recapVisible && formRef.current) formRef.current.requestSubmit()
-                    else scrollToId('recap')
+                    // requestSubmit manque encore sur quelques navigateurs
+                    // mobiles anciens : sans repli, le bouton lèverait une
+                    // exception et resterait inerte.
+                    if (!recapVisible || !formRef.current) return scrollToId('recap')
+                    if (typeof formRef.current.requestSubmit === 'function') formRef.current.requestSubmit()
+                    else submit({ preventDefault: () => {} } as React.FormEvent)
                   }}
                   className="gold-cta shrink-0 rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {createOrder.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'اطلب الآن' : 'Commander'}
+                  {createOrder.isPending && !submitStalled
+                    ? isAr
+                      ? 'إرسال…'
+                      : 'Envoi…'
+                    : isAr
+                      ? 'اطلب الآن'
+                      : 'Commander'}
                 </button>
               </>
             )}

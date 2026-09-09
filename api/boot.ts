@@ -250,10 +250,33 @@ app.get("/api/admin/export/orders.csv", async (c) => {
 // gestion produits) ; empêche les payloads abusifs sur des endpoints publics.
 app.use(bodyLimit({ maxSize: 1 * 1024 * 1024 }));
 
-// Limite générale : 60 requêtes / minute / IP sur toute l'API tRPC
-// (protège contact.send, orders.create, stats.track, admin.login, etc.
-// contre le spam et les abus, en plus du verrou dédié sur admin.login).
-app.use("/api/trpc/*", rateLimit({ windowMs: 60 * 1000, max: 60 }));
+// Deux réserves distinctes sur l'API tRPC.
+//
+// LECTURES — largement ouvertes. Elles ne coûtent qu'une requête SQL et
+// c'est par elles que passe un client qui achète : visite, catalogue, liste
+// des délégations. Les serrer, c'est fermer la boutique. En Tunisie, les
+// abonnés 4G d'un même opérateur sortent par un petit nombre d'adresses
+// publiques ; un jour de publicité, des dizaines de vrais clients partagent
+// la même IP. L'ancienne limite unique de 60/min les aurait bloqués — et,
+// pire, la réponse 429 n'est pas au format tRPC : le client lisait un
+// message d'erreur en anglais au lieu de sa commande (corrigé aussi dans
+// src/providers/trpc.tsx).
+//
+// ÉCRITURES — serrées, car c'est là qu'est l'abus : commandes bidon,
+// messages de contact en masse, force brute sur admin.login. Trente par
+// minute laissent largement passer un client qui hésite et recommence.
+const TRPC_WRITE = /\b(create|send|login|update|delete|save|sync|approve|set)\b/i;
+app.use("/api/trpc/*", rateLimit({ windowMs: 60 * 1000, max: 600, bucket: "trpc-read" }));
+app.use(
+  "/api/trpc/*",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    bucket: "trpc-write",
+    appliesTo: (c) =>
+      c.req.method === "POST" && TRPC_WRITE.test(decodeURIComponent(c.req.path)),
+  }),
+);
 
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({

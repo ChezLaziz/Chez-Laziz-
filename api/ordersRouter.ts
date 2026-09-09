@@ -23,6 +23,7 @@ import {
   type ReportableOrder,
 } from "./lib/metaConversionsApi";
 import { TRPCError } from "@trpc/server";
+import { ORDER_ERROR } from "@contracts/orderErrors";
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
@@ -178,7 +179,7 @@ export const ordersRouter = createRouter({
       const findProduct = (id: number) => {
         const product = catalog.find((p) => p.id === id);
         if (!product) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Produit indisponible" });
+          throw new TRPCError({ code: "BAD_REQUEST", message: ORDER_ERROR.produitIndisponible });
         }
         return product;
       };
@@ -186,7 +187,8 @@ export const ordersRouter = createRouter({
         // Pack prêt : prix de vente FIXE (contracts/packs.ts), jamais celui du client.
         if (i.kind === "pack") {
           const pack = getFixedPack(i.packId);
-          if (!pack) throw new TRPCError({ code: "BAD_REQUEST", message: "Pack indisponible" });
+          if (!pack)
+            throw new TRPCError({ code: "BAD_REQUEST", message: ORDER_ERROR.packIndisponible });
           return {
             kind: "pack",
             packId: pack.id,
@@ -203,7 +205,7 @@ export const ordersRouter = createRouter({
           if (!isValidCustomSelection(i.productIds)) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: `Le Custom Pack doit contenir exactement ${CUSTOM_PACK_SIZE} produits différents.`,
+              message: ORDER_ERROR.customPackTaille,
             });
           }
           const products = i.productIds.map(findProduct);
@@ -244,8 +246,7 @@ export const ordersRouter = createRouter({
         if (!valid) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message:
-              "La preuve de paiement D17 (capture d'écran du virement) est obligatoire.",
+            message: ORDER_ERROR.preuveD17Requise,
           });
         }
       }
@@ -261,7 +262,7 @@ export const ordersRouter = createRouter({
         if (!found || governorateKey(found.governorate) !== governorateKey(input.governorate)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "La délégation choisie ne correspond pas au gouvernorat.",
+            message: ORDER_ERROR.delegationHorsGouvernorat,
           });
         }
         delegationExternalId = found.externalId;
