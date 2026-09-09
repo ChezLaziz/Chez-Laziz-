@@ -113,13 +113,26 @@ describe("buildTpePayload — l'argent", () => {
 });
 
 describe("buildTpePayload — le poids", () => {
-  it("envoie le poids réel quand tous les articles en ont un", () => {
-    expect(build().weight).toBe(3);
+  it("laisse TOUJOURS leur champ weight à null", () => {
+    // Leur `weight` est une clé étrangère vers une table de tranches, pas un
+    // nombre de kilos. Envoyer 3 pour trois kilos a été refusé en production :
+    //   {"weight":["Clé primaire « 3 » non valide - l'objet n'existe pas."]}
+    expect(build().weight).toBeNull();
+    expect(build({ items: [{ name: "Coffret", qty: 1 }] }).weight).toBeNull();
   });
 
-  it("envoie null plutôt qu'un poids sous-estimé", () => {
-    const p = build({ items: [{ name: "Coffret", qty: 1 }] });
-    expect(p.weight).toBeNull();
+  it("fait quand même voyager le poids réel, dans le commentaire", () => {
+    expect(build().note).toBe("Poids 3 kg");
+  });
+
+  it("garde la note du client en premier", () => {
+    expect(build({ note: "Livrer avant 18h" }).note).toBe("Livrer avant 18h — Poids 3 kg");
+  });
+
+  it("n'annonce aucun poids quand un article n'en a pas", () => {
+    // Mieux vaut ne rien dire qu'annoncer un colis plus léger qu'il n'est.
+    const p = build({ note: "Fragile", items: [{ name: "Coffret", qty: 1 }] });
+    expect(p.note).toBe("Fragile");
   });
 });
 

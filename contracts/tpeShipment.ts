@@ -79,6 +79,20 @@ export type TpePayload = {
   external_id: string;
 };
 
+/** Le commentaire porté sur le colis.
+ *
+ * La note du client d'abord — c'est elle qui compte pour la livraison — puis
+ * le poids réel quand on le connaît, parce que leur formulaire ne peut pas
+ * le recevoir autrement (voir `weight` plus bas). Un poids incomplet n'est
+ * pas écrit du tout plutôt qu'annoncé trop léger. */
+export function shipmentNote(order: ShippableOrder): string {
+  const parts = [(order.note ?? "").trim()];
+  if (hasCompleteWeight(order.items)) {
+    parts.push(`Poids ${totalWeightKg(order.items)} kg`);
+  }
+  return parts.filter((p) => p !== "").join(" — ");
+}
+
 /** Millimes → dinars, écrits comme un humain les écrirait.
  *
  * 47000 → « 47 », 47500 → « 47.500 ». Leur interface a envoyé une chaîne ;
@@ -146,10 +160,19 @@ export function buildTpePayload(
       product: it.name.trim(),
       quantity: String(it.qty),
     })),
-    // Un poids incomplet reste null plutôt que sous-estimé : leur champ est
-    // optionnel, et un chiffre faux vaut moins que pas de chiffre.
-    weight: hasCompleteWeight(order.items) ? totalWeightKg(order.items) : null,
-    note: (order.note ?? "").trim(),
+    // TOUJOURS null. Leur champ `weight` N'EST PAS un poids en kilos : c'est
+    // une clé étrangère vers leur table de tranches de poids. Y envoyer 3
+    // pour trois kilos a été refusé net :
+    //
+    //   {"weight":["Clé primaire « 3 » non valide - l'objet n'existe pas."]}
+    //
+    // Leur propre interface envoie null, et le colis est accepté. On ne
+    // connaît pas leurs identifiants de tranches et on n'en devine pas :
+    // un mauvais identifiant ferait facturer la mauvaise tranche.
+    weight: null,
+    // Le poids réel ne disparaît pas pour autant — il passe dans le
+    // commentaire, où le dépôt le lit pour choisir la bonne tranche.
+    note: shipmentNote(order),
     // Du makroudh : fragile, et le client a le droit d'ouvrir avant de
     // payer. Décision commerciale de Chez Laziz, constante.
     is_fragile: true,
