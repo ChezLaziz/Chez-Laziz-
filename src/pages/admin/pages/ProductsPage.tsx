@@ -112,14 +112,20 @@ export default function ProductsPage({ token, period }: { token: string; period:
         </Card>
       )}
 
-      {/* Sans coût de revient, « meilleur produit » ne peut vouloir dire que
-          « plus gros chiffre d'affaires » — pas « celui qui rapporte le
-          plus ». La distinction est trop importante pour être passée sous
-          silence. */}
-      <NotCollected
-        what="Marge et profit par produit"
-        needs="La table des produits n'a pas de colonne coût de revient. Le classement ci-dessus est donc au chiffre d'affaires, pas à la marge : un produit très vendu peut rapporter moins qu'un autre moins vendu. Ajouter un prix de revient par produit rendrait ce classement possible."
-      />
+      {/* Ce classement est au chiffre d'affaires. Tant que les coûts ne sont
+          pas tous saisis, « meilleur produit » veut dire « plus gros CA » et
+          pas « celui qui rapporte le plus » — une distinction trop
+          importante pour être passée sous silence. */}
+      {data.dataQuality.productCostCoverage < 1 && (
+        <NotCollected
+          what="Marge par produit"
+          needs={
+            data.dataQuality.productCostCoverage === 0
+              ? "Aucun coût de revient n'est saisi : ce classement est au chiffre d'affaires, pas à la marge. Un produit très vendu peut rapporter moins qu'un autre moins vendu. Renseignez le coût au kilo dans « Catalogue & prix » pour voir la marge dans « Rentabilité »."
+              : `Le coût de revient couvre ${Math.round(data.dataQuality.productCostCoverage * 100)}% du chiffre d'affaires. Ce classement reste au chiffre d'affaires ; la marge par produit se trouve dans « Rentabilité », qui liste aussi les produits dont le coût manque encore.`
+          }
+        />
+      )}
     </div>
   )
 }

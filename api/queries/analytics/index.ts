@@ -1,5 +1,5 @@
 import { getDb } from "../connection";
-import { orders, pageViews } from "@db/schema";
+import { orders, pageViews, products } from "@db/schema";
 import { and, gte, lt, sql } from "drizzle-orm";
 import {
   computeCoreTotals,
@@ -17,6 +17,7 @@ import {
 } from "./metrics";
 import { dayKey, daysInPeriod, type Period, type PeriodPair } from "./period";
 import { buildCustomerHistories, computeCustomerMetrics } from "./customers";
+import { computeMargins, type CostsByProductId } from "./margin";
 import {
   attachGrowth,
   computeGovernorateDelivery,
@@ -30,6 +31,7 @@ export * from "./metrics";
 export * from "./period";
 export * from "./customers";
 export * from "./breakdowns";
+export * from "./margin";
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -91,6 +93,20 @@ async function fetchCustomerOrderHistory(): Promise<AnalyticsOrder[]> {
   return rows.map((r) => ({ ...r, items: [] }));
 }
 
+/** Coûts de revient au kilo, par produit. Les produits sans coût saisi sont
+ * volontairement ABSENTS de la Map plutôt que présents à 0 : le calcul de
+ * marge doit pouvoir distinguer « coûte 0 » de « on ne sait pas ». */
+async function fetchProductCosts(): Promise<CostsByProductId> {
+  const rows = await getDb()
+    .select({ id: products.id, cost: products.costPerKgMillimes })
+    .from(products);
+  const map: CostsByProductId = new Map();
+  for (const r of rows) {
+    if (r.cost !== null) map.set(r.id, r.cost);
+  }
+  return map;
+}
+
 async function countPageViews(period: Period): Promise<number> {
   const [row] = await getDb()
     .select({ count: sql<number>`count(*)` })
@@ -138,13 +154,16 @@ export type DataQuality = {
   ordersTotal: number;
   customerIdCoverage: number;
   governorateCoverage: number;
-  /** Ces deux-là restent à 0 tant que les colonnes n'existent pas en base :
-   * coût produit et source d'acquisition ne sont aujourd'hui pas collectés. */
+  /** Part du chiffre d'affaires dont le coût de revient est saisi. */
   productCostCoverage: number;
+  /** Reste à 0 : aucune source d'acquisition n'est collectée en base. */
   acquisitionSourceCoverage: number;
 };
 
-function computeDataQuality(allOrders: AnalyticsOrder[]): DataQuality {
+function computeDataQuality(
+  allOrders: AnalyticsOrder[],
+  costCoverage: number,
+): DataQuality {
   const total = allOrders.length;
   let withCustomerId = 0;
   let withGovernorate = 0;
@@ -156,7 +175,7 @@ function computeDataQuality(allOrders: AnalyticsOrder[]): DataQuality {
     ordersTotal: total,
     customerIdCoverage: total === 0 ? 0 : withCustomerId / total,
     governorateCoverage: total === 0 ? 0 : withGovernorate / total,
-    productCostCoverage: 0,
+    productCostCoverage: costCoverage,
     acquisitionSourceCoverage: 0,
   };
 }
@@ -188,6 +207,8 @@ export type OverviewData = {
   governorateDelivery: ReturnType<typeof computeGovernorateDelivery>;
   payments: ReturnType<typeof computePaymentBreakdown>;
   customerMetrics: ReturnType<typeof computeCustomerMetrics>;
+  margins: ReturnType<typeof computeMargins>;
+  previousMargins: ReturnType<typeof computeMargins>;
 };
 
 /** Toutes les données de la Vue d'ensemble en UNE passe.
@@ -196,10 +217,11 @@ export type OverviewData = {
  * top produits) qui chargeaient la table entière en mémoire, chacun de son
  * côté, toutes les 30 secondes. */
 export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
-  const [currentAll, previousAll, history, viewsNow, viewsBefore] = await Promise.all([
+  const [currentAll, previousAll, history, costs, viewsNow, viewsBefore] = await Promise.all([
     fetchOrdersInPeriod(periods.current),
     fetchOrdersInPeriod(periods.previous),
     fetchCustomerOrderHistory(),
+    fetchProductCosts(),
     countPageViews(periods.current),
     countPageViews(periods.previous),
   ]);
@@ -214,6 +236,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     if (h.firstOrderAt < periods.current.start) priorIds.add(h.id);
   }
 
+  const margins = computeMargins(current, costs);
   const productsNow = computeProductStats(current);
   const governoratesNow = computeGovernorateStats(current);
 
@@ -244,7 +267,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     delivery: computeDeliveryImpact(currentAll),
     statusCounts,
     pageViews: withTrend(viewsNow, viewsBefore),
-    dataQuality: computeDataQuality(currentAll),
+    dataQuality: computeDataQuality(currentAll, margins.revenueCoverage),
 
     // Détail consommé par les pages Ventes / Clients / Produits / Géographie.
     // Servi dans la même réponse pour qu'aucune page ne recalcule un chiffre
@@ -260,5 +283,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     governorateDelivery: computeGovernorateDelivery(currentAll),
     payments: computePaymentBreakdown(current),
     customerMetrics: computeCustomerMetrics(current, histories, periods.current.start),
+    margins,
+    previousMargins: computeMargins(previous, costs),
   };
 }

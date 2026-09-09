@@ -8,14 +8,24 @@
  * Aucune fonction ici ne touche la base : elles sont pures et testées, pour
  * que les définitions restent vérifiables sans base de données. */
 
-/** Ligne de commande telle que stockée en JSON dans `orders.items`. */
+/** Ligne de commande telle que stockée en JSON dans `orders.items`.
+ *
+ * `weightKg` compte : les prix sont au kilo (voir priceForWeight), donc le
+ * coût de revient l'est aussi, et une ligne de 2 kg coûte le double d'une
+ * ligne de 1 kg du même produit.
+ *
+ * `contents` n'existe que pour les packs. Les packs personnalisés y portent
+ * un productId par composant ; les packs prêts n'ont que des noms — d'où
+ * l'impossibilité d'en calculer le coût (voir lineCostMillimes). */
 export type OrderItem = {
   kind?: "product" | "pack" | "custom";
   productId?: number;
   packId?: string;
   name: string;
+  weightKg?: number;
   qty: number;
   unitPriceMillimes: number;
+  contents?: { productId?: number; name: string; weightKg?: number }[];
 };
 
 /** Les seuls champs d'une commande dont l'analytique a besoin. */

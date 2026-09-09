@@ -16,6 +16,7 @@ import SalesPage from './admin/pages/SalesPage'
 import CustomersPage from './admin/pages/CustomersPage'
 import ProductsPage from './admin/pages/ProductsPage'
 import GeographyPage from './admin/pages/GeographyPage'
+import ProfitabilityPage from './admin/pages/ProfitabilityPage'
 import IntelligencePage from './admin/pages/IntelligencePage'
 import { useOverview } from './admin/useOverview'
 
@@ -801,6 +802,9 @@ type ProductForm = {
   nameAr: string
   descriptionAr: string
   priceTND: string
+  /** Coût de revient au kilo, en dinars. Vide = coût inconnu, ce qui n'est
+   * pas la même chose que 0 : voir la note sous le champ. */
+  costTND: string
   category: string
   badge: string
   imageUrl: string
@@ -814,6 +818,7 @@ const EMPTY_FORM: ProductForm = {
   nameAr: '',
   descriptionAr: '',
   priceTND: '',
+  costTND: '',
   category: 'Les classiques',
   badge: '',
   imageUrl: '',
@@ -908,6 +913,7 @@ function ProductsTab({ token }: { token: string }) {
       nameAr: p.nameAr ?? '',
       descriptionAr: p.descriptionAr ?? '',
       priceTND: formatTND(p.priceMillimes),
+      costTND: p.costPerKgMillimes === null ? '' : formatTND(p.costPerKgMillimes),
       category: p.category,
       badge: p.badge ?? '',
       imageUrl: p.imageUrl ?? '',
@@ -926,6 +932,9 @@ function ProductsTab({ token }: { token: string }) {
       nameAr: form.nameAr.trim() || null,
       descriptionAr: form.descriptionAr.trim() || null,
       priceMillimes: toMillimes(form.priceTND),
+      // Champ vide → null (coût inconnu), jamais 0 : un coût nul afficherait
+      // 100 % de marge et hisserait le produit en tête de la rentabilité.
+      costPerKgMillimes: form.costTND.trim() === '' ? null : toMillimes(form.costTND),
       category: form.category.trim() || 'Les classiques',
       badge: form.badge.trim() || null,
       imageUrl: form.imageUrl.trim() || null,
@@ -933,7 +942,11 @@ function ProductsTab({ token }: { token: string }) {
       isExclusiveCreation: form.isExclusiveCreation,
     }
     if (Number.isNaN(data.priceMillimes)) {
-      setSaveError('Le prix doit être un nombre, par exemple 8 ou 8,5.')
+      setSaveError('Le prix de vente doit être un nombre, par exemple 8 ou 8,5.')
+      return
+    }
+    if (data.costPerKgMillimes !== null && Number.isNaN(data.costPerKgMillimes)) {
+      setSaveError('Le coût de revient doit être un nombre, par exemple 4 ou 4,5. Laissez le champ vide s\'il est inconnu.')
       return
     }
     if (editingId) {
@@ -987,7 +1000,22 @@ function ProductsTab({ token }: { token: string }) {
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nom du produit" className={inputCls} />
-            <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix en dinars (ex : 8 ou 8,5)" inputMode="decimal" className={inputCls} />
+            <input required value={form.priceTND} onChange={(e) => setForm({ ...form, priceTND: e.target.value })} placeholder="Prix de vente au kilo (ex : 8 ou 8,5)" inputMode="decimal" className={inputCls} />
+          </div>
+
+          <div>
+            <input
+              value={form.costTND}
+              onChange={(e) => setForm({ ...form, costTND: e.target.value })}
+              placeholder="Coût de revient au kilo, en dinars (facultatif)"
+              inputMode="decimal"
+              className={inputCls}
+            />
+            <p className="mt-1.5 text-xs leading-relaxed text-ink/50">
+              Ce que vous coûte un kilo de ce produit : matières premières et fabrication. Sert à
+              calculer la marge dans « Rentabilité ». Laissez vide si vous ne le savez pas — le
+              produit sera alors exclu du calcul et signalé, jamais compté comme gratuit.
+            </p>
           </div>
           <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (facultative)" rows={2} className={`${inputCls} resize-none`} />
 
@@ -2282,6 +2310,7 @@ export default function AdminPage() {
       {tab === 'clients' && <CustomersPage token={token} period={period} />}
       {tab === 'produits' && <ProductsPage token={token} period={period} />}
       {tab === 'geographie' && <GeographyPage token={token} period={period} />}
+      {tab === 'rentabilite' && <ProfitabilityPage token={token} period={period} />}
       {tab === 'intelligence' && <IntelligencePage token={token} period={period} />}
       {tab === 'commandes' && (
         <OrdersTab token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />

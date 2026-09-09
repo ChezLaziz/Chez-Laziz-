@@ -7,9 +7,9 @@
  * d'ensemble » et « Paramètres » côte à côte, alors qu'on ne les ouvre pas
  * dans le même état d'esprit.
  *
- * Absents volontairement : Marketing (attribution), Tunnel, Rentabilité et
- * Stock. Les données qui les alimenteraient — source d'acquisition, dépense
- * publicitaire, session, coût de revient, quantité en stock — ne sont
+ * Absents volontairement : Marketing (attribution), Tunnel et Stock. Les
+ * données qui les alimenteraient — source d'acquisition, dépense
+ * publicitaire, identifiant de session, quantité en stock — ne sont
  * collectées nulle part. Quatre pages vides coûtent plus qu'elles
  * n'apportent ; elles reviendront quand la donnée existera. */
 
@@ -19,6 +19,7 @@ export type NavId =
   | 'clients'
   | 'produits'
   | 'geographie'
+  | 'rentabilite'
   | 'intelligence'
   | 'commandes'
   | 'catalogue'
@@ -36,6 +37,7 @@ export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] 
       { id: 'clients', label: 'Clients' },
       { id: 'produits', label: 'Produits' },
       { id: 'geographie', label: 'Géographie' },
+      { id: 'rentabilite', label: 'Rentabilité' },
       { id: 'intelligence', label: 'Intelligence' },
     ],
   },
@@ -64,5 +66,6 @@ export const ANALYTICS_PAGES = new Set<NavId>([
   'clients',
   'produits',
   'geographie',
+  'rentabilite',
   'intelligence',
 ])

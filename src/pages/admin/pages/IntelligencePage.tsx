@@ -72,8 +72,10 @@ export default function IntelligencePage({
       <Card title="Ce que cette analyse ne couvre pas">
         <ul className="space-y-2 text-sm leading-relaxed text-ink/60">
           <li>
-            <span className="font-medium text-ink/75">Rentabilité.</span> Aucun coût de revient
-            n'est enregistré : impossible de dire quel produit ou quel gouvernorat rapporte le plus.
+            <span className="font-medium text-ink/75">Rentabilité.</span>{' '}
+            {data.dataQuality.productCostCoverage === 0
+              ? "Aucun coût de revient n'est encore saisi : impossible de dire quel produit rapporte le plus. Renseignez-les dans « Catalogue & prix »."
+              : `La marge est calculée sur ${Math.round(data.dataQuality.productCostCoverage * 100)}% du chiffre d'affaires (voir « Rentabilité »). Emballage, transport réel, publicité et charges fixes restent hors calcul : c'est une marge produit, pas un bénéfice net.`}
           </li>
           <li>
             <span className="font-medium text-ink/75">Publicité.</span> Ni source d'acquisition ni

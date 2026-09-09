@@ -43,6 +43,13 @@
       "when": 1788600788070,
       "tag": "0005_first_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788919645108,
+      "tag": "0006_steady_felicia_hardy",
+      "breakpoints": true
     }
   ]
 }
