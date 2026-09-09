@@ -47,6 +47,14 @@ function paths(id: NavId) {
           <circle cx="12" cy="10" r="2.5" />
         </>
       )
+    case 'rentabilite':
+      return (
+        <>
+          <path d="M12 4v16M7 20h10" strokeLinecap="round" />
+          <path d="M4.5 9h15M4.5 9 2 14.5h5L4.5 9ZM19.5 9 17 14.5h5L19.5 9Z" strokeLinejoin="round" />
+          <path d="M12 4 6 7M12 4l6 3" strokeLinecap="round" />
+        </>
+      )
     case 'intelligence':
       return (
         <>

@@ -48,8 +48,16 @@ export const products = pgTable("products", {
   // jamais si un nouveau produit n'a pas encore été traduit.
   nameAr: varchar("name_ar", { length: 255 }),
   descriptionAr: text("description_ar"),
-  // Prix en millimes : 8000 = 8.000 TND
+  // Prix de VENTE au kilo, en millimes : 8000 = 8.000 TND/kg.
+  // Le prix d'une ligne est priceMillimes × weightKg (voir priceForWeight).
   priceMillimes: integer("price_millimes").notNull(),
+  // Coût de revient au kilo, même unité que priceMillimes.
+  //
+  // NULLABLE, et ce n'est pas un détail : un coût absent ne doit jamais être
+  // lu comme un coût nul, sinon le produit afficherait 100 % de marge. Les
+  // lignes sans coût sont exclues du calcul et comptées dans le taux de
+  // couverture, jamais estimées.
+  costPerKgMillimes: integer("cost_per_kg_millimes"),
   category: varchar("category", { length: 100 }).notNull(),
   badge: varchar("badge", { length: 50 }),
   imageUrl: varchar("image_url", { length: 255 }),
