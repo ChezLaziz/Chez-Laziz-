@@ -5,8 +5,10 @@ import {
   aliasKey,
   matchDelegation,
   resolvedDelegationId,
+  delegationsForGovernorate,
   type DelegationRef,
 } from "./delegations";
+import { TUNISIA_GOVERNORATES } from "./shop";
 
 /** Toutes les délégations citées ici sont RÉELLES : elles viennent de la
  * table renvoyée par Team Parcel Express le 9 septembre 2026 (293 lignes,
@@ -210,5 +212,42 @@ describe("cityKey — la mémoire ne doit pas confondre deux villes", () => {
     const aliases = new Map([[aliasKey("Nabeul", "بني خلاد"), "127"]]);
     expect(resolvedDelegationId(match("Nabeul", "بني خلاد", aliases))).toBe("127");
     expect(resolvedDelegationId(match("Nabeul", "بن عروس", aliases))).toBeNull();
+  });
+});
+
+describe("delegationsForGovernorate — le sélecteur du site", () => {
+  /** Les 24 noms de gouvernorat tels que Team Parcel Express les écrit. */
+  const TPE_GOVERNORATES = [
+    "Ariana", "Ben Arous", "Bizerte", "Béja", "Gabès", "Gafsa", "Jendouba", "Kairouan",
+    "Kasserine", "Kef", "Kébili", "Mahdia", "Manouba", "Monastir", "Médenine", "Nabeul",
+    "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan",
+  ];
+
+  it("retrouve chacun de NOS 24 gouvernorats chez eux, malgré « Le », « La » et les accents", () => {
+    // Un gouvernorat qui ne se retrouve pas donne un sélecteur vide, et le
+    // client de ce gouvernorat-là ne peut plus commander.
+    const theirs = new Set(TPE_GOVERNORATES.map(governorateKey));
+    const missing = TUNISIA_GOVERNORATES.filter((g) => !theirs.has(governorateKey(g)));
+    expect(missing).toEqual([]);
+  });
+
+  it("ne confond pas deux gouvernorats entre eux", () => {
+    const keys = TUNISIA_GOVERNORATES.map(governorateKey);
+    expect(new Set(keys).size).toBe(TUNISIA_GOVERNORATES.length);
+  });
+
+  it("filtre par gouvernorat et trie par nom", () => {
+    const list = delegationsForGovernorate(TPE, "Gafsa");
+    expect(list.map((d) => d.name)).toEqual(["Gafsa Nord", "Gafsa Sud"]);
+  });
+
+  it("relie « Le Kef » et « La Manouba » à « Kef » et « Manouba »", () => {
+    expect(delegationsForGovernorate(TPE, "Le Kef").map((d) => d.externalId)).toEqual(["145", "313"]);
+    expect(delegationsForGovernorate(TPE, "La Manouba").map((d) => d.externalId)).toEqual(["59"]);
+  });
+
+  it("rend une liste vide pour un gouvernorat inconnu ou vide", () => {
+    expect(delegationsForGovernorate(TPE, "")).toEqual([]);
+    expect(delegationsForGovernorate(TPE, "Atlantide")).toEqual([]);
   });
 });

@@ -252,6 +252,22 @@ export default function OrderPage() {
   const [phone, setPhone] = useState('')
   const [governorate, setGovernorate] = useState('')
   const [city, setCity] = useState('')
+  // L'identifiant de la délégation chez le transporteur. La ville n'est plus
+  // écrite par le client : il la choisit dans la liste du gouvernorat.
+  const [delegationId, setDelegationId] = useState('')
+  const delegationsQuery = trpc.orders.delegations.useQuery(
+    { governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number] },
+    { enabled: !!governorate, staleTime: 60 * 60 * 1000 },
+  )
+  const delegations = delegationsQuery.data ?? []
+  // La saisie libre ne revient que si, POUR LE GOUVERNORAT CHOISI, la liste
+  // s'est révélée vide ou injoignable : mieux vaut une ville écrite à la
+  // main qu'un client qui ne peut pas commander. Avant tout choix de
+  // gouvernorat, c'est le sélecteur (désactivé) qui s'affiche, pas un champ
+  // texte — sinon la page changerait de forme sous les doigts du client.
+  const listUnavailable =
+    !!governorate && !delegationsQuery.isLoading && (delegationsQuery.isError || delegations.length === 0)
+  const useDelegationList = !listUnavailable
   const [address, setAddress] = useState('')
   const [note, setNote] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
@@ -447,6 +463,7 @@ export default function OrderPage() {
         phone: phone.trim(),
         governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number],
         city: city.trim(),
+        delegationExternalId: delegationId || undefined,
         address: address.trim(),
         note: note.trim() || undefined,
         items: items.map(({ line }) =>
@@ -1090,7 +1107,13 @@ export default function OrderPage() {
                     <select
                       required
                       value={governorate}
-                      onChange={(e) => setGovernorate(e.target.value)}
+                      onChange={(e) => {
+                        setGovernorate(e.target.value)
+                        // Une délégation appartient à un gouvernorat : en
+                        // changer invalide le choix précédent.
+                        setDelegationId('')
+                        setCity('')
+                      }}
                       aria-label={isAr ? 'الولاية' : 'Gouvernorat'}
                       autoComplete="address-level1"
                       className={`${inputCls} h-[50px] ${governorate ? '' : 'text-ink/35'}`}
@@ -1106,15 +1129,49 @@ export default function OrderPage() {
                         </option>
                       ))}
                     </select>
-                    <input
-                      required
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder={isAr ? 'المدينة / المعتمدية' : 'Ville / délégation'}
-                      aria-label={isAr ? 'المدينة أو المعتمدية' : 'Ville ou délégation'}
-                      autoComplete="address-level2"
-                      className={inputCls}
-                    />
+                    {/* La délégation se CHOISIT, elle ne s'écrit plus. Dix-sept
+                        commandes avaient donné dix-sept graphies différentes —
+                        arabe, nom de quartier, gouvernorat contradictoire — et
+                        aucune ne se retrouvait telle quelle chez le
+                        transporteur. La liste est la sienne. */}
+                    {useDelegationList ? (
+                      <select
+                        required
+                        value={delegationId}
+                        disabled={!governorate || delegationsQuery.isLoading}
+                        onChange={(e) => {
+                          const chosen = delegations.find((d) => d.externalId === e.target.value)
+                          setDelegationId(e.target.value)
+                          setCity(chosen?.name ?? '')
+                        }}
+                        aria-label={isAr ? 'المعتمدية' : 'Délégation'}
+                        autoComplete="address-level2"
+                        className={`${inputCls} h-[50px] ${delegationId ? '' : 'text-ink/35'}`}
+                      >
+                        <option value="" disabled>
+                          {!governorate
+                            ? isAr ? 'اختاروا الولاية أولاً' : "Choisissez d'abord le gouvernorat"
+                            : delegationsQuery.isLoading
+                              ? '…'
+                              : isAr ? 'المعتمدية' : 'Délégation'}
+                        </option>
+                        {delegations.map((d) => (
+                          <option key={d.externalId} value={d.externalId} className="text-ink">
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        required
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder={isAr ? 'المدينة / المعتمدية' : 'Ville / délégation'}
+                        aria-label={isAr ? 'المدينة أو المعتمدية' : 'Ville ou délégation'}
+                        autoComplete="address-level2"
+                        className={inputCls}
+                      />
+                    )}
                     <textarea
                       required
                       value={address}

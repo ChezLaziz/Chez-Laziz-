@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { delegationsForGovernorate, governorateKey } from "@contracts/delegations";
+import { allDelegations, findDelegation } from "./queries/delegations";
 import { createRouter, publicQuery } from "./middleware";
 import {
   listOrders,
@@ -119,6 +121,21 @@ const productItemInput = z.object({
 const orderItemInput = z.union([packItemInput, customItemInput, productItemInput]);
 
 export const ordersRouter = createRouter({
+  /** Les délégations d'un gouvernorat, pour le sélecteur de la commande.
+   *
+   * Public et en lecture seule : ce sont des noms de lieux, rien de plus.
+   * Vide si la table du transporteur n'est pas chargée — le formulaire
+   * retombe alors sur la saisie libre. */
+  delegations: publicQuery
+    .input(z.object({ governorate: z.enum(TUNISIA_GOVERNORATES) }))
+    .query(async ({ input }) => {
+      const all = await allDelegations("tpe");
+      return delegationsForGovernorate(all, input.governorate).map((d) => ({
+        externalId: d.externalId,
+        name: d.name,
+      }));
+    }),
+
   /** Passer une commande (public). Les prix, le sous-total, la livraison et
    * le total sont TOUJOURS recalculés côté serveur à partir du catalogue —
    * jamais depuis les valeurs envoyées par le client. */
@@ -130,7 +147,10 @@ export const ordersRouter = createRouter({
         governorate: z.enum(TUNISIA_GOVERNORATES),
         city: z.string().min(1).max(150),
         address: z.string().min(5).max(1000),
-        postalCode: z.string().max(10).optional(),
+        // La délégation choisie dans la liste du transporteur. Facultative
+        // pour ne pas bloquer la commande si la liste n'a pas pu se charger :
+        // la ville en texte libre reste alors la seule information.
+        delegationExternalId: z.string().min(1).max(40).optional(),
         note: z.string().max(1000).optional(),
         items: z.array(orderItemInput).min(1),
         paymentMethod: z.enum(PAYMENT_METHODS),
@@ -230,13 +250,31 @@ export const ordersRouter = createRouter({
         }
       }
 
+      // L'identifiant vient d'un formulaire public : on ne l'écrit sur la
+      // commande que s'il existe chez le transporteur ET appartient au
+      // gouvernorat déclaré. La ville stockée est alors LEUR nom, pas ce que
+      // le navigateur a envoyé — c'est ce qui rend l'envoi sans surprise.
+      let delegationExternalId: string | undefined;
+      let city = input.city;
+      if (input.delegationExternalId) {
+        const found = await findDelegation("tpe", input.delegationExternalId);
+        if (!found || governorateKey(found.governorate) !== governorateKey(input.governorate)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "La délégation choisie ne correspond pas au gouvernorat.",
+          });
+        }
+        delegationExternalId = found.externalId;
+        city = found.name;
+      }
+
       const order = await createOrder({
         customerName: input.customerName,
         phone: input.phone,
         governorate: input.governorate,
-        city: input.city,
+        city,
         address: input.address,
-        postalCode: input.postalCode,
+        delegationExternalId,
         note: input.note,
         acquisitionSource: input.acquisitionSource,
         acquisitionCampaign: input.acquisitionCampaign,

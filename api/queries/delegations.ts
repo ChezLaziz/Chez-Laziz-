@@ -195,16 +195,46 @@ export async function cityReport(carrier: string): Promise<CityLine[]> {
  * délégation sans son gouvernorat serait une requête à moitié remplie. */
 export async function destinationForOrder(
   carrier: string,
-  order: { governorate: string; city: string },
+  order: { governorate: string; city: string; delegationExternalId?: string | null },
 ): Promise<TpeDestination | null> {
   const [delegations, aliases] = await Promise.all([
     allDelegations(carrier),
     aliasMap(carrier),
   ]);
+
+  // Commande passée avec le sélecteur : le client a choisi dans LEUR liste,
+  // il n'y a rien à deviner. On vérifie seulement que l'identifiant existe
+  // encore chez eux.
+  const chosen = order.delegationExternalId
+    ? delegations.find((d) => d.externalId === order.delegationExternalId)
+    : undefined;
+  if (chosen && chosen.governorateExternalId !== "") {
+    return { governorateId: chosen.governorateExternalId, delegationId: chosen.externalId };
+  }
+
   const id = resolvedDelegationId(matchDelegation(order, delegations, aliases));
   if (id === null) return null;
 
   const found = delegations.find((d) => d.externalId === id);
   if (!found || found.governorateExternalId === "") return null;
   return { governorateId: found.governorateExternalId, delegationId: found.externalId };
+}
+
+/** Une délégation par son identifiant chez le transporteur — pour valider
+ * ce qu'un formulaire public envoie avant de l'écrire sur une commande. */
+export async function findDelegation(
+  carrier: string,
+  externalId: string,
+): Promise<StoredDelegation | null> {
+  const [row] = await getDb()
+    .select({
+      externalId: carrierDelegations.externalId,
+      name: carrierDelegations.name,
+      governorate: carrierDelegations.governorate,
+      governorateExternalId: carrierDelegations.governorateExternalId,
+    })
+    .from(carrierDelegations)
+    .where(and(eq(carrierDelegations.carrier, carrier), eq(carrierDelegations.externalId, externalId)))
+    .limit(1);
+  return row ?? null;
 }
