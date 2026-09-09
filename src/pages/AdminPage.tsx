@@ -5,7 +5,6 @@ import { formatTND } from '@/lib/shop'
 import { formatWeight, type WeightKg } from '@contracts/shop'
 import Ornament from '@/components/Ornament'
 import { useSEO } from '@/hooks/useSEO'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { PresetRange } from '@contracts/analytics'
 import Sidebar from './admin/shell/Sidebar'
 import TopBar from './admin/shell/TopBar'
@@ -19,6 +18,7 @@ import GeographyPage from './admin/pages/GeographyPage'
 import ProfitabilityPage from './admin/pages/ProfitabilityPage'
 import MarketingPage from './admin/pages/MarketingPage'
 import IntelligencePage from './admin/pages/IntelligencePage'
+import SocialPage from './admin/pages/SocialPage'
 import { useOverview } from './admin/useOverview'
 
 const TOKEN_KEY = 'laziz_admin_token'
@@ -1549,238 +1549,6 @@ function SettingsTab({ token }: { token: string }) {
 }
 
 
-/* ------------------------------ Marketing ------------------------------ */
-
-type NetworkKey = 'instagram' | 'facebook' | 'tiktok' | 'google'
-
-const NETWORKS: {
-  key: NetworkKey
-  label: string
-  color: string
-  handle: string
-  url: string
-  icon: React.ReactNode
-}[] = [
-  {
-    key: 'instagram',
-    label: 'Instagram',
-    color: '#E1306C',
-    handle: '@chezlaziz',
-    url: 'https://www.instagram.com/chezlaziz',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <rect x="3" y="3" width="18" height="18" rx="5" />
-        <circle cx="12" cy="12" r="4" />
-        <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
-      </svg>
-    ),
-  },
-  {
-    key: 'facebook',
-    label: 'Facebook',
-    color: '#1877F2',
-    handle: 'Chez Laziz',
-    url: 'https://www.facebook.com/profile.php?id=61573444418563',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M13.5 21v-7h2.4l.4-3h-2.8V9.1c0-.9.3-1.5 1.6-1.5H16V4.9c-.5-.1-1.4-.1-2.2-.1-2.2 0-3.8 1.4-3.8 3.9V11H7.5v3H10v7h3.5Z" />
-      </svg>
-    ),
-  },
-  {
-    key: 'tiktok',
-    label: 'TikTok',
-    color: '#111111',
-    handle: 'Recherche TikTok',
-    url: 'https://www.tiktok.com/search?q=chez%20laziz%20kairouan',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M16.6 3c.4 2.3 1.9 3.8 4.4 4v3.1c-1.6 0-3-.5-4.4-1.4v6.4c0 3.5-2.6 5.9-5.9 5.9A5.7 5.7 0 0 1 5 15.2c0-3.4 2.8-5.9 6.3-5.7v3.2c-1.7-.3-3.1.7-3.1 2.4 0 1.5 1.1 2.6 2.6 2.6 1.7 0 2.7-1.2 2.7-3V3h3.1Z" />
-      </svg>
-    ),
-  },
-  {
-    key: 'google',
-    label: 'Google',
-    color: '#4285F4',
-    handle: 'Recherche Google Maps',
-    url: 'https://www.google.com/maps/search/Chez+laziz+Kairouan',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2l-6.1 3.4 1.4-6.8L2.2 9.1l6.9-.8L12 2Z" />
-      </svg>
-    ),
-  },
-]
-
-function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: string }) {
-  const utils = trpc.useUtils()
-  const { data: history, isLoading, isError } = trpc.social.history.useQuery({
-    token,
-    network: net.key,
-  })
-  const [recordError, setRecordError] = useState<string | null>(null)
-  const record = trpc.social.record.useMutation({
-    onSuccess: () => {
-      setRecordError(null)
-      utils.social.latest.invalidate()
-      utils.social.history.invalidate()
-    },
-    onError: (e) => setRecordError(e.message),
-  })
-
-  const [followers, setFollowers] = useState('')
-  const [messages, setMessages] = useState('')
-  const [editing, setEditing] = useState(false)
-
-  const latest = history && history.length ? history[history.length - 1] : null
-  const prev = history && history.length > 1 ? history[history.length - 2] : null
-  const diff = latest && prev ? latest.followers - prev.followers : null
-
-  const chartData = (history ?? []).map((h) => ({
-    at: new Date(h.createdAt).getTime(),
-    followers: h.followers,
-  }))
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const f = parseInt(followers, 10)
-    const m = parseInt(messages || '0', 10)
-    if (Number.isNaN(f)) {
-      setRecordError("Le nombre d'abonnés doit être un nombre entier.")
-      return
-    }
-    record.mutate(
-      { token, network: net.key, followers: f, messages: Number.isNaN(m) ? 0 : m },
-      { onSuccess: () => { setEditing(false); setFollowers(''); setMessages('') } },
-    )
-  }
-
-  return (
-    <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-5 md:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span
-            className="flex h-11 w-11 items-center justify-center rounded-full"
-            style={{ color: net.color, backgroundColor: net.color + '14' }}
-          >
-            {net.icon}
-          </span>
-          <div>
-            <p className="font-medium">{net.label}</p>
-            <a href={net.url} target="_blank" rel="noreferrer" className="text-xs text-accent underline underline-offset-2">
-              {net.handle}
-            </a>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="font-display text-3xl text-ink">
-            {isLoading ? (
-              <span className="inline-block h-7 w-16 animate-pulse rounded bg-ink/[0.07] align-middle" />
-            ) : latest ? (
-              latest.followers.toLocaleString('fr-FR')
-            ) : (
-              '—'
-            )}
-          </p>
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink/45">
-            {isError ? 'non chargé' : isLoading ? 'chargement…' : !latest ? 'aucun relevé' : 'abonnés'}
-          </p>
-          {diff !== null && diff !== 0 && (
-            <p className={`mt-1 text-xs font-semibold ${diff > 0 ? 'text-green-600' : 'text-red-500'}`}>
-              {diff > 0 ? '+' : ''}{diff} depuis le dernier relevé
-            </p>
-          )}
-        </div>
-      </div>
-
-      {recordError && (
-        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
-          {recordError}
-        </p>
-      )}
-
-      {latest && (
-        <p className="mt-3 text-xs font-light text-ink/50">
-          💬 {latest.messages} message{latest.messages > 1 ? 's' : ''} reçu{latest.messages > 1 ? 's' : ''}
-          {' · '}relevé du {new Date(latest.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-        </p>
-      )}
-
-      {chartData.length > 1 && (
-        <div className="mt-4 h-32">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-              {/* Échelle de TEMPS et non catégorielle : deux relevés espacés
-                  d'un mois ne doivent pas s'afficher côte à côte comme deux
-                  relevés du même jour. */}
-              <XAxis
-                dataKey="at"
-                type="number"
-                scale="time"
-                domain={['dataMin', 'dataMax']}
-                tickFormatter={(t: number) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                tick={{ fontSize: 10, fill: '#3c3835' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis domain={['dataMin - 5', 'dataMax + 5']} tick={{ fontSize: 10, fill: '#3c3835' }} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(v) => [String(v), 'Abonnés']}
-                labelFormatter={(l) => new Date(Number(l)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-              />
-              <Line type="monotone" dataKey="followers" stroke={net.color} strokeWidth={2} dot={{ r: 3, fill: net.color }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {editing ? (
-        <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-3 border-t border-sand/60 pt-4">
-          <div className="flex-1 min-w-[120px]">
-            <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Abonnés</label>
-            <input required value={followers} onChange={(e) => setFollowers(e.target.value)} placeholder={latest ? String(latest.followers) : 'ex : 1250'} inputMode="numeric" className={inputCls} />
-          </div>
-          <div className="flex-1 min-w-[120px]">
-            <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.18em] text-ink/50">Messages reçus</label>
-            <input value={messages} onChange={(e) => setMessages(e.target.value)} placeholder="0" inputMode="numeric" className={inputCls} />
-          </div>
-          <button type="submit" disabled={record.isPending} className="gold-cta rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50">
-            {record.isPending ? '…' : 'Enregistrer'}
-          </button>
-          <button type="button" onClick={() => setEditing(false)} className="rounded-full border border-ink/25 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink">
-            Annuler
-          </button>
-        </form>
-      ) : (
-        <button
-          onClick={() => setEditing(true)}
-          className="mt-4 w-full rounded-full border border-[#b8912e] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-accent transition-colors hover:bg-[#b8912e] hover:text-white"
-        >
-          Mettre à jour les chiffres
-        </button>
-      )}
-    </div>
-  )
-}
-
-function MarketingTab({ token }: { token: string }) {
-  return (
-    <div>
-      <p className="mb-6 text-sm font-light text-ink/60">
-        Ouvre chaque réseau, note le nombre d'abonnés et de messages, puis clique sur
-        « Mettre à jour » — le site garde l'historique et trace l'évolution. 30 secondes par réseau.
-      </p>
-
-      <div className="grid gap-5 md:grid-cols-2">
-        {NETWORKS.map((net) => (
-          <NetworkCard key={net.key} net={net} token={token} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 /* ------------------------------ Contenu (galerie + pied de page) ------------------------------ */
 
 function GalleryManager({ token }: { token: string }) {
@@ -2319,7 +2087,7 @@ export default function AdminPage() {
       )}
       {tab === 'catalogue' && <ProductsTab token={token} />}
       {tab === 'messages' && <MessagesTab token={token} />}
-      {tab === 'reseaux' && <MarketingTab token={token} />}
+      {tab === 'reseaux' && <SocialPage token={token} period={period} />}
       {tab === 'contenu' && <ContenuTab token={token} />}
       {tab === 'parametres' && <SettingsTab token={token} />}
     </AdminShell>

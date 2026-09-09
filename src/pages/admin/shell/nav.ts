@@ -63,9 +63,13 @@ export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] 
   },
 ]
 
-/** Pages analytiques : elles partagent le sélecteur de période global. Les
- * pages de gestion ne le montrent pas — filtrer un formulaire de réglages
- * sur « 7 derniers jours » n'aurait aucun sens. */
+/** Pages qui partagent le sélecteur de période global. Les pages de gestion
+ * ne le montrent pas — filtrer un formulaire de réglages sur « 7 derniers
+ * jours » n'aurait aucun sens.
+ *
+ * « Réseaux sociaux » y figure malgré sa place dans Gestion : son tableau
+ * met les abonnés relevés à la main en regard des commandes attribuées à
+ * chaque plateforme, et cette moitié-là est bien bornée par la période. */
 export const ANALYTICS_PAGES = new Set<NavId>([
   'apercu',
   'ventes',
@@ -75,4 +79,5 @@ export const ANALYTICS_PAGES = new Set<NavId>([
   'rentabilite',
   'marketing',
   'intelligence',
+  'reseaux',
 ])
