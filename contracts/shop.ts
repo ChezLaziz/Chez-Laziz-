@@ -52,8 +52,26 @@ export const DELIVERY_TIME_LABEL = "24h";
 export const DELIVERY_METHOD_LABEL = "Livraison à domicile (porte-à-porte)";
 
 // ---- Paiement ----
-export const PAYMENT_METHODS = ["cod", "d17"] as const;
+//
+// UN SEUL MOYEN : on paie au livreur, à la porte.
+//
+// Le virement mobile D17 a existé ici. Il demandait au client de quitter le
+// site, de payer dans une autre application, de faire une capture d'écran,
+// de la joindre — puis d'attendre qu'un humain l'approuve. Sur DIX-NEUF
+// commandes reçues par la boutique, ZÉRO l'a emprunté. Il ne coûtait donc
+// rien à retirer, et il coûtait cher à garder : un choix de plus dans le
+// tunnel, un champ obligatoire de plus, un aller-retour hors du site au
+// moment exact où le client décide, et tout un circuit d'approbation.
+//
+// La liste reste une LISTE, et c'est délibéré : le jour où un vrai moyen de
+// paiement en ligne arrive, il s'ajoute ici sans rien casser. La colonne
+// payment_method reste également en base, où elle décrit chaque commande.
+export const PAYMENT_METHODS = ["cod"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/** Le seul moyen de paiement, et donc celui que le serveur applique quoi
+ * qu'il reçoive. */
+export const DEFAULT_PAYMENT_METHOD: PaymentMethod = "cod";
 
 export function isValidPaymentMethod(value: unknown): value is PaymentMethod {
   return (
@@ -61,19 +79,6 @@ export function isValidPaymentMethod(value: unknown): value is PaymentMethod {
     (PAYMENT_METHODS as readonly string[]).includes(value)
   );
 }
-
-/** Numéro D17 auquel le client doit envoyer le paiement avant de joindre
- * sa capture d'écran (preuve obligatoire, vérifiée manuellement par l'admin). */
-export const D17_NUMBER_DISPLAY = "24 41 07 35";
-
-export const PAYMENT_PROOF_ALLOWED_MIME = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
-// Une capture d'écran de paiement, pas une photo HD — 8 Mo est largement
-// suffisant et limite l'abus de l'endpoint d'upload.
-export const PAYMENT_PROOF_MAX_SIZE_BYTES = 8 * 1024 * 1024;
 
 // ---- Gouvernorats de Tunisie (liste officielle, pour le sélecteur de livraison) ----
 export const TUNISIA_GOVERNORATES = [

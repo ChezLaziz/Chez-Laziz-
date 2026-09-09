@@ -56,23 +56,19 @@ export default function PrivacyPage() {
                 <li>اسمكم ورقم هاتفكم</li>
                 <li>عنوان التوصيل (الولاية، المدينة، العنوان، الترقيم البريدي)</li>
                 <li>تفاصيل طلبيتكم أو رسالتكم</li>
-                <li>
-                  إذا دفعتو بـ D17: صورة الدفع، تُستعمل فقط للتحقق من العملية
-                </li>
               </ul>
               <p className="mt-2">
                 ما نطلبوش كلمة سر، ولا بريد إلكتروني، ولا رقم بطاقة بنكية — ما فماش أي دفع
-                أونلاين يتم في هذا الموقع (الدفع نقدًا أو تحويل D17 فقط).
+                أونلاين يتم في هذا الموقع، الدفع نقدًا عند التسليم برك.
               </p>
             </section>
 
             <section>
               <h2 className="mb-2 font-display text-xl text-ink">كيفاش نستعملو هذه المعلومات</h2>
               <p>
-                هذه المعلومات تُستعمل فقط لتحضير طلبيتكم وتوصيلها وتأكيدها، للتحقق من دفع
-                D17، أو للرد على رسالتكم (بالهاتف أو ماسنجر). تُحفظ في قاعدة بياناتنا لمتابعة
-                الطلبيات، وما تُباعش ولا تُشارك مع أي طرف ثالث لأغراض تجارية. صورة الدفع D17
-                ما يوصلها إلا فريقنا، ما تُنشر ولا تُشارك أبدًا.
+                هذه المعلومات تُستعمل فقط لتحضير طلبيتكم وتوصيلها وتأكيدها، أو للرد على
+                رسالتكم (بالهاتف أو ماسنجر). تُحفظ في قاعدة بياناتنا لمتابعة الطلبيات،
+                وما تُباعش ولا تُشارك مع أي طرف ثالث لأغراض تجارية.
               </p>
             </section>
 
@@ -174,15 +170,11 @@ export default function PrivacyPage() {
               <li>Votre nom et numéro de téléphone</li>
               <li>Votre adresse de livraison (gouvernorat, ville, adresse, code postal)</li>
               <li>Le détail de votre commande ou de votre message</li>
-              <li>
-                Si vous payez par D17 : la capture d'écran du paiement, utilisée
-                uniquement pour vérifier la transaction
-              </li>
             </ul>
             <p className="mt-2">
               Nous ne demandons ni mot de passe, ni adresse email, ni numéro de carte
-              bancaire — aucun paiement en ligne n'est traité sur ce site (paiement en
-              espèces ou par virement D17 uniquement).
+              bancaire — aucun paiement en ligne n'est traité sur ce site : on règle en
+              espèces, à la livraison.
             </p>
           </section>
 
@@ -190,11 +182,10 @@ export default function PrivacyPage() {
             <h2 className="mb-2 font-display text-xl text-ink">Comment nous utilisons ces données</h2>
             <p>
               Ces informations servent uniquement à préparer, livrer et confirmer
-              votre commande, à vérifier un paiement D17, ou à répondre à votre
-              message (par téléphone ou Messenger). Elles sont conservées dans notre
-              base de données pour le suivi des commandes et ne sont ni vendues, ni
-              partagées avec des tiers à des fins commerciales. La capture d'écran
-              D17 n'est accessible qu'à notre équipe, jamais publiée ni partagée.
+              votre commande, ou à répondre à votre message (par téléphone ou
+              Messenger). Elles sont conservées dans notre base de données pour le
+              suivi des commandes et ne sont ni vendues, ni partagées avec des tiers
+              à des fins commerciales.
             </p>
           </section>
 

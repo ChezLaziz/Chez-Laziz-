@@ -4,7 +4,6 @@ import { ORDER_ERROR } from "@contracts/orderErrors";
 
 const listAvailableProducts = vi.fn();
 const createOrder = vi.fn();
-const paymentProofExists = vi.fn();
 const assertAdmin = vi.fn();
 const updateOrderStatus = vi.fn();
 const updatePaymentStatus = vi.fn();
@@ -20,7 +19,6 @@ vi.mock("./queries/orders", () => ({
   listOrders: vi.fn(),
   markMetaPurchaseReported,
 }));
-vi.mock("./lib/r2", () => ({ paymentProofExists }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
 vi.mock("./lib/email", () => ({ notifyAdminNewOrder: vi.fn(async () => undefined) }));
 // La logique de décision (shouldReportMetaPurchase) reste réelle — seul
@@ -33,12 +31,25 @@ vi.mock("./lib/metaConversionsApi", async () => {
 });
 
 const { ordersRouter } = await import("./ordersRouter");
+const { FIXED_PACKS } = await import("@contracts/packs");
 
 const CATALOG = [
   { id: 1, name: "Makroudh aux Dattes", priceMillimes: 8000, available: true },
   { id: 2, name: "Makroudh Blanc à la Pistache", priceMillimes: 40000, available: true },
   { id: 5, name: "Makroudh Blanc au Fraise", priceMillimes: 22000, available: true },
   { id: 6, name: "Makroudh aux Amandes", priceMillimes: 17000, available: true },
+];
+
+/** Le catalogue complet : tout ce que les packs prêts contiennent.
+ *
+ * Un pack n'est vendable que si TOUT son contenu est disponible (voir
+ * packIsAvailable) : les tests de packs partent donc d'un catalogue qui les
+ * couvre, sans quoi ils testeraient le refus au lieu de la facturation. */
+const CATALOG_COMPLET = [
+  ...CATALOG,
+  ...[...new Set(FIXED_PACKS.flatMap((p) => p.contents))]
+    .filter((n) => !CATALOG.some((c) => c.name === n))
+    .map((name, i) => ({ id: 100 + i, name, priceMillimes: 20000, available: true })),
 ];
 
 const ctx = { req: new Request("http://localhost"), resHeaders: new Headers() };
@@ -105,7 +116,7 @@ describe("orders.create — server-side price recalculation", () => {
     ).rejects.toThrow();
   });
 
-  it("rejects a payment method other than cod/d17", async () => {
+  it("refuse un moyen de paiement inconnu", async () => {
     await expect(
       // @ts-expect-error — méthode de paiement volontairement invalide pour le test
       caller.create({ ...baseInput, paymentMethod: "stripe" }),
@@ -120,54 +131,38 @@ describe("orders.create — server-side price recalculation", () => {
   });
 });
 
-describe("orders.create — D17 payment proof is mandatory", () => {
-  it("rejects a D17 order with no proof key at all", async () => {
+describe("orders.create — D17 a été retiré du site", () => {
+  // Le verrou qui compte : un onglet resté ouvert sur l'ancienne version, un
+  // script, ou n'importe quel appel direct peut encore demander « d17 ». La
+  // commande doit être REFUSÉE, pas enregistrée dans un état de paiement que
+  // plus personne ne sait traiter.
+  it("refuse une commande qui demande encore D17", async () => {
     await expect(
-      caller.create({ ...baseInput, paymentMethod: "d17" }),
-    ).rejects.toMatchObject({ message: ORDER_ERROR.preuveD17Requise });
+      caller.create({ ...baseInput, paymentMethod: "d17" as unknown as "cod" }),
+    ).rejects.toThrow();
     expect(createOrder).not.toHaveBeenCalled();
   });
 
-  it("rejects a D17 order whose proof key doesn't actually exist in storage", async () => {
-    paymentProofExists.mockResolvedValue(false);
-    await expect(
-      caller.create({
-        ...baseInput,
-        paymentMethod: "d17",
-        paymentProofKey: "payment-proof/fake-key-a-client-made-up.jpg",
-      }),
-    ).rejects.toMatchObject({ message: ORDER_ERROR.preuveD17Requise });
-    expect(createOrder).not.toHaveBeenCalled();
-  });
-
-  it("accepts a D17 order once a real, existing proof key is supplied", async () => {
-    paymentProofExists.mockResolvedValue(true);
-    await caller.create({
-      ...baseInput,
-      paymentMethod: "d17",
-      paymentProofKey: "payment-proof/real-key.jpg",
-    });
+  it("une commande sans moyen de paiement passe : il n'y en a plus qu'un", async () => {
+    const sansPaiement = { ...baseInput };
+    delete (sansPaiement as { paymentMethod?: unknown }).paymentMethod;
+    await caller.create(sansPaiement);
     expect(createOrder).toHaveBeenCalledWith(
-      expect.objectContaining({
-        paymentMethod: "d17",
-        paymentStatus: "pending_verification",
-        paymentProofKey: "payment-proof/real-key.jpg",
-      }),
+      expect.objectContaining({ paymentMethod: "cod", paymentStatus: "pending" }),
     );
   });
 
-  it("never marks a D17 order as approved just because a proof was submitted", async () => {
-    paymentProofExists.mockResolvedValue(true);
-    await caller.create({ ...baseInput, paymentMethod: "d17", paymentProofKey: "payment-proof/real-key.jpg" });
-    const [order] = createOrder.mock.calls.at(-1)!;
-    expect(order.paymentStatus).not.toBe("approved");
-  });
-
-  it("a COD order needs no proof and is immediately payable on delivery", async () => {
+  it("une commande en espèces reste à encaisser à la livraison", async () => {
     await caller.create(baseInput);
     expect(createOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ paymentMethod: "cod", paymentStatus: "pending", paymentProofKey: undefined }),
+      expect.objectContaining({ paymentMethod: "cod", paymentStatus: "pending" }),
     );
+  });
+
+  it("aucune preuve de paiement n'est plus enregistrée", async () => {
+    await caller.create(baseInput);
+    const [order] = createOrder.mock.calls.at(-1)!;
+    expect(order).not.toHaveProperty("paymentProofKey");
   });
 });
 
@@ -236,12 +231,25 @@ describe("admin-only order procedures reject unauthenticated access", () => {
   it("orders.setPaymentStatus requires a valid admin token", async () => {
     assertAdmin.mockRejectedValue(new TRPCError({ code: "UNAUTHORIZED" }));
     await expect(
-      caller.setPaymentStatus({ token: "not-a-real-token", id: 1, paymentStatus: "approved" }),
+      caller.setPaymentStatus({ token: "not-a-real-token", id: 1, paymentStatus: "paid" }),
     ).rejects.toThrow(TRPCError);
   });
 });
 
 describe("orders.create — packs prêts (prix fixes)", () => {
+  beforeEach(() => listAvailableProducts.mockResolvedValue(CATALOG_COMPLET));
+
+  it("refuse un pack dont l'un des produits n'est plus au catalogue", async () => {
+    // Le vrai scénario : quelqu'un marque un makroudh indisponible depuis
+    // l'administration, et le pack qui le contient reste en vente à son prix
+    // plein. La commande partait, impossible à préparer.
+    listAvailableProducts.mockResolvedValue(CATALOG);
+    await expect(
+      caller.create({ ...baseInput, items: [{ kind: "pack", packId: "vip", qty: 1 }] }),
+    ).rejects.toMatchObject({ message: ORDER_ERROR.packIndisponible });
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
   it("facture un pack au prix de vente fixe, avec son contenu et son poids", async () => {
     await caller.create({ ...baseInput, items: [{ kind: "pack", packId: "vip", qty: 1 }] });
     expect(createOrder).toHaveBeenCalledWith(
@@ -414,33 +422,3 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
   });
 });
 
-describe("orders.setPaymentStatus — Meta « Achat » (D17)", () => {
-  beforeEach(() => {
-    assertAdmin.mockResolvedValue(undefined);
-  });
-
-  it("signale l'achat seulement une fois le paiement APPROUVÉ par l'admin", async () => {
-    updatePaymentStatus.mockResolvedValue(
-      makeOrder({ paymentMethod: "d17", paymentStatus: "approved" }),
-    );
-    await caller.setPaymentStatus({ token: "t", id: 42, paymentStatus: "approved" });
-    expect(markMetaPurchaseReported).toHaveBeenCalledWith(42);
-    expect(sendMetaPurchaseEvent).toHaveBeenCalledTimes(1);
-  });
-
-  it("n'envoie rien si la preuve D17 est rejetée", async () => {
-    updatePaymentStatus.mockResolvedValue(
-      makeOrder({ paymentMethod: "d17", paymentStatus: "rejected" }),
-    );
-    await caller.setPaymentStatus({ token: "t", id: 42, paymentStatus: "rejected" });
-    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
-  });
-
-  it("un D17 encore en attente de vérification ne déclenche rien même si le statut avance", async () => {
-    updateOrderStatus.mockResolvedValue(
-      makeOrder({ paymentMethod: "d17", paymentStatus: "pending_verification", status: "en_preparation" }),
-    );
-    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
-    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
-  });
-});

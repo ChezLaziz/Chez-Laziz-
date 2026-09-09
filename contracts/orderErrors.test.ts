@@ -38,6 +38,6 @@ describe('orderErrorMessage', () => {
   })
 
   it('tolère les espaces autour du jeton', () => {
-    expect(orderErrorMessage(`  ${ORDER_ERROR.preuveD17Requise}\n`, 'fr', FALLBACK)).not.toBe(FALLBACK)
+    expect(orderErrorMessage(`  ${ORDER_ERROR.produitIndisponible}\n`, 'fr', FALLBACK)).not.toBe(FALLBACK)
   })
 })

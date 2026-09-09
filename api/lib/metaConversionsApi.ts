@@ -2,12 +2,10 @@
 // côté serveur uniquement, une fois la commande confirmée réelle (voir
 // shouldReportMetaPurchase ci-dessous) — jamais à la simple création de la
 // commande, qui ne prouve ni l'intention d'achat ni le paiement :
-//   - "cash on delivery" : aucune vérification de paiement n'existe, donc le
-//     signal le plus fiable est la confirmation manuelle de l'admin (appel
-//     client) — matérialisée par un statut qui avance au-delà de "nouvelle".
-//   - D17 : seule l'approbation de la capture d'écran de paiement par
-//     l'admin (paymentStatus "approved") prouve qu'un paiement a réellement
-//     eu lieu.
+// Aucune vérification de paiement n'existe : on encaisse à la livraison. Le
+// signal le plus fiable est donc la confirmation manuelle par un humain
+// (l'appel au client), matérialisée par un statut qui avance au-delà de
+// "nouvelle".
 // Envoyer "Purchase" dès la création — comme une première version le
 // faisait — compte des simples intentions (formulaire rempli, jamais
 // livré/payé) comme des ventes auprès de Meta, ce qui dégrade la qualité du
@@ -30,30 +28,30 @@ export function isMetaConversionsApiConfigured(): boolean {
 }
 
 export type ReportableOrder = {
-  paymentMethod: "cod" | "d17";
-  paymentStatus:
-    | "pending"
-    | "pending_verification"
-    | "approved"
-    | "rejected"
-    | "paid";
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
   metaPurchaseReportedAt: Date | null;
 };
 
 /** Décide si CETTE commande doit être signalée à Meta maintenant — à
- * appeler après toute mise à jour de statut ou de paiement, jamais à la
- * création. Ne renvoie vrai qu'une seule fois par commande. */
+ * appeler après toute mise à jour de statut, jamais à la création.
+ * Ne renvoie vrai qu'une seule fois par commande.
+ *
+ * UN SEUL SIGNAL DEPUIS LE RETRAIT DE D17 : l'avancement du statut au-delà
+ * de « nouvelle », c'est-à-dire le moment où un humain a appelé le client et
+ * confirmé la commande. C'est la seule preuve dont dispose une boutique qui
+ * encaisse à la livraison — aucun paiement n'a lieu en ligne.
+ *
+ * Il existait une seconde branche : une commande D17 comptait dès qu'un
+ * administrateur approuvait la capture de virement. D17 est retiré, et
+ * aucune commande ne l'a jamais emprunté.
+ *
+ * « paid » (l'argent encaissé par le livreur) ne déclenche RIEN ici : c'est
+ * une écriture de gestion qui arrive après coup, et la commande a de toute
+ * façon déjà été signalée au moment de sa confirmation. */
 export function shouldReportMetaPurchase(order: ReportableOrder): boolean {
   if (order.metaPurchaseReportedAt) return false;
   if (order.status === "annulee") return false;
-  // "paid" (encaissement d'une commande en espèces) ne change RIEN ici :
-  // pour le COD, le signal reste l'avancement du statut après confirmation
-  // téléphonique, comme avant. Marquer l'argent encaissé est une écriture
-  // de gestion, pas un nouvel évènement publicitaire — et une commande
-  // déjà signalée l'est de toute façon une seule fois.
-  if (order.paymentMethod === "cod") return order.status !== "nouvelle";
-  return order.paymentStatus === "approved";
+  return order.status !== "nouvelle";
 }
 
 export function sha256(value: string): string {

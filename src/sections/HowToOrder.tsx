@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { formatTND, DELIVERY_FEE_MILLIMES, D17_NUMBER_DISPLAY } from '@/lib/shop'
+import { formatTND, DELIVERY_FEE_MILLIMES } from '@/lib/shop'
 import { useLang } from '@/lib/i18n'
 
 const STEPS_FR = [
@@ -16,7 +16,7 @@ const STEPS_FR = [
   {
     n: '03',
     title: 'Payez comme vous préférez',
-    text: `En espèces à la livraison, ou par D17 au ${D17_NUMBER_DISPLAY} avec une capture d’écran. Nous vous appelons pour confirmer.`,
+    text: `En espèces à la livraison, au moment où le livreur vous remet le colis. Nous vous appelons avant pour confirmer.`,
   },
 ]
 
@@ -38,7 +38,7 @@ const STEPS_AR = [
     // espacés ("24 41 07 35") s'inverse visuellement une fois inséré dans
     // une phrase arabe (RTL) — l'algorithme bidi le traite comme plusieurs
     // segments faibles au lieu d'un seul nombre à préserver tel quel.
-    text: `نقدًا عند الاستلام، أو عبر D17 على الرقم ⁦${D17_NUMBER_DISPLAY}⁩ مع صورة إثبات الدفع. نتصل بكم لتأكيد الطلب.`,
+    text: `نقدًا عند الاستلام، وقت ما يعطيكم الشوفور الطلب في يدكم. نتصل بكم قبل باش نأكّدو.`,
   },
 ]
 

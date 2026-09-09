@@ -131,23 +131,17 @@ export async function updateOrderStatus(
 
 /** Met à jour l'état de paiement d'une commande.
  *
- * D17 : "approved"/"rejected" = décision de l'admin sur la capture d'écran.
- * Espèces à la livraison : "paid"/"pending" = argent encaissé ou non, ce
- * qui était jusqu'ici impossible à enregistrer (la fonction sortait
- * immédiatement pour toute commande non-D17, donc une commande en espèces
- * restait "pending" pour toujours). Chaque moyen de paiement n'accepte que
- * les valeurs qui ont un sens pour lui. */
+ * Deux valeurs depuis le retrait de D17 : "paid" quand l'argent est rentré,
+ * "pending" quand il reste à encaisser. "approved" et "rejected" décrivaient
+ * la décision d'un administrateur sur une capture de virement ; elles
+ * restent dans l'énumération de la base — on ne détruit pas d'historique —
+ * mais plus personne ne peut les poser. */
 export async function updatePaymentStatus(
   id: number,
-  paymentStatus: "approved" | "rejected" | "paid" | "pending",
+  paymentStatus: "paid" | "pending",
 ) {
   const order = await getDb().query.orders.findFirst({ where: eq(orders.id, id) });
   if (!order) return null;
-  const allowed =
-    order.paymentMethod === "d17"
-      ? ["approved", "rejected"]
-      : ["paid", "pending"];
-  if (!allowed.includes(paymentStatus)) return order;
   await getDb()
     .update(orders)
     .set({

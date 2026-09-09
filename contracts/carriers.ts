@@ -110,10 +110,16 @@ export function hasCompleteWeight(items: ShippableOrder["items"]): boolean {
 
 /** CE QUE LE LIVREUR DOIT ENCAISSER — et surtout ce qu'il ne doit PAS.
  *
- * La règle la plus dangereuse de tout ce module. Une commande D17 déjà
- * approuvée est PAYÉE : envoyer son total au transporteur ferait payer le
- * client deux fois. Le montant à encaisser est donc nul dès que l'argent est
- * déjà rentré, quel que soit le total de la commande. */
+ * La règle la plus dangereuse de tout ce module : une commande dont l'argent
+ * est DÉJÀ rentré ne doit rien encaisser. Envoyer son total au transporteur
+ * ferait payer le client une seconde fois, et un remboursement se règle à la
+ * main, au téléphone, avec un client déjà mécontent.
+ *
+ * « paid » couvre le cas qui se produit vraiment : une commande encaissée
+ * puis remise au transporteur. « approved » venait des virements D17, retirés
+ * du site ; la valeur reste dans l'énumération de la base et la garde reste
+ * ici — une règle de sécurité ne se retire pas parce qu'on croit son cas
+ * devenu impossible. */
 export function amountToCollectMillimes(o: ShippableOrder): number {
   const alreadyPaid = o.paymentStatus === "approved" || o.paymentStatus === "paid";
   return alreadyPaid ? 0 : o.totalMillimes;

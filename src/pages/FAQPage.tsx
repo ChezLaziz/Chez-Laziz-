@@ -4,7 +4,7 @@ import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import { useSEO, setJsonLd } from '../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
-import { formatTND, PHONE_DISPLAY, PHONE_TEL, D17_NUMBER_DISPLAY, ALLOWED_WEIGHTS_KG, DELIVERY_FEE_MILLIMES, formatWeight } from '@/lib/shop'
+import { formatTND, PHONE_DISPLAY, PHONE_TEL, ALLOWED_WEIGHTS_KG, DELIVERY_FEE_MILLIMES, formatWeight } from '@/lib/shop'
 
 const FAQ_FR: { q: string; a: string }[] = [
   {
@@ -19,12 +19,7 @@ const FAQ_FR: { q: string; a: string }[] = [
   { q: 'Combien coûte la livraison ?', a: `${formatTND(DELIVERY_FEE_MILLIMES)} TND, frais fixes, quel que soit le nombre de produits.` },
   { q: 'Livrez-vous partout en Tunisie ?', a: 'Oui, dans les 24 gouvernorats, à domicile (porte-à-porte).' },
   { q: 'Quel est le délai de livraison ?', a: 'Environ 24h à compter de la confirmation téléphonique de votre commande.' },
-  { q: 'Quels moyens de paiement acceptez-vous ?', a: 'Deux moyens : paiement en espèces à la livraison, ou virement D17.' },
-  {
-    q: 'Comment fonctionne le paiement D17 ?',
-    a: `Vous envoyez le montant total au ${D17_NUMBER_DISPLAY}, puis vous joignez la capture d'écran du paiement lors de la commande. Notre équipe vérifie la capture avant de confirmer.`,
-  },
-  { q: 'La capture d\'écran D17 est-elle obligatoire ?', a: 'Oui — une commande D17 ne peut pas être envoyée sans capture d\'écran du paiement.' },
+  { q: 'Quels moyens de paiement acceptez-vous ?', a: 'Le paiement en espèces à la livraison, tout simplement. Vous ne réglez rien avant d’avoir votre commande en main.' },
   { q: 'Comment fonctionne le paiement à la livraison ?', a: 'Vous payez en espèces directement au livreur, à la réception de votre commande.' },
   { q: 'Chez Laziz m\'appelle-t-il après ma commande ?', a: 'Oui, nous vous appelons systématiquement pour confirmer les produits, l\'adresse et le paiement avant préparation.' },
 ]
@@ -42,12 +37,7 @@ const FAQ_AR: { q: string; a: string }[] = [
   { q: 'قداش ثمن التوصيل؟', a: `${formatTND(DELIVERY_FEE_MILLIMES)} د.ت، مصاريف ثابتة، مهما كان عدد المنتجات.` },
   { q: 'توصلو لكل تونس؟', a: 'إي، في الـ24 ولاية، توصيل للمنزل.' },
   { q: 'قداش مدة التوصيل؟', a: 'حوالي 24 ساعة من وقت تأكيد الطلبية بالهاتف.' },
-  { q: 'شنية طرق الدفع المتوفرة؟', a: 'طريقتين: الدفع نقدًا عند التسليم، أو تحويل عبر D17.' },
-  {
-    q: 'كيفاش يخدم الدفع عبر D17؟',
-    a: `تبعثو المبلغ الكامل لـ${D17_NUMBER_DISPLAY}، وبعدها ترفقو صورة الدفع مع الطلبية. فريقنا يتحقق من الصورة قبل ما يأكد الطلبية.`,
-  },
-  { q: 'صورة الدفع D17 إجبارية؟', a: 'إي — ما نقدروش نأكدو طلبية D17 بلا صورة الدفع.' },
+  { q: 'شنية طرق الدفع المتوفرة؟', a: 'الدفع نقدًا عند التسليم، وهذا الكل. ما تخلّصو شي قبل ما يوصلكم الطلب في يدكم.' },
   { q: 'كيفاش يخدم الدفع عند التسليم؟', a: 'تخلصو نقدًا مباشرة للموزع، وقت ما توصلكم الطلبية.' },
   { q: 'عند لعزيز يتصل بيا بعد الطلبية؟', a: 'إي، نتصلو بيكم ديمة لتأكيد المنتجات والعنوان وطريقة الدفع قبل التحضير.' },
 ]
@@ -60,14 +50,14 @@ export default function FAQPage() {
     isAr
       ? {
           title: 'الأسئلة الشائعة — عند لعزيز | التوصيل، الدفع، الطلب',
-          description: 'الأسئلة الشائعة عند لعزيز: التوصيل في تونس، المدة، الدفع عند التسليم أو D17، الأوزان المتوفرة.',
+          description: 'الأسئلة الشائعة عند لعزيز: التوصيل في تونس، المدة، الدفع نقدًا عند التسليم، الأوزان المتوفرة.',
           path: '/ar/faq',
           breadcrumb: 'الأسئلة الشائعة',
         }
       : {
           title: 'FAQ — Chez Laziz | Livraison, paiement, commande',
           description:
-            'Questions fréquentes Chez Laziz : livraison en Tunisie, délai, paiement à la livraison ou D17, poids disponibles.',
+            'Questions fréquentes Chez Laziz : livraison en Tunisie, délai, paiement en espèces à la livraison, poids disponibles.',
           path: '/faq',
           breadcrumb: 'FAQ',
         },

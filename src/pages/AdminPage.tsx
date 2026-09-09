@@ -331,10 +331,6 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
   )
 }
 
-/* ------------------------------ Commandes ------------------------------ */
-
-/** Preuve de paiement D17 : jamais une URL publique — récupérée via fetch
- * authentifié (Bearer token) et affichée depuis un blob local. */
 /* ------------------------------ Produits ------------------------------ */
 
 type ProductForm = {

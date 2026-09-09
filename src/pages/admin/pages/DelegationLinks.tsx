@@ -221,7 +221,13 @@ function PendingCity({
               onClick={() => onPick(c.externalId)}
               className="min-h-8 rounded-full border border-ink/20 bg-white px-3 text-[11px] font-medium text-ink/75 hover:border-[#b8912e] hover:text-accent disabled:opacity-40"
             >
+              {/* Deux délégations d'un même gouvernorat peuvent porter EXACTEMENT
+                  le même nom réduit (c'est justement le cas « ambiguous ») : sans
+                  l'identifiant, les deux boutons affichaient le même texte et la
+                  personne qui choisit ne pouvait plus les distinguer à l'écran —
+                  un mauvais clic envoie le colis dans la mauvaise zone. */}
               {c.name}
+              <span className="ml-1 font-mono text-[9px] text-ink/35">#{c.externalId}</span>
             </button>
           ))}
         </div>

@@ -8,6 +8,7 @@ import {
   PACK_ITEM_WEIGHT_KG,
   customPackProductsTotal,
   customPackTotal,
+  packIsAvailable,
   formatPriceDT,
   getFixedPack,
   isValidCustomSelection,
@@ -144,5 +145,30 @@ describe("formatPriceDT", () => {
   it("traduit le libellé de devise", () => {
     expect(formatPriceDT(8000, "ar")).toBe("8 د.ت");
     expect(formatPriceDT(69900, "ar")).toBe("69,9 د.ت");
+  });
+});
+
+describe('packIsAvailable', () => {
+  const pack = { contents: ['Makroudh Jwayed', 'Makroudh Zgougou'] as const }
+
+  it('vend le pack quand tout son contenu est au catalogue', () => {
+    expect(packIsAvailable(pack, ['Makroudh Jwayed', 'Makroudh Zgougou', 'Autre'])).toBe(true)
+  });
+
+  it('refuse le pack dès qu’UN seul produit manque', () => {
+    expect(packIsAvailable(pack, ['Makroudh Jwayed'])).toBe(false)
+  });
+
+  it('refuse tout pack quand le catalogue est vide', () => {
+    expect(packIsAvailable(pack, [])).toBe(false)
+  });
+
+  it('compare sur le nom exact : une graphie approchante ne suffit pas', () => {
+    expect(packIsAvailable(pack, ['makroudh jwayed', 'Makroudh Zgougou'])).toBe(false)
+  });
+
+  it('tous les packs prêts du catalogue réel sont vendables', () => {
+    const tous = FIXED_PACKS.flatMap((p) => p.contents)
+    for (const p of FIXED_PACKS) expect(packIsAvailable(p, tous)).toBe(true)
   });
 });

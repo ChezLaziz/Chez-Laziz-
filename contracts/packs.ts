@@ -141,3 +141,27 @@ export function normalizeCustomSelection(ids: readonly number[]): number[] {
 export function formatPriceDT(millimes: number, lang: "fr" | "ar" = "fr"): string {
   return `${formatDinars(millimes)} ${lang === "ar" ? "د.ت" : "DT"}`;
 }
+
+/** Ce pack peut-il encore être vendu avec ce catalogue ?
+ *
+ * Un pack prêt a un prix FIGÉ et un contenu défini par des NOMS de produits.
+ * Le serveur vérifiait chaque produit vendu à l'unité — un produit retiré du
+ * catalogue faisait refuser la commande — mais ne vérifiait RIEN pour les
+ * packs. Marquer un makroudh indisponible depuis l'administration laissait
+ * donc le pack qui le contient en vente, à son prix plein.
+ *
+ * Ce qui arrive ensuite est le pire scénario d'une boutique qui fait de la
+ * publicité : la commande est prise, encaissable sur le papier, et il faut
+ * rappeler le client pour lui expliquer qu'on ne peut pas la préparer. Un
+ * client qui a payé dans sa tête et qu'on rappelle pour renégocier est un
+ * client perdu, et l'annonce qui l'a amené est payée quand même.
+ *
+ * La comparaison se fait sur le nom français exact, qui est la clé utilisée
+ * partout ailleurs pour relier un pack à son contenu. */
+export function packIsAvailable(
+  pack: Pick<FixedPack, "contents">,
+  availableProductNames: Iterable<string>,
+): boolean {
+  const names = new Set(availableProductNames);
+  return pack.contents.every((n) => names.has(n));
+}

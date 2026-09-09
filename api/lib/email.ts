@@ -24,7 +24,6 @@ type NotifiableOrder = {
   subtotalMillimes: number;
   deliveryFeeMillimes: number;
   totalMillimes: number;
-  paymentMethod: "cod" | "d17";
   paymentStatus: string;
   note: string | null;
 };
@@ -57,10 +56,7 @@ export function isEmailConfigured(): boolean {
 
 export function buildNewOrderEmail(order: NotifiableOrder): { subject: string; html: string; text: string } {
   const items = parseItems(order.items);
-  const paymentLabel =
-    order.paymentMethod === "d17"
-      ? "D17 — capture d'écran à vérifier dans l'admin"
-      : "Espèces à la livraison";
+  const paymentLabel = "Espèces à la livraison";
   const addressLine = `${order.address}, ${order.city}${order.postalCode ? ` ${order.postalCode}` : ""}, ${order.governorate}`;
 
   const contentsText = (it: OrderItem) =>
@@ -107,7 +103,6 @@ export function buildNewOrderEmail(order: NotifiableOrder): { subject: string; h
 <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#2b211b;background:#faf7f0;padding:28px 24px">
   <p style="margin:0;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#c88a3d">Chez Laziz</p>
   <h1 style="margin:8px 0 20px;font-size:24px;font-weight:normal">Nouvelle commande #${order.id}</h1>
-  ${order.paymentMethod === "d17" ? `<p style="margin:0 0 16px;padding:10px 12px;background:#fff4dd;border:1px solid #e8c98a;border-radius:8px"><strong>D17</strong> — une capture d'écran de paiement est à vérifier dans l'admin.</p>` : ""}
   <p style="margin:0 0 4px"><strong>${escapeHtml(order.customerName)}</strong> · <a href="tel:${escapeHtml(order.phone)}" style="color:#c88a3d">${escapeHtml(order.phone)}</a></p>
   <p style="margin:0 0 20px;color:#756a61">${escapeHtml(addressLine)}</p>
   <table style="width:100%;border-collapse:collapse;border-top:1px solid #e8ded0;border-bottom:1px solid #e8ded0;font-size:15px">${rows}</table>

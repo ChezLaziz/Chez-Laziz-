@@ -44,11 +44,14 @@ type Order = {
   totalMillimes: number
   paymentMethod: string
   paymentStatus: string
-  paymentProofKey: string | null
   note: string | null
   status: string
   carrier: string | null
   trackingNumber: string | null
+  // Absent du type jusqu'ici : c'est justement pourquoi un envoi resté
+  // « envoi_en_cours » ou « incertain » ne montrait AUCUNE sortie à
+  // l'écran — l'admin n'avait même pas la donnée pour le détecter.
+  carrierStatus: string | null
   createdAt: Date | string
 }
 
@@ -150,7 +153,7 @@ export default function OrdersPage({
   const removeOrder = trpc.orders.delete.useMutation({ onSuccess: done, onError })
 
   const [search, setSearch] = useState('')
-  const [payFilter, setPayFilter] = useState<'all' | 'd17_pending' | 'to_collect' | 'to_ship'>('all')
+  const [payFilter, setPayFilter] = useState<'all' | 'to_collect' | 'to_ship'>('all')
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
@@ -171,10 +174,10 @@ export default function OrdersPage({
     return (o: ShippableOrder) => byCity.get(`${o.governorate}|${o.city}`) ?? null
   }, [cityLinks.data])
 
-  const isToCollect = (o: Order) =>
-    o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee'
-  const isD17Pending = (o: Order) =>
-    o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification'
+  // Toute commande non encaissée et non annulée. L'argent d'une boutique qui
+  // encaisse à la livraison se compte ici : oublier une commande dans cette
+  // file, c'est un colis remis dont personne n'a vu revenir le paiement.
+  const isToCollect = (o: Order) => o.paymentStatus !== 'paid' && o.status !== 'annulee'
   // Prête à partir mais pas encore remise : la file d'attente du transporteur.
   const isToShip = (o: Order) => o.status !== 'annulee' && o.status !== 'terminee' && !o.trackingNumber
 
@@ -186,13 +189,11 @@ export default function OrdersPage({
     return hay.toLowerCase().includes(query)
   })
   const filtered = scoped.filter((o) => {
-    if (payFilter === 'd17_pending') return isD17Pending(o)
     if (payFilter === 'to_collect') return isToCollect(o)
     if (payFilter === 'to_ship') return isToShip(o)
     return true
   })
 
-  const d17Pending = scoped.filter(isD17Pending).length
   const toCollect = scoped.filter(isToCollect)
   const toShip = scoped.filter(isToShip).length
   const toCollectMillimes = toCollect.reduce((s, o) => s + o.totalMillimes, 0)
@@ -243,7 +244,6 @@ export default function OrdersPage({
             [
               ['all', `Toutes (${scoped.length})`],
               ['to_ship', `À remettre${toShip ? ` (${toShip})` : ''}`],
-              ['d17_pending', `D17 à vérifier${d17Pending ? ` (${d17Pending})` : ''}`],
               ['to_collect', `À encaisser${toCollect.length ? ` (${toCollect.length})` : ''}`],
             ] as const
           ).map(([value, label]) => (
@@ -348,7 +348,6 @@ export default function OrdersPage({
               <OrderRow
                 key={o.id}
                 order={o}
-                token={token}
                 selected={selected.has(o.id)}
                 onSelect={() => setSelected((s) => toggle(s, o.id))}
                 open={expanded.has(o.id)}
@@ -725,7 +724,6 @@ ${blocks}
 
 function OrderRow({
   order: o,
-  token,
   selected,
   onSelect,
   open,
@@ -738,21 +736,32 @@ function OrderRow({
   savingPayment,
 }: {
   order: Order
-  token: string
   selected: boolean
   onSelect: () => void
   open: boolean
   onToggle: () => void
   onStatus: (s: Status) => void
-  onPayment: (p: 'approved' | 'rejected' | 'paid' | 'pending') => void
+  onPayment: (p: 'paid' | 'pending') => void
   onTracking: (t: string) => void
   onClearCarrier: () => void
   onDelete: () => void
   savingPayment: boolean
 }) {
+  /** L'envoi est resté en l'air.
+   *
+   * La réservation d'envoi pose « envoi_en_cours » SANS écrire de
+   * transporteur. Si le processus meurt entre la réservation et sa
+   * conclusion, la commande garde cet état pour toujours : tout envoi futur
+   * est refusé, et l'écran, qui n'affichait le bloc transporteur que si un
+   * transporteur était écrit, ne montrait aucune sortie. La commande était
+   * bloquée définitivement, sans que rien ne le dise.
+   *
+   * La sortie existait pourtant côté serveur — « clear » remet tout à zéro.
+   * Elle est désormais atteignable, et accompagnée de l'avertissement qui
+   * compte : le colis existe peut-être déjà. */
+  const envoiBloque = o.carrierStatus === 'envoi_en_cours' || o.carrierStatus === 'incertain'
   const items = parseOrderItems(o.items)
   const meta = STATUS_META[o.status as Status] ?? STATUS_META.nouvelle
-  const d17Pending = o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification'
   const [tracking, setTracking] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -778,25 +787,21 @@ function OrderRow({
             <span className="block truncate text-sm font-medium text-ink">{o.customerName}</span>
             <span className="block truncate text-[11px] text-ink/45">
               {o.city}, {o.governorate}
-              {/* Sur téléphone, la ligne du haut n'a pas la place du montant :
-                  il descend ici plutôt que de disparaître. Une commande sans
-                  son montant ni son moyen de paiement ne se traite pas. */}
+              {/* Sur téléphone, la ligne du haut n'a pas la place du
+                  montant : il descend ici plutôt que de disparaître. Une
+                  commande sans son montant ne se traite pas. */}
               <span className="sm:hidden">
                 {' · '}
                 <span className="font-medium text-ink/70">{formatTND(o.totalMillimes)} DT</span>
-                {' '}
-                {o.paymentMethod === 'd17' ? 'D17' : 'esp.'}
-                {d17Pending ? ' · à vérifier' : ''}
               </span>
               <span className="hidden sm:inline"> · {formatDate(o.createdAt)}</span>
             </span>
           </span>
-          <span className="hidden shrink-0 text-right sm:block">
-            <span className="block text-sm text-ink">{formatTND(o.totalMillimes)} DT</span>
-            <span className="block text-[11px] text-ink/45">
-              {o.paymentMethod === 'd17' ? 'D17' : 'Espèces'}
-              {d17Pending ? ' · à vérifier' : ''}
-            </span>
+          {/* Le moyen de paiement ne s'affiche plus : il est le même pour
+              toutes les commandes. Une colonne qui répète la même valeur sur
+              chaque ligne occupe de la place et n'apprend rien. */}
+          <span className="hidden shrink-0 text-right text-sm text-ink sm:block">
+            {formatTND(o.totalMillimes)} DT
           </span>
         </button>
 
@@ -902,33 +907,7 @@ function OrderRow({
                 </select>
               </label>
 
-              {d17Pending && (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5">
-                  {o.paymentProofKey && (
-                    <PaymentProofViewer token={token} proofKey={o.paymentProofKey} />
-                  )}
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onPayment('approved')}
-                      disabled={savingPayment}
-                      className="min-h-9 flex-1 rounded-full bg-green-700 px-3 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-40"
-                    >
-                      Approuver
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onPayment('rejected')}
-                      disabled={savingPayment}
-                      className="min-h-9 flex-1 rounded-full border border-red-300 px-3 text-xs font-semibold uppercase tracking-wide text-red-700 disabled:opacity-40"
-                    >
-                      Rejeter
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {o.paymentMethod === 'cod' && o.status !== 'annulee' && (
+              {o.status !== 'annulee' && (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-sand/60 bg-white px-3 py-2.5">
                   <span className="text-[13px] text-ink/70">
                     {o.paymentStatus === 'paid'
@@ -948,14 +927,21 @@ function OrderRow({
 
               <div className="rounded-lg border border-sand/60 bg-white px-3 py-2.5">
                 <p className="mb-1.5 text-[11px] uppercase tracking-wide text-ink/45">Transporteur</p>
-                {o.carrier ? (
+                {o.carrier || envoiBloque ? (
                   <div className="space-y-2">
                     <p className="text-[13px] text-ink">
-                      {CARRIERS[o.carrier as CarrierKey]?.label ?? o.carrier}
+                      {o.carrier ? (CARRIERS[o.carrier as CarrierKey]?.label ?? o.carrier) : 'Envoi interrompu'}
                       {o.trackingNumber && (
                         <span className="ml-2 font-mono text-xs text-ink/60">{o.trackingNumber}</span>
                       )}
                     </p>
+                    {envoiBloque && (
+                      <p className="text-[12px] leading-relaxed text-amber-800">
+                        {o.carrierStatus === 'envoi_en_cours'
+                          ? "Un envoi est parti et n'a jamais répondu. Le colis existe peut-être : vérifiez chez le transporteur AVANT de débloquer."
+                          : "L'envoi précédent est resté sans réponse. Le colis existe peut-être : vérifiez chez le transporteur avant de renvoyer."}
+                      </p>
+                    )}
                     {!o.trackingNumber && (
                       <div className="flex gap-2">
                         <input
@@ -980,7 +966,7 @@ function OrderRow({
                       onClick={onClearCarrier}
                       className="text-[11px] text-ink/40 underline underline-offset-4 hover:text-ink"
                     >
-                      Retirer le transporteur
+                      {envoiBloque ? "Débloquer l'envoi" : 'Retirer le transporteur'}
                     </button>
                   </div>
                 ) : (
@@ -1029,57 +1015,3 @@ function OrderRow({
   )
 }
 
-/* ---------------------------- Capture D17 ---------------------------- */
-
-function PaymentProofViewer({ token, proofKey }: { token: string; proofKey: string }) {
-  const [open, setOpen] = useState(false)
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const view = async () => {
-    setOpen(true)
-    setError(null)
-    if (blobUrl) return
-    try {
-      const res = await fetch(`/api/admin/proofs/${proofKey}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error('Introuvable')
-      const blob = await res.blob()
-      setBlobUrl(URL.createObjectURL(blob))
-    } catch {
-      setError("Impossible de charger la capture d'écran.")
-    }
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={view}
-        className="text-xs font-semibold uppercase tracking-wide text-accent underline underline-offset-4 hover:text-[#8a5527]"
-      >
-        Voir la capture D17
-      </button>
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
-          onClick={() => setOpen(false)}
-        >
-          <div className="max-h-[85vh] max-w-lg overflow-auto rounded-xl bg-white p-3" onClick={(e) => e.stopPropagation()}>
-            {error && <p className="p-6 text-sm text-red-600">{error}</p>}
-            {!error && !blobUrl && <p className="p-6 text-sm text-ink/50">Chargement…</p>}
-            {blobUrl && <img src={blobUrl} alt="Preuve de paiement D17" className="max-w-full rounded-lg" />}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="mt-2 w-full rounded-lg border border-sand py-2 text-xs font-semibold uppercase tracking-wide text-ink/60 hover:bg-sand/30"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}

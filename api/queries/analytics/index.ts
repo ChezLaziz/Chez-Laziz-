@@ -22,7 +22,6 @@ import { computeAcquisition } from "./acquisition";
 import {
   attachGrowth,
   computeGovernorateDelivery,
-  computePaymentBreakdown,
   computeProductGovernorateMatrix,
   governorateKey,
   productKey,
@@ -212,7 +211,6 @@ export type OverviewData = {
   >;
   productByGovernorate: ReturnType<typeof computeProductGovernorateMatrix>;
   governorateDelivery: ReturnType<typeof computeGovernorateDelivery>;
-  payments: ReturnType<typeof computePaymentBreakdown>;
   customerMetrics: ReturnType<typeof computeCustomerMetrics>;
   margins: ReturnType<typeof computeMargins>;
   previousMargins: ReturnType<typeof computeMargins>;
@@ -290,7 +288,6 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     ),
     productByGovernorate: computeProductGovernorateMatrix(current),
     governorateDelivery: computeGovernorateDelivery(currentAll),
-    payments: computePaymentBreakdown(current),
     customerMetrics: computeCustomerMetrics(current, histories, periods.current.start),
     margins,
     previousMargins: computeMargins(previous, costs),

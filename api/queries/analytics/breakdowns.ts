@@ -1,5 +1,10 @@
-/** Découpages du chiffre d'affaires : par mode de paiement, par produit ×
- * gouvernorat, et croissance d'une période à l'autre.
+/** Découpages du chiffre d'affaires : par produit × gouvernorat, et
+ * croissance d'une période à l'autre.
+ *
+ * La répartition par mode de paiement a disparu avec D17 : il n'en reste
+ * qu'un. Un camembert à une seule part, ou un « 100 % espèces » présenté
+ * comme une mesure, ne dit rien que le lecteur ne sache déjà — et ce projet
+ * refuse d'afficher un chiffre qui n'informe pas.
  *
  * Toutes ces fonctions consomment des commandes DÉJÀ filtrées valides et
  * réutilisent orderRevenueMillimes : aucune ne redéfinit ce qu'est un
@@ -12,33 +17,6 @@ import {
   type GovernorateStats,
   type ProductStats,
 } from "./metrics";
-
-export type PaymentBreakdown = {
-  method: string;
-  orders: number;
-  revenueMillimes: number;
-  share: number;
-};
-
-export function computePaymentBreakdown(validOrders: AnalyticsOrder[]): PaymentBreakdown[] {
-  const map = new Map<string, { orders: number; revenueMillimes: number }>();
-  let total = 0;
-  for (const o of validOrders) {
-    const revenue = orderRevenueMillimes(o);
-    total += revenue;
-    const entry = map.get(o.paymentMethod) ?? { orders: 0, revenueMillimes: 0 };
-    entry.orders++;
-    entry.revenueMillimes += revenue;
-    map.set(o.paymentMethod, entry);
-  }
-  return Array.from(map.entries())
-    .map(([method, e]) => ({
-      method,
-      ...e,
-      share: total === 0 ? 0 : e.revenueMillimes / total,
-    }))
-    .sort((a, b) => b.revenueMillimes - a.revenueMillimes);
-}
 
 /** Croissance par ligne, en rapprochant deux périodes sur une clé commune.
  *

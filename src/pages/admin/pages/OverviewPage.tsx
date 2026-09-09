@@ -67,7 +67,7 @@ export default function OverviewPage({
           répété sous chaque montant de la page. */}
       <p className="-mt-2 text-[11px] text-ink/40">
         Chiffre d'affaires hors frais de livraison (encaissés pour le transporteur). Commandes
-        annulées et paiements D17 rejetés exclus.
+        annulées exclues.
       </p>
 
       <Card title="Évolution du chiffre d'affaires">
