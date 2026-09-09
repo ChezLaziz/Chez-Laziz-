@@ -5,19 +5,14 @@ import { formatTND } from '@/lib/shop'
 import { formatWeight, type WeightKg } from '@contracts/shop'
 import Ornament from '@/components/Ornament'
 import { useSEO } from '@/hooks/useSEO'
-import {
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import type { PresetRange } from '@contracts/analytics'
+import Sidebar from './admin/shell/Sidebar'
+import TopBar from './admin/shell/TopBar'
+import DateRange from './admin/shell/DateRange'
+import { ANALYTICS_PAGES, NAV_GROUPS, type NavId } from './admin/shell/nav'
+import OverviewPage from './admin/pages/OverviewPage'
+import { useOverview } from './admin/useOverview'
 
 const TOKEN_KEY = 'laziz_admin_token'
 
@@ -90,13 +85,6 @@ const STATUS_LABELS: Record<string, string> = {
   prete: 'Prête',
   terminee: 'Terminée',
   annulee: 'Annulée',
-}
-const STATUS_HEX: Record<string, string> = {
-  nouvelle: '#b8912e',
-  en_preparation: '#3b82f6',
-  prete: '#22c55e',
-  terminee: '#9c9490',
-  annulee: '#ef4444',
 }
 const STATUS_COLORS: Record<string, string> = {
   nouvelle: 'bg-[#b8912e]/15 text-[#8a5527] border-[#b8912e]/40',
@@ -1436,84 +1424,6 @@ function SettingsTab({ token }: { token: string }) {
   )
 }
 
-/* ------------------------------ Visiteurs ------------------------------ */
-
-function StatsTab({ token }: { token: string }) {
-  const { data: stats, isLoading } = trpc.stats.summary.useQuery(
-    { token },
-    { refetchInterval: 30000 },
-  )
-
-  if (isLoading || !stats) return <p className="text-sm text-ink/50">Chargement…</p>
-
-  const dayLabel = (iso: string) =>
-    new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', {
-      weekday: 'short',
-      day: 'numeric',
-    })
-
-  const cards = [
-    { label: 'Visites totales', value: stats.total },
-    { label: "Aujourd'hui", value: stats.today },
-    { label: '7 derniers jours', value: stats.week },
-  ]
-
-  return (
-    <div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-center">
-            <p className="font-display text-4xl text-accent">{c.value}</p>
-            <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
-              {c.label}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
-        <p className="mb-4 font-display text-xl">Visites par jour</p>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={stats.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="visitsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#b8912e" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#b8912e" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="day"
-                tickFormatter={dayLabel}
-                tick={{ fontSize: 11, fill: '#3c3835' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#3c3835' }} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(v) => [String(v), 'Visites']}
-                labelFormatter={(l) => dayLabel(String(l))}
-                cursor={{ stroke: '#dec9b8', strokeWidth: 1 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="count"
-                stroke="#b8912e"
-                strokeWidth={2.5}
-                fill="url(#visitsGradient)"
-                dot={{ r: 3, fill: '#b8912e', strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="mt-3 text-xs font-light text-ink/45">
-          Une visite = une page vue par visiteur et par session (les pages admin ne sont pas comptées).
-        </p>
-      </div>
-    </div>
-  )
-}
 
 /* ------------------------------ Marketing ------------------------------ */
 
@@ -1557,7 +1467,7 @@ const NETWORKS: {
     key: 'tiktok',
     label: 'TikTok',
     color: '#111111',
-    handle: '@chezlaziz',
+    handle: 'Recherche TikTok',
     url: 'https://www.tiktok.com/search?q=chez%20laziz%20kairouan',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -1569,7 +1479,7 @@ const NETWORKS: {
     key: 'google',
     label: 'Google',
     color: '#4285F4',
-    handle: 'Avis Google',
+    handle: 'Recherche Google Maps',
     url: 'https://www.google.com/maps/search/Chez+laziz+Kairouan',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -2185,356 +2095,16 @@ function ContenuTab({ token }: { token: string }) {
   )
 }
 
-/* ------------------------------ Vue d'ensemble ------------------------------ */
-
-function OverviewTab({
-  token,
-  onGoToOrders,
-  onGoToMessages,
-  onGoToMarketing,
-}: {
-  token: string
-  onGoToOrders: (status: string) => void
-  onGoToMessages: () => void
-  onGoToMarketing: () => void
-}) {
-  const { data, isLoading } = trpc.dashboard.overview.useQuery(
-    { token },
-    { refetchInterval: 30000 },
-  )
-
-  if (isLoading || !data) return <p className="text-sm text-ink/50">Chargement…</p>
-
-  const { revenue, statusCounts, topProducts, visits, unreadMessages, unreadCount, social } = data
-
-  const revenueCards = [
-    { label: "Aujourd'hui", value: revenue.todayMillimes },
-    { label: '7 derniers jours', value: revenue.weekMillimes },
-    { label: 'Total', value: revenue.totalMillimes },
-  ]
-
-  const activeStatuses: (keyof typeof STATUS_LABELS)[] = [
-    'nouvelle',
-    'en_preparation',
-    'prete',
-    'terminee',
-    'annulee',
-  ]
-
-  const dayLabel = (iso: string) =>
-    new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
-
-  return (
-    <div className="space-y-8">
-      {/* Bannière de bienvenue */}
-      <div className="relative overflow-hidden rounded-2xl border border-sand/70 bg-ink-deep p-8 shadow-sm md:p-10">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: 'url(/images/makroudh.webp)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.16,
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: 'radial-gradient(560px circle at 12% 15%, rgba(184,145,46,0.28), transparent 60%)',
-          }}
-        />
-        <div className="relative">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-accent">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </p>
-          <p className="mt-3 max-w-2xl font-display text-3xl leading-tight text-[#faf6f3] md:text-4xl">
-            Chaque makroudh porte le savoir-faire de Kairouan.
-          </p>
-          <p className="mt-3 max-w-xl text-sm font-light text-[#faf6f3]/70">
-            Bienvenue dans l'espace Chez Laziz — commandes, catalogue et présence en ligne, tout au même endroit.
-          </p>
-        </div>
-      </div>
-
-      {/* Chiffre d'affaires */}
-      <div>
-        <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
-          Chiffre d'affaires
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {revenueCards.map((c) => (
-            <div key={c.label} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-center">
-              <p className="font-display text-3xl text-accent">{formatTND(c.value)} <span className="text-base">DT</span></p>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
-                {c.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Commandes par statut — cartes cliquables qui filtrent + répartition */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
-        <div>
-          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
-            Commandes — cliquez pour filtrer
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            {activeStatuses.map((s) => (
-              <button
-                key={s}
-                onClick={() => onGoToOrders(s)}
-                className={`rounded-xl border p-4 text-center transition-transform hover:-translate-y-0.5 ${STATUS_COLORS[s]}`}
-              >
-                <p className="font-display text-2xl">{statusCounts[s] ?? 0}</p>
-                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                  {STATUS_LABELS[s]}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {(() => {
-          const total = activeStatuses.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0)
-          const pieData = activeStatuses
-            .map((s) => ({ key: s, value: statusCounts[s] ?? 0 }))
-            .filter((d) => d.value > 0)
-          return (
-            <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
-              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ink/50">
-                Répartition
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="relative h-28 w-28 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData.length ? pieData : [{ key: 'vide', value: 1 }]}
-                        dataKey="value"
-                        nameKey="key"
-                        innerRadius={38}
-                        outerRadius={54}
-                        paddingAngle={pieData.length > 1 ? 2 : 0}
-                        stroke="none"
-                      >
-                        {(pieData.length ? pieData : [{ key: 'vide', value: 1 }]).map((d) => (
-                          <Cell key={d.key} fill={STATUS_HEX[d.key] ?? '#e5ddd6'} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-display text-xl text-ink">{total}</span>
-                    <span className="text-[9px] uppercase tracking-wide text-ink/45">total</span>
-                  </div>
-                </div>
-                <ul className="space-y-1.5 text-xs">
-                  {activeStatuses.map((s) => (
-                    <li key={s} className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_HEX[s] }} />
-                      <span className="text-ink/60">{STATUS_LABELS[s]}</span>
-                      <span className="ml-auto font-semibold text-ink">{statusCounts[s] ?? 0}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )
-        })()}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Top produits */}
-        <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
-          <p className="mb-4 font-display text-xl">Produits les plus vendus</p>
-          {topProducts.length === 0 ? (
-            <p className="text-sm text-ink/50">Pas encore de ventes.</p>
-          ) : (
-            <ul className="space-y-3">
-              {topProducts.map((p, i) => (
-                <li key={p.productId} className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#b8912e]/15 text-xs font-semibold text-accent">
-                    {i + 1}
-                  </span>
-                  <span className="flex-1 text-sm">{p.name}</span>
-                  <span className="text-xs text-ink/45">{p.qtySold} vendus</span>
-                  <span className="font-display text-accent">{formatTND(p.revenueMillimes)} DT</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Visiteurs */}
-        <div className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6">
-          <div className="mb-4 flex items-baseline justify-between">
-            <p className="font-display text-xl">Visiteurs</p>
-            <p className="text-xs text-ink/45">
-              {visits.today} aujourd'hui · {visits.week} sur 7 jours
-            </p>
-          </div>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={visits.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="overviewVisitsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#b8912e" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#b8912e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="day"
-                  tickFormatter={dayLabel}
-                  tick={{ fontSize: 10, fill: '#3c3835' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#3c3835' }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v) => [String(v), 'Visites']} labelFormatter={(l) => dayLabel(String(l))} cursor={{ stroke: '#dec9b8', strokeWidth: 1 }} />
-                <Area
-                  type="monotone"
-                  dataKey="count"
-                  stroke="#b8912e"
-                  strokeWidth={2.5}
-                  fill="url(#overviewVisitsGradient)"
-                  dot={{ r: 2.5, fill: '#b8912e', strokeWidth: 0 }}
-                  activeDot={{ r: 4 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Messages non lus */}
-        <button
-          onClick={onGoToMessages}
-          className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-left transition-transform hover:-translate-y-0.5"
-        >
-          <div className="mb-4 flex items-baseline justify-between">
-            <p className="font-display text-xl">Messages</p>
-            {unreadCount > 0 && (
-              <span className="rounded-full bg-[#b8912e] px-2.5 py-0.5 text-xs font-semibold text-white">
-                {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-          {unreadMessages.length === 0 ? (
-            <p className="text-sm text-ink/50">Aucun message non lu.</p>
-          ) : (
-            <ul className="space-y-2">
-              {unreadMessages.map((m) => (
-                <li key={m.id} className="border-t border-sand/60 pt-2 text-sm first:border-t-0 first:pt-0">
-                  <span className="font-medium">{m.name}</span>
-                  <span className="ml-2 text-ink/50">— {m.message.slice(0, 60)}{m.message.length > 60 ? '…' : ''}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </button>
-
-        {/* Réseaux sociaux */}
-        <button
-          onClick={onGoToMarketing}
-          className="rounded-2xl border border-sand/70 bg-white shadow-sm p-6 text-left transition-transform hover:-translate-y-0.5"
-        >
-          <p className="mb-4 font-display text-xl">Réseaux sociaux</p>
-          {social.length === 0 ? (
-            <p className="text-sm text-ink/50">Aucun chiffre enregistré — allez dans « Marketing ».</p>
-          ) : (
-            <ul className="grid grid-cols-2 gap-3">
-              {social.map((s) => (
-                <li key={s.network} className="flex items-center justify-between rounded-lg bg-[#faf6f3] px-3 py-2">
-                  <span className="text-xs font-medium capitalize text-ink/70">{s.network}</span>
-                  <span className="font-display text-accent">{s.followers.toLocaleString('fr-FR')}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </button>
-      </div>
-    </div>
-  )
-}
 
 /* ------------------------------ Page ------------------------------ */
-
-const TABS = [
-  { id: 'apercu', label: "Vue d'ensemble" },
-  { id: 'commandes', label: 'Commandes' },
-  { id: 'produits', label: 'Produits & prix' },
-  { id: 'messages', label: 'Messages' },
-  { id: 'visiteurs', label: 'Visiteurs' },
-  { id: 'marketing', label: 'Marketing' },
-  { id: 'contenu', label: 'Contenu' },
-  { id: 'parametres', label: 'Paramètres' },
-] as const
-
-// Icônes fines (stroke 1.8, même langage graphique que le panier du header
-// public) — une par onglet, pour repérer la section en un coup d'œil.
-const TAB_ICONS: Record<(typeof TABS)[number]['id'], React.ReactNode> = {
-  apercu: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="3" y="3" width="8" height="8" rx="1.5" />
-      <rect x="13" y="3" width="8" height="5" rx="1.5" />
-      <rect x="13" y="12" width="8" height="9" rx="1.5" />
-      <rect x="3" y="15" width="8" height="6" rx="1.5" />
-    </svg>
-  ),
-  commandes: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" strokeLinejoin="round" />
-      <path d="M9 8h6M9 12h6" strokeLinecap="round" />
-    </svg>
-  ),
-  produits: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 3 3 8v8l9 5 9-5V8l-9-5Z" strokeLinejoin="round" />
-      <path d="M3 8l9 5 9-5M12 13v8" />
-    </svg>
-  ),
-  messages: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m4 6.5 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  visiteurs: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" strokeLinejoin="round" />
-      <circle cx="12" cy="12" r="2.6" />
-    </svg>
-  ),
-  marketing: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M3 10v4h3l6 4V6l-6 4H3Z" strokeLinejoin="round" />
-      <path d="M16 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11" strokeLinecap="round" />
-    </svg>
-  ),
-  parametres: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.5a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  contenu: (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="3" y="4" width="18" height="14" rx="2" />
-      <path d="m3 15 5-5 4 4 3-3 6 6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="8.5" cy="8.5" r="1.4" />
-    </svg>
-  ),
-}
 
 export default function AdminPage() {
   useSEO({ title: 'Espace admin — Chez Laziz', description: 'Tableau de bord Chez Laziz.', path: '/admin', noindex: true })
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
-  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('apercu')
+  const [tab, setTab] = useState<NavId>('apercu')
   const [orderFilter, setOrderFilter] = useState<string | null>(null)
+  const [period, setPeriod] = useState<PresetRange>('30d')
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Vérifie le token stocké ; si invalide/expiré → retour au login
   trpc.admin.check.useQuery(
@@ -2561,94 +2131,132 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
-      {/* Filet doré — signature visuelle du reste du site, en écho discret ici */}
-      <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
+    <AdminShell
+      tab={tab}
+      onSelectTab={(id) => {
+        setOrderFilter(null)
+        setTab(id)
+      }}
+      period={period}
+      onPeriodChange={setPeriod}
+      drawerOpen={drawerOpen}
+      onDrawerChange={setDrawerOpen}
+      token={token}
+      onLogout={() => {
+        localStorage.removeItem(TOKEN_KEY)
+        setToken(null)
+      }}
+    >
+      {tab === 'apercu' && (
+        <OverviewPage
+          token={token}
+          period={period}
+          onGoToOrders={(status) => {
+            setOrderFilter(status)
+            setTab('commandes')
+          }}
+        />
+      )}
+      {tab === 'commandes' && (
+        <OrdersTab token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
+      )}
+      {tab === 'catalogue' && <ProductsTab token={token} />}
+      {tab === 'messages' && <MessagesTab token={token} />}
+      {tab === 'reseaux' && <MarketingTab token={token} />}
+      {tab === 'contenu' && <ContenuTab token={token} />}
+      {tab === 'parametres' && <SettingsTab token={token} />}
+      {PLACEHOLDER_PAGES.has(tab) && <ComingSoon tab={tab} />}
+    </AdminShell>
+  )
+}
 
-      <header className="sticky top-0 z-30 border-b border-sand/60 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex min-h-[64px] max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-3 md:h-[70px] md:flex-nowrap md:py-0 md:px-8">
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <img src="/images/logo.webp" alt="Chez Laziz" className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" />
-            <div className="leading-tight">
-              <p className="font-display text-base tracking-[0.08em] text-ink sm:text-lg sm:tracking-[0.1em]">CHEZ&nbsp;LAZIZ</p>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-accent sm:text-[10px] sm:tracking-[0.3em]">Espace admin</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <Link
-              to="/"
-              className="rounded-full border border-ink/20 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent sm:px-4 sm:text-xs"
-            >
-              Voir le site
-            </Link>
-            <button
-              onClick={() => {
-                localStorage.removeItem(TOKEN_KEY)
-                setToken(null)
-              }}
-              className="rounded-full border border-ink/20 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink/70 transition-colors hover:border-red-300 hover:text-red-600 sm:px-4 sm:text-xs"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
-        <div className="relative">
-          <nav className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-5 pb-3 md:px-8">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                // 8 onglets = ~2,5 largeurs d'écran sur un téléphone :
-                // sans ceci, l'onglet actif pouvait rester hors du champ.
-                ref={(el) => {
-                  if (el && tab === t.id) el.scrollIntoView({ block: 'nearest', inline: 'center' })
-                }}
-                onClick={() => {
-                  setOrderFilter(null)
-                  setTab(t.id)
-                }}
-                className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors ${
-                  tab === t.id
-                    ? 'bg-ink text-[#faf6f3] shadow-sm'
-                    : 'text-ink/55 hover:bg-ink/5 hover:text-ink'
-                }`}
-              >
-                <span className={tab === t.id ? 'text-[#b8912e]' : 'text-ink/35'}>{TAB_ICONS[t.id]}</span>
-                {t.label}
-              </button>
-            ))}
-          </nav>
-          <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white/95 to-transparent md:hidden" />
-        </div>
-      </header>
+/** Pages analytiques encore à construire : la donnée existe, l'écran non.
+ * Un message net vaut mieux qu'un onglet qui ne réagit pas au clic. */
+const PLACEHOLDER_PAGES = new Set<NavId>(['ventes', 'clients', 'produits', 'geographie', 'intelligence'])
 
-      <main className="mx-auto max-w-6xl px-5 py-10 md:px-8">
-        <div key={tab} className="animate-in fade-in slide-in-from-bottom-1 duration-500">
-          {tab === 'apercu' && (
-            <OverviewTab
-              token={token}
-              onGoToOrders={(status) => {
-                setOrderFilter(status)
-                setTab('commandes')
-              }}
-              onGoToMessages={() => setTab('messages')}
-              onGoToMarketing={() => setTab('marketing')}
-            />
-          )}
-          {tab === 'commandes' && (
-            <OrdersTab
-              token={token}
-              statusFilter={orderFilter}
-              onClearFilter={() => setOrderFilter(null)}
-            />
-          )}
-          {tab === 'produits' && <ProductsTab token={token} />}
-          {tab === 'messages' && <MessagesTab token={token} />}
-          {tab === 'visiteurs' && <StatsTab token={token} />}
-          {tab === 'marketing' && <MarketingTab token={token} />}
-          {tab === 'contenu' && <ContenuTab token={token} />}
-          {tab === 'parametres' && <SettingsTab token={token} />}
-        </div>
-      </main>
+function ComingSoon({ tab }: { tab: NavId }) {
+  const label = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === tab)?.label ?? ''
+  return (
+    <div className="rounded-xl border border-dashed border-sand bg-white px-6 py-10 text-center">
+      <p className="font-display text-lg text-ink">{label}</p>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink/55">
+        Cette page est en cours de construction. Les données existent déjà — les chiffres affichés
+        ici viendront des mêmes calculs que la Vue d'ensemble, sans recalcul séparé.
+      </p>
     </div>
   )
 }
+
+function AdminShell({
+  tab,
+  onSelectTab,
+  period,
+  onPeriodChange,
+  drawerOpen,
+  onDrawerChange,
+  token,
+  onLogout,
+  children,
+}: {
+  tab: NavId
+  onSelectTab: (id: NavId) => void
+  period: PresetRange
+  onPeriodChange: (p: PresetRange) => void
+  drawerOpen: boolean
+  onDrawerChange: (open: boolean) => void
+  token: string
+  onLogout: () => void
+  children: React.ReactNode
+}) {
+  // Même clé de requête que la Vue d'ensemble : React Query la partage, la
+  // barre supérieure n'ouvre donc pas un second appel réseau pour ce badge.
+  const unreadCount = useOverview(token, period).data?.unreadCount
+
+  const title = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === tab)?.label ?? ''
+
+  return (
+    <div className="min-h-screen bg-[#faf6f3] lg:flex">
+      {/* Colonne fixe à partir de lg ; en dessous, tiroir superposé. */}
+      <aside className="hidden w-60 shrink-0 border-r border-sand/60 lg:sticky lg:top-0 lg:block lg:h-screen">
+        <Sidebar active={tab} onSelect={onSelectTab} />
+      </aside>
+
+      {drawerOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div
+            className="absolute inset-0 bg-ink/40"
+            onClick={() => onDrawerChange(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-y-0 left-0 w-64 shadow-xl">
+            <Sidebar active={tab} onSelect={onSelectTab} onClose={() => onDrawerChange(false)} />
+          </div>
+        </div>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <TopBar
+          title={title}
+          unreadCount={unreadCount ?? 0}
+          onOpenMessages={() => onSelectTab('messages')}
+          onOpenMenu={() => onDrawerChange(true)}
+          onLogout={onLogout}
+          right={
+            ANALYTICS_PAGES.has(tab) ? (
+              <div className="hidden sm:block">
+                <DateRange value={period} onChange={onPeriodChange} />
+              </div>
+            ) : undefined
+          }
+        />
+        {ANALYTICS_PAGES.has(tab) && (
+          <div className="border-b border-sand/60 bg-white px-4 py-2 sm:hidden">
+            <DateRange value={period} onChange={onPeriodChange} />
+          </div>
+        )}
+        <main className="px-4 py-6 md:px-6">{children}</main>
+      </div>
+    </div>
+  )
+}
+
