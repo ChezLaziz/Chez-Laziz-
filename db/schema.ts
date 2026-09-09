@@ -109,6 +109,27 @@ export const orders = pgTable("orders", {
   acquisitionContent: varchar("acquisition_content", { length: 120 }),
   // mobile | tablet | desktop, déduit de l'agent utilisateur.
   deviceType: varchar("device_type", { length: 20 }),
+  // ---- Remise au transporteur ----
+  //
+  // La livraison est SOUS-TRAITÉE : ces colonnes ne pilotent aucun livreur et
+  // ne suivent aucun véhicule. Elles répondent à une seule question que
+  // personne ne pouvait trancher jusqu'ici : ce colis est chez qui, sous quel
+  // numéro ?
+  //
+  // Un seul transporteur par commande, garanti par la structure elle-même :
+  // ce sont des colonnes de `orders`, pas une table d'expéditions. Renvoyer
+  // deux fois le même colis est donc impossible par construction.
+  //
+  // carrier : tpe | jetpack (voir contracts/carriers.ts).
+  carrier: varchar("carrier", { length: 30 }),
+  // Numéro donné par le transporteur. NULL = pas encore remis.
+  trackingNumber: varchar("tracking_number", { length: 80 }),
+  // Dernier état connu, tel que le transporteur le nomme — jamais traduit ni
+  // interprété : un état inventé se lirait comme une mesure.
+  carrierStatus: varchar("carrier_status", { length: 60 }),
+  carrierSyncedAt: timestamp("carrier_synced_at"),
+  // Étiquette / bordereau, quand le transporteur en fournit un.
+  labelUrl: varchar("label_url", { length: 500 }),
   status: orderStatusEnum("status").notNull().default("nouvelle"),
   // Horodatage de l'envoi de l'événement "Purchase" à Meta (Pixel/Conversions
   // API) — jamais à la création de la commande, seulement une fois la

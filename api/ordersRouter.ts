@@ -7,7 +7,9 @@ import {
   createOrder,
   deleteOrder,
   markMetaPurchaseReported,
+  setOrderCarrier,
 } from "./queries/orders";
+import { CARRIER_KEYS } from "@contracts/carriers";
 import { assertAdmin } from "./queries/admin";
 import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
@@ -297,6 +299,31 @@ export const ordersRouter = createRouter({
       const order = await updatePaymentStatus(input.id, input.paymentStatus);
       if (order) await maybeReportMetaPurchase(order);
       return order;
+    }),
+
+  /** Chez quel transporteur part le colis, et sous quel numéro.
+   *
+   * Saisie manuelle : aucune API transporteur n'est joignable aujourd'hui
+   * (voir contracts/carriers.ts). Le jour où l'une le devient, c'est cette
+   * même mutation qui enregistrera le numéro renvoyé — l'interface ne changera
+   * pas. */
+  setCarrier: publicQuery
+    .input(
+      z.object({
+        token: z.string(),
+        id: z.number().int().positive(),
+        carrier: z.enum(CARRIER_KEYS).nullable(),
+        trackingNumber: z.string().max(80).optional(),
+        clear: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+      return setOrderCarrier(input.id, {
+        carrier: input.carrier,
+        trackingNumber: input.trackingNumber,
+        clear: input.clear,
+      });
     }),
 
   delete: publicQuery
