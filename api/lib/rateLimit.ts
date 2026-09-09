@@ -44,6 +44,16 @@ export function rateLimit(opts: {
     }
     entry.count += 1;
     if (entry.count > opts.max) {
+      // TRACÉ, parce qu'un refus silencieux est indétectable. Si un jour de
+      // publicité ce limiteur bloque de vrais clients, personne ne pourrait
+      // le savoir : la commande n'arrive simplement jamais. Une ligne dans
+      // les journaux rend la question posable. L'adresse n'est pas écrite —
+      // seul le seau concerné, qui suffit à trancher lecture ou écriture.
+      console.warn(
+        `[rate-limit] refus ${opts.bucket ?? "default"} — ${entry.count} requêtes ` +
+          `en ${Math.round(opts.windowMs / 1000)} s pour une même adresse (plafond ${opts.max}) ` +
+          `sur ${c.req.method} ${c.req.path}`,
+      );
       return c.json({ error: "Trop de requêtes, réessayez plus tard." }, 429);
     }
     return next();
