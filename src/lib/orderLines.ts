@@ -1,4 +1,5 @@
 import { cartLineKey, type CartLine } from '@/lib/cartLine'
+import { metaContentId } from '@contracts/metaContentId'
 import { productName } from '@contracts/productText'
 import { formatWeight, priceForWeight, type WeightKg } from '@contracts/shop'
 import {
@@ -73,7 +74,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         unitPriceMillimes: priceForWeight(p.priceMillimes, line.weightKg),
         contents: [],
         packagingMillimes: 0,
-        analyticsId: String(p.id),
+        analyticsId: metaContentId({ kind: 'product', productId: p.id }),
         variant: formatWeight(line.weightKg, lang),
         imageUrl: p.imageUrl,
         isExclusiveCreation: p.isExclusiveCreation,
@@ -94,7 +95,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
           return `${label} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`
         }),
         packagingMillimes: 0,
-        analyticsId: `pack:${pack.id}`,
+        analyticsId: metaContentId({ kind: 'pack', packId: pack.id }),
         variant: kgLabel(packWeightKg(pack), lang),
         imageUrl: catalog.find((c) => c.name === pack.contents[0])?.imageUrl ?? null,
         isExclusiveCreation: false,
@@ -112,7 +113,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         unitPriceMillimes: customPackTotal(found.map((p) => p.priceMillimes)),
         contents: found.map((p) => `${productName(p, lang)} — ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}`),
         packagingMillimes: CUSTOM_PACK_PACKAGING_MILLIMES,
-        analyticsId: `custom:${line.productIds.join('-')}`,
+        analyticsId: metaContentId({ kind: 'custom', productIds: line.productIds }),
         variant: kgLabel(CUSTOM_PACK_WEIGHT_KG, lang),
         imageUrl: found[0]?.imageUrl ?? null,
         isExclusiveCreation: false,

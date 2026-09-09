@@ -176,7 +176,8 @@ export function buildTpePayload(
     // seule ligne ; c'est aussi ce que produit `fullAddress`.
     address: fullAddress(order),
     // LA règle qui protège le client : une commande déjà payée part à zéro.
-    // Sans elle, un client D17 paierait deux fois.
+    // Sans elle, un client dont la commande est déjà encaissée paierait
+    // une seconde fois à sa porte.
     price_ttc: dinars(amountToCollectMillimes(order)),
     price_delivery: order.deliveryFeeMillimes / 1000,
     price_return: TPE_RETURN_FEE_DINARS,

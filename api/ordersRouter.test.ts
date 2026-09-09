@@ -4,7 +4,6 @@ import { ORDER_ERROR } from "@contracts/orderErrors";
 
 const listAvailableProducts = vi.fn();
 const createOrder = vi.fn();
-const paymentProofExists = vi.fn();
 const assertAdmin = vi.fn();
 const updateOrderStatus = vi.fn();
 const updatePaymentStatus = vi.fn();
@@ -20,7 +19,6 @@ vi.mock("./queries/orders", () => ({
   listOrders: vi.fn(),
   markMetaPurchaseReported,
 }));
-vi.mock("./lib/r2", () => ({ paymentProofExists }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
 vi.mock("./lib/email", () => ({ notifyAdminNewOrder: vi.fn(async () => undefined) }));
 // La logique de décision (shouldReportMetaPurchase) reste réelle — seul
@@ -33,12 +31,25 @@ vi.mock("./lib/metaConversionsApi", async () => {
 });
 
 const { ordersRouter } = await import("./ordersRouter");
+const { FIXED_PACKS } = await import("@contracts/packs");
 
 const CATALOG = [
   { id: 1, name: "Makroudh aux Dattes", priceMillimes: 8000, available: true },
   { id: 2, name: "Makroudh Blanc à la Pistache", priceMillimes: 40000, available: true },
   { id: 5, name: "Makroudh Blanc au Fraise", priceMillimes: 22000, available: true },
   { id: 6, name: "Makroudh aux Amandes", priceMillimes: 17000, available: true },
+];
+
+/** Le catalogue complet : tout ce que les packs prêts contiennent.
+ *
+ * Un pack n'est vendable que si TOUT son contenu est disponible (voir
+ * packIsAvailable) : les tests de packs partent donc d'un catalogue qui les
+ * couvre, sans quoi ils testeraient le refus au lieu de la facturation. */
+const CATALOG_COMPLET = [
+  ...CATALOG,
+  ...[...new Set(FIXED_PACKS.flatMap((p) => p.contents))]
+    .filter((n) => !CATALOG.some((c) => c.name === n))
+    .map((name, i) => ({ id: 100 + i, name, priceMillimes: 20000, available: true })),
 ];
 
 const ctx = { req: new Request("http://localhost"), resHeaders: new Headers() };
@@ -226,6 +237,19 @@ describe("admin-only order procedures reject unauthenticated access", () => {
 });
 
 describe("orders.create — packs prêts (prix fixes)", () => {
+  beforeEach(() => listAvailableProducts.mockResolvedValue(CATALOG_COMPLET));
+
+  it("refuse un pack dont l'un des produits n'est plus au catalogue", async () => {
+    // Le vrai scénario : quelqu'un marque un makroudh indisponible depuis
+    // l'administration, et le pack qui le contient reste en vente à son prix
+    // plein. La commande partait, impossible à préparer.
+    listAvailableProducts.mockResolvedValue(CATALOG);
+    await expect(
+      caller.create({ ...baseInput, items: [{ kind: "pack", packId: "vip", qty: 1 }] }),
+    ).rejects.toMatchObject({ message: ORDER_ERROR.packIndisponible });
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
   it("facture un pack au prix de vente fixe, avec son contenu et son poids", async () => {
     await caller.create({ ...baseInput, items: [{ kind: "pack", packId: "vip", qty: 1 }] });
     expect(createOrder).toHaveBeenCalledWith(

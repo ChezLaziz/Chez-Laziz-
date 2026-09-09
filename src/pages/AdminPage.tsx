@@ -331,8 +331,6 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
   )
 }
 
-/* ------------------------------ Commandes ------------------------------ */
-
 /* ------------------------------ Produits ------------------------------ */
 
 type ProductForm = {

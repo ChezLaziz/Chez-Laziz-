@@ -46,6 +46,7 @@ import {
   CUSTOM_PACK_SIZE,
   CUSTOM_PACK_WEIGHT_KG,
   FIXED_PACKS,
+  packIsAvailable,
   customPackTotal,
   formatPriceDT,
   type FixedPackId,
@@ -248,7 +249,6 @@ function findSpotlightProduct(catalog: CatalogProduct[], slug: string | null): C
 type Placed = {
   id: number
   recapText: string
-  paymentMethod: PaymentMethod
   recap: {
     lines: {
       key: string
@@ -450,6 +450,25 @@ export default function OrderPage() {
     [catalogReady, lines, catalog],
   )
   const orphanCount = orphelines.reduce((s, l) => s + l.qty, 0)
+
+  /** Les packs qu'on peut RÉELLEMENT préparer aujourd'hui.
+   *
+   * Le prix d'un pack est figé, mais son contenu vient du catalogue. Un
+   * makroudh marqué indisponible depuis l'administration laissait le pack
+   * qui le contient en vente : le client l'ajoutait, remplissait tout le
+   * formulaire, et se faisait refuser au dernier instant. Mieux vaut ne pas
+   * le montrer que le refuser après coup — un refus à la validation est la
+   * pire place possible pour dire non.
+   *
+   * Même garde qu'ailleurs : tant que le catalogue n'a pas répondu, on
+   * n'enlève rien, sinon une panne réseau viderait le rayon. */
+  const packsVendables = useMemo(
+    () =>
+      catalogReady
+        ? FIXED_PACKS.filter((p) => packIsAvailable(p, catalog.map((c) => c.name)))
+        : FIXED_PACKS,
+    [catalogReady, catalog],
+  )
   /** Ce que le client a VRAIMENT dans sa commande, fantômes exclus. */
   const itemCount = items.reduce((s, l) => s + l.qty, 0)
 
@@ -745,7 +764,16 @@ export default function OrderPage() {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     // Le focus après le défilement : sur iOS, ouvrir le clavier pendant
     // l'animation la fait sauter et le champ finit hors écran.
-    setTimeout(() => (el as HTMLElement).focus({ preventScroll: true }), 350)
+    //
+    // Et jamais sur un champ DÉSACTIVÉ. Le sélecteur de délégation l'est tant
+    // que sa liste charge : on aurait dit au client « choisissez la
+    // délégation » en posant le curseur sur quelque chose d'incliquable. Le
+    // défilement et le message, eux, ont lieu dans tous les cas — c'est ce
+    // qu'il doit voir.
+    setTimeout(() => {
+      const cible = el as HTMLElement & { disabled?: boolean }
+      if (!cible.disabled) cible.focus({ preventScroll: true })
+    }, 350)
   }
 
   const onCheckoutStart = () => {
@@ -842,13 +870,16 @@ export default function OrderPage() {
             // Navigation privée ou stockage plein : la commande est passée,
             // c'est tout ce qui compte.
           }
+          // Même règle que pour l'écran : le montant écrit au client est
+          // celui que le serveur a enregistré.
+          const totalReel = order?.totalMillimes ?? total
           const text = isAr
             ? `مرحبًا Chez Laziz! الطلب رقم ${order?.id ?? ''} — ${name.trim()} :\n${snapshot
                 .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
-                .join('\n')}\nالتوصيل: ${addressLine}\nالمجموع (التوصيل مشمول): ${formatPriceDT(total, lang)}\nالدفع: عند التسليم`
+                .join('\n')}\nالتوصيل: ${addressLine}\nالمجموع (التوصيل مشمول): ${formatPriceDT(totalReel, lang)}\nالدفع: عند التسليم`
             : `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${snapshot
                 .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
-                .join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatPriceDT(total, lang)}\nPaiement : à la livraison`
+                .join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatPriceDT(totalReel, lang)}\nPaiement : à la livraison`
           track('purchase', {
             transaction_id: String(order?.id ?? ''),
             value: total / 1000,
@@ -860,14 +891,25 @@ export default function OrderPage() {
           // L'événement est envoyé côté serveur uniquement une fois la
           // commande réellement confirmée — voir api/lib/metaConversionsApi.ts
           // et maybeReportMetaPurchase dans api/ordersRouter.ts.
+          // LES MONTANTS DU SERVEUR, PAS CEUX DU NAVIGATEUR.
+          //
+          // Le serveur recalcule tout et enregistre SON total : c'est celui
+          // que le livreur encaissera. Si un prix a changé depuis
+          // l'administration pendant que le client remplissait le formulaire,
+          // les deux chiffres diffèrent — et le client repartirait avec une
+          // promesse que sa commande ne tient pas. Discussion à la porte,
+          // colis refusé, transport payé pour rien.
+          //
+          // Le calcul local reste le repli : si la réponse arrivait sans ses
+          // montants, mieux vaut le chiffre affiché pendant la saisie que
+          // rien du tout.
           setPlaced({
             id: order?.id ?? 0,
             recapText: text,
-            paymentMethod,
             recap: {
               lines: snapshot,
-              subtotalMillimes: subtotal,
-              totalMillimes: total,
+              subtotalMillimes: order?.subtotalMillimes ?? subtotal,
+              totalMillimes: order?.totalMillimes ?? total,
               address: addressLine,
             },
           })
@@ -1155,7 +1197,15 @@ export default function OrderPage() {
         </section>
       )}
 
-      <main className={`mx-auto max-w-7xl px-5 py-6 md:px-10 md:py-12 ${showBar ? 'pb-32' : ''}`}>
+      {/* Le bandeau de cookies est en position fixe au bas de l'écran. La
+          barre flottante s'en écarte déjà ; le contenu, lui, passait dessous
+          — et le bouton « Commander » pouvait s'y retrouver caché à l'instant
+          exact où la barre disparaît, parce qu'il venait d'entrer dans le
+          champ de vision. On réserve donc sa hauteur en bas de page. */}
+      <main
+        className={`mx-auto max-w-7xl px-5 py-6 md:px-10 md:py-12 ${showBar ? 'pb-32' : ''}`}
+        style={{ paddingBottom: `calc(var(--cookie-banner-h, 0px) + ${showBar ? '8rem' : '1.5rem'})` }}
+      >
         {/* ── Nos produits (à la carte, au poids) ──
             Sans titre de section : l'onglet actif, à trois centimètres
             au-dessus, dit déjà « Produits ». Le répéter en grand coûtait
@@ -1258,7 +1308,7 @@ export default function OrderPage() {
             </p>
           </div>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4 xl:gap-6">
-            {FIXED_PACKS.map((pack) => (
+            {packsVendables.map((pack) => (
               <PackCard
                 key={pack.id}
                 pack={pack}

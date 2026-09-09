@@ -19,17 +19,20 @@ export const orderStatusEnum = pgEnum("order_status", [
   "annulee",
 ]);
 
-// Deux moyens de paiement seulement : espèces à la livraison, ou virement D17
-// (preuve manuelle par capture d'écran, vérifiée par l'admin).
+// Un seul moyen aujourd'hui : espèces à la livraison. « d17 » (virement
+// mobile avec capture d'écran) a été retiré du site — aucune commande ne
+// l'a jamais emprunté. La valeur RESTE dans l'énumération : on ne supprime
+// pas une valeur d'énumération d'une base vivante pour faire propre, et le
+// jour où un autre moyen arrive, il s'ajoute ici.
 export const paymentMethodEnum = pgEnum("payment_method", ["cod", "d17"]);
 
-// COD : "pending" jusqu'à la livraison (pas de vérification de paiement).
-// D17 : "pending_verification" à la création (capture reçue, pas encore
-// vérifiée) puis "approved"/"rejected" décidé par l'admin.
-// "paid" : encaissé. Sert surtout aux commandes en espèces à la livraison,
-// qui restaient sinon "pending" à vie — l'admin n'avait aucune trace de
-// l'argent réellement rentré. Pour D17, "approved" reste la preuve du
-// paiement (capture vérifiée) ; "paid" n'y est pas utilisé.
+// Deux valeurs vivantes : "pending" = reste à encaisser à la livraison,
+// "paid" = l'argent est rentré. Sans "paid", une commande en espèces
+// restait "pending" à vie et personne ne savait ce qui avait été encaissé.
+// "pending_verification", "approved" et "rejected" décrivaient le cycle
+// d'une capture de virement D17. Plus personne ne peut les poser depuis son
+// retrait ; elles restent ici parce qu'une énumération de base de données
+// décrit aussi le passé.
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "pending_verification",
@@ -94,7 +97,9 @@ export const orders = pgTable("orders", {
   totalMillimes: integer("total_millimes").notNull(),
   paymentMethod: paymentMethodEnum("payment_method").notNull().default("cod"),
   paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending"),
-  // Clé de stockage R2 de la capture d'écran D17 (jamais une URL publique — voir api/lib/r2.ts)
+  // Ancienne clé de stockage de la capture de paiement D17. Plus rien ne
+  // l'écrit ni ne la lit depuis le retrait de D17 ; la colonne reste, vide,
+  // plutôt qu'une migration destructive sur une boutique en production.
   paymentProofKey: varchar("payment_proof_key", { length: 255 }),
   // Clé générée par le client pour une tentative de commande : un double
   // clic ou une nouvelle tentative réseau renvoie la commande déjà créée

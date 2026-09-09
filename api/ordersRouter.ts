@@ -23,6 +23,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
 import { metaUserSignals } from "@contracts/metaSignals";
+import { metaContentId } from "@contracts/metaContentId";
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
@@ -41,17 +42,32 @@ import {
   PACK_ITEM_WEIGHT_KG,
   customPackTotal,
   getFixedPack,
+  packIsAvailable,
   isValidCustomSelection,
   packContents,
   packWeightKg,
 } from "@contracts/packs";
 
-/** `pack:<id>` / `custom` / `<productId>` — mêmes identifiants que ceux
- * envoyés par le Pixel navigateur (src/pages/OrderPage.tsx). */
+/** Les références Meta d'une commande, identiques à celles que le Pixel du
+ * navigateur a envoyées à l'ajout au panier — voir contracts/metaContentId.ts
+ * pour ce que coûtait leur divergence. */
 function metaContentIds(items: OrderItem[]): string[] {
-  return items.map((i) =>
-    i.kind === "pack" ? `pack:${i.packId}` : i.kind === "custom" ? "custom" : String(i.productId),
-  );
+  return items.map((i) => {
+    // Les champs d'OrderItem sont optionnels : les toutes premières commandes
+    // n'avaient pas de `kind`. Une ligne qu'on ne sait pas nommer rend une
+    // chaîne vide plutôt qu'une référence inventée — Meta ignorera la ligne,
+    // ce qui vaut mieux que de lui apprendre un produit qui n'existe pas.
+    if (i.kind === "pack") return i.packId ? metaContentId({ kind: "pack", packId: i.packId }) : "";
+    if (i.kind === "custom") {
+      const ids = (i.contents ?? [])
+        .map((c) => c.productId)
+        .filter((id): id is number => typeof id === "number");
+      return ids.length > 0 ? metaContentId({ kind: "custom", productIds: ids }) : "";
+    }
+    return typeof i.productId === "number"
+      ? metaContentId({ kind: "product", productId: i.productId })
+      : "";
+  });
 }
 
 /** Signale l'achat à Meta si (et seulement si) cette commande vient de
@@ -204,7 +220,12 @@ export const ordersRouter = createRouter({
         // Pack prêt : prix de vente FIXE (contracts/packs.ts), jamais celui du client.
         if (i.kind === "pack") {
           const pack = getFixedPack(i.packId);
-          if (!pack)
+            // Le prix d'un pack est figé, mais son CONTENU vient du catalogue :
+          // un makroudh marqué indisponible depuis l'administration laissait
+          // le pack qui le contient en vente, à son prix plein. La commande
+          // partait, encaissable sur le papier, et il fallait rappeler le
+          // client pour lui dire qu'on ne peut pas la préparer.
+          if (!pack || !packIsAvailable(pack, catalog.map((p) => p.name)))
             throw new TRPCError({ code: "BAD_REQUEST", message: ORDER_ERROR.packIndisponible });
           return {
             kind: "pack",

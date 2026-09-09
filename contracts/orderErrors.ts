@@ -22,7 +22,6 @@ export const ORDER_ERROR = {
   produitIndisponible: "CL_produit_indisponible",
   packIndisponible: "CL_pack_indisponible",
   customPackTaille: "CL_custom_pack_taille",
-  preuveD17Requise: "CL_preuve_d17_requise",
   delegationHorsGouvernorat: "CL_delegation_hors_gouvernorat",
   tropDeRequetes: "CL_trop_de_requetes",
 } as const;
@@ -41,10 +40,6 @@ const MESSAGES: Record<OrderErrorToken, { fr: string; ar: string }> = {
   [ORDER_ERROR.customPackTaille]: {
     fr: `Votre pack sur mesure doit contenir exactement ${CUSTOM_PACK_SIZE} produits différents.`,
     ar: `حزمتكم الخاصة لازم تحتوي على ${CUSTOM_PACK_SIZE} منتجات مختلفة بالضبط.`,
-  },
-  [ORDER_ERROR.preuveD17Requise]: {
-    fr: "Joignez la capture d'écran de votre paiement D17 pour valider la commande.",
-    ar: "أرفقوا صورة دفع D17 لتأكيد الطلب.",
   },
   [ORDER_ERROR.delegationHorsGouvernorat]: {
     fr: "La délégation choisie n'appartient pas à ce gouvernorat. Choisissez-la à nouveau.",
