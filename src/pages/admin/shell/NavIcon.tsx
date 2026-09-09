@@ -55,6 +55,13 @@ function paths(id: NavId) {
           <path d="M12 4 6 7M12 4l6 3" strokeLinecap="round" />
         </>
       )
+    case 'inventaire':
+      return (
+        <>
+          <path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z" strokeLinejoin="round" />
+          <path d="M3 8.5 12 13l9-4.5M12 13v7" />
+        </>
+      )
     case 'intelligence':
       return (
         <>

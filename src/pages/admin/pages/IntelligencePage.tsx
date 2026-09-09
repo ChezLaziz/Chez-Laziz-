@@ -88,8 +88,10 @@ export default function IntelligencePage({
             serveur : le taux de conversion et les points d'abandon ne sont pas mesurables.
           </li>
           <li>
-            <span className="font-medium text-ink/75">Stock.</span> Aucune quantité en stock n'est
-            suivie : ni rupture, ni rotation, ni prévision de demande.
+            <span className="font-medium text-ink/75">Stock.</span>{' '}
+            {data.dataQuality.stockCoverage === 0
+              ? "Aucun stock n'est encore suivi : ni rupture, ni rotation, ni jours de couverture. Renseignez-le dans « Catalogue & prix »."
+              : `Le suivi couvre ${Math.round(data.dataQuality.stockCoverage * 100)}% du chiffre d'affaires (voir « Inventaire »). Les packs ne sont pas décomptés du stock : le rythme d'écoulement affiché est un minimum.`}
           </li>
         </ul>
       </Card>

@@ -18,6 +18,7 @@ import {
 import { dayKey, daysInPeriod, type Period, type PeriodPair } from "./period";
 import { buildCustomerHistories, computeCustomerMetrics } from "./customers";
 import { computeMargins, type CostsByProductId } from "./margin";
+import { computeInventory, stockCoverage } from "./inventory";
 import {
   attachGrowth,
   computeGovernorateDelivery,
@@ -32,6 +33,7 @@ export * from "./period";
 export * from "./customers";
 export * from "./breakdowns";
 export * from "./margin";
+export * from "./inventory";
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -96,12 +98,20 @@ async function fetchCustomerOrderHistory(): Promise<AnalyticsOrder[]> {
 /** Coûts de revient au kilo, par produit. Les produits sans coût saisi sont
  * volontairement ABSENTS de la Map plutôt que présents à 0 : le calcul de
  * marge doit pouvoir distinguer « coûte 0 » de « on ne sait pas ». */
-async function fetchProductCosts(): Promise<CostsByProductId> {
-  const rows = await getDb()
-    .select({ id: products.id, cost: products.costPerKgMillimes })
+async function fetchCatalogue() {
+  return getDb()
+    .select({
+      id: products.id,
+      name: products.name,
+      cost: products.costPerKgMillimes,
+      stockGrams: products.stockGrams,
+    })
     .from(products);
+}
+
+function costsFrom(catalogue: { id: number; cost: number | null }[]): CostsByProductId {
   const map: CostsByProductId = new Map();
-  for (const r of rows) {
+  for (const r of catalogue) {
     if (r.cost !== null) map.set(r.id, r.cost);
   }
   return map;
@@ -156,6 +166,8 @@ export type DataQuality = {
   governorateCoverage: number;
   /** Part du chiffre d'affaires dont le coût de revient est saisi. */
   productCostCoverage: number;
+  /** Part du chiffre d'affaires faite par des produits au stock suivi. */
+  stockCoverage: number;
   /** Reste à 0 : aucune source d'acquisition n'est collectée en base. */
   acquisitionSourceCoverage: number;
 };
@@ -163,6 +175,7 @@ export type DataQuality = {
 function computeDataQuality(
   allOrders: AnalyticsOrder[],
   costCoverage: number,
+  stockCov: number,
 ): DataQuality {
   const total = allOrders.length;
   let withCustomerId = 0;
@@ -176,6 +189,7 @@ function computeDataQuality(
     customerIdCoverage: total === 0 ? 0 : withCustomerId / total,
     governorateCoverage: total === 0 ? 0 : withGovernorate / total,
     productCostCoverage: costCoverage,
+    stockCoverage: stockCov,
     acquisitionSourceCoverage: 0,
   };
 }
@@ -209,6 +223,7 @@ export type OverviewData = {
   customerMetrics: ReturnType<typeof computeCustomerMetrics>;
   margins: ReturnType<typeof computeMargins>;
   previousMargins: ReturnType<typeof computeMargins>;
+  inventory: ReturnType<typeof computeInventory>;
 };
 
 /** Toutes les données de la Vue d'ensemble en UNE passe.
@@ -217,11 +232,11 @@ export type OverviewData = {
  * top produits) qui chargeaient la table entière en mémoire, chacun de son
  * côté, toutes les 30 secondes. */
 export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
-  const [currentAll, previousAll, history, costs, viewsNow, viewsBefore] = await Promise.all([
+  const [currentAll, previousAll, history, catalogue, viewsNow, viewsBefore] = await Promise.all([
     fetchOrdersInPeriod(periods.current),
     fetchOrdersInPeriod(periods.previous),
     fetchCustomerOrderHistory(),
-    fetchProductCosts(),
+    fetchCatalogue(),
     countPageViews(periods.current),
     countPageViews(periods.previous),
   ]);
@@ -236,6 +251,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     if (h.firstOrderAt < periods.current.start) priorIds.add(h.id);
   }
 
+  const costs = costsFrom(catalogue);
   const margins = computeMargins(current, costs);
   const productsNow = computeProductStats(current);
   const governoratesNow = computeGovernorateStats(current);
@@ -267,7 +283,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     delivery: computeDeliveryImpact(currentAll),
     statusCounts,
     pageViews: withTrend(viewsNow, viewsBefore),
-    dataQuality: computeDataQuality(currentAll, margins.revenueCoverage),
+    dataQuality: computeDataQuality(currentAll, margins.revenueCoverage, stockCoverage(catalogue, current)),
 
     // Détail consommé par les pages Ventes / Clients / Produits / Géographie.
     // Servi dans la même réponse pour qu'aucune page ne recalcule un chiffre
@@ -285,5 +301,12 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     customerMetrics: computeCustomerMetrics(current, histories, periods.current.start),
     margins,
     previousMargins: computeMargins(previous, costs),
+    // Le rythme d'écoulement se lit sur la période affichée : c'est ce que
+    // « il reste N jours » doit refléter, pas une moyenne de toute l'histoire.
+    inventory: computeInventory(
+      catalogue.map((c) => ({ id: c.id, name: c.name, stockGrams: c.stockGrams })),
+      current,
+      daysInPeriod(periods.current).length,
+    ),
   };
 }

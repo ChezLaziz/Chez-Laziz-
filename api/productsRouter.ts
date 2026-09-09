@@ -18,6 +18,8 @@ const productInput = z.object({
   // Nullable et non simplement optionnel : vider le champ doit effacer le
   // coût, pas le laisser à son ancienne valeur.
   costPerKgMillimes: z.number().int().min(0).optional().nullable(),
+  // En grammes, entier : 2,5 kg = 2500. Nullable = stock non suivi.
+  stockGrams: z.number().int().min(0).optional().nullable(),
   category: z.string().min(1).max(100),
   badge: z.string().max(50).optional().nullable(),
   imageUrl: z.string().max(255).optional().nullable(),
@@ -49,6 +51,7 @@ export const productsRouter = createRouter({
         descriptionAr: input.data.descriptionAr ?? null,
         priceMillimes: input.data.priceMillimes,
         costPerKgMillimes: input.data.costPerKgMillimes ?? null,
+        stockGrams: input.data.stockGrams ?? null,
         category: input.data.category,
         badge: input.data.badge ?? null,
         imageUrl: input.data.imageUrl ?? null,

@@ -58,6 +58,15 @@ export const products = pgTable("products", {
   // lignes sans coût sont exclues du calcul et comptées dans le taux de
   // couverture, jamais estimées.
   costPerKgMillimes: integer("cost_per_kg_millimes"),
+  // Stock disponible, en GRAMMES — même logique que les prix, qui sont au
+  // kilo : les produits se vendent au poids (0,5 / 1 / 1,5 / 2 kg), donc
+  // un compteur d'« unités » ne voudrait rien dire. Stocké en grammes,
+  // entier, pour éviter les flottants (2,5 kg = 2500).
+  //
+  // NULLABLE au même titre que le coût : stock inconnu n'est pas stock nul.
+  // Un 0 signifierait « en rupture » et masquerait le produit du calcul de
+  // couverture ; null dit « pas encore suivi ».
+  stockGrams: integer("stock_grams"),
   category: varchar("category", { length: 100 }).notNull(),
   badge: varchar("badge", { length: 50 }),
   imageUrl: varchar("image_url", { length: 255 }),

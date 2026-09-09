@@ -50,6 +50,13 @@
       "when": 1788919645108,
       "tag": "0006_steady_felicia_hardy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788920834555,
+      "tag": "0007_bizarre_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

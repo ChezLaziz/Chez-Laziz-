@@ -17,6 +17,7 @@ import CustomersPage from './admin/pages/CustomersPage'
 import ProductsPage from './admin/pages/ProductsPage'
 import GeographyPage from './admin/pages/GeographyPage'
 import ProfitabilityPage from './admin/pages/ProfitabilityPage'
+import InventoryPage from './admin/pages/InventoryPage'
 import IntelligencePage from './admin/pages/IntelligencePage'
 import { useOverview } from './admin/useOverview'
 
@@ -805,6 +806,9 @@ type ProductForm = {
   /** Coût de revient au kilo, en dinars. Vide = coût inconnu, ce qui n'est
    * pas la même chose que 0 : voir la note sous le champ. */
   costTND: string
+  /** Stock en kilos, tel que saisi. Vide = stock non suivi, ce qui n'est
+   * pas la même chose que 0 (rupture). */
+  stockKg: string
   category: string
   badge: string
   imageUrl: string
@@ -819,6 +823,7 @@ const EMPTY_FORM: ProductForm = {
   descriptionAr: '',
   priceTND: '',
   costTND: '',
+  stockKg: '',
   category: 'Les classiques',
   badge: '',
   imageUrl: '',
@@ -914,6 +919,7 @@ function ProductsTab({ token }: { token: string }) {
       descriptionAr: p.descriptionAr ?? '',
       priceTND: formatTND(p.priceMillimes),
       costTND: p.costPerKgMillimes === null ? '' : formatTND(p.costPerKgMillimes),
+      stockKg: p.stockGrams === null ? '' : String(p.stockGrams / 1000),
       category: p.category,
       badge: p.badge ?? '',
       imageUrl: p.imageUrl ?? '',
@@ -935,6 +941,11 @@ function ProductsTab({ token }: { token: string }) {
       // Champ vide → null (coût inconnu), jamais 0 : un coût nul afficherait
       // 100 % de marge et hisserait le produit en tête de la rentabilité.
       costPerKgMillimes: form.costTND.trim() === '' ? null : toMillimes(form.costTND),
+      // Vide → null (non suivi). Un 0 signifierait « en rupture ».
+      stockGrams:
+        form.stockKg.trim() === ''
+          ? null
+          : Math.round(parseFloat(form.stockKg.replace(',', '.')) * 1000),
       category: form.category.trim() || 'Les classiques',
       badge: form.badge.trim() || null,
       imageUrl: form.imageUrl.trim() || null,
@@ -943,6 +954,10 @@ function ProductsTab({ token }: { token: string }) {
     }
     if (Number.isNaN(data.priceMillimes)) {
       setSaveError('Le prix de vente doit être un nombre, par exemple 8 ou 8,5.')
+      return
+    }
+    if (data.stockGrams !== null && Number.isNaN(data.stockGrams)) {
+      setSaveError('Le stock doit être un nombre de kilos, par exemple 12 ou 12,5. Laissez le champ vide si vous ne suivez pas ce produit.')
       return
     }
     if (data.costPerKgMillimes !== null && Number.isNaN(data.costPerKgMillimes)) {
@@ -1015,6 +1030,21 @@ function ProductsTab({ token }: { token: string }) {
               Ce que vous coûte un kilo de ce produit : matières premières et fabrication. Sert à
               calculer la marge dans « Rentabilité ». Laissez vide si vous ne le savez pas — le
               produit sera alors exclu du calcul et signalé, jamais compté comme gratuit.
+            </p>
+          </div>
+
+          <div>
+            <input
+              value={form.stockKg}
+              onChange={(e) => setForm({ ...form, stockKg: e.target.value })}
+              placeholder="Stock disponible en kilos (facultatif)"
+              inputMode="decimal"
+              className={inputCls}
+            />
+            <p className="mt-1.5 text-xs leading-relaxed text-ink/50">
+              Combien de kilos vous restent. Alimente « Inventaire » : rythme d'écoulement et jours
+              de stock restants. Laissez vide si vous ne suivez pas ce produit — <strong>0 veut
+              dire « en rupture »</strong>, ce qui n'est pas la même chose.
             </p>
           </div>
           <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (facultative)" rows={2} className={`${inputCls} resize-none`} />
@@ -2311,6 +2341,7 @@ export default function AdminPage() {
       {tab === 'produits' && <ProductsPage token={token} period={period} />}
       {tab === 'geographie' && <GeographyPage token={token} period={period} />}
       {tab === 'rentabilite' && <ProfitabilityPage token={token} period={period} />}
+      {tab === 'inventaire' && <InventoryPage token={token} period={period} />}
       {tab === 'intelligence' && <IntelligencePage token={token} period={period} />}
       {tab === 'commandes' && (
         <OrdersTab token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
