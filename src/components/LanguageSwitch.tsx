@@ -1,9 +1,14 @@
 import { Link, useLocation } from 'react-router'
 import { useLang, useIsBilingualPage, altLangPath } from '@/lib/i18n'
+import FlagIcon from './FlagIcon'
 
-/** Sélecteur de langue à deux segments (FR | ع), toujours visible dans la
- * barre d'en-tête — y compris sur mobile, où il était auparavant caché au
- * fond du menu hamburger, donc introuvable.
+/** Sélecteur de langue à deux segments (FR | عربي), avec drapeau, toujours
+ * visible dans la barre d'en-tête — y compris sur mobile, où il était
+ * auparavant caché au fond du menu hamburger, donc introuvable.
+ *
+ * Un drapeau et un mot, pas la lettre « ع » seule : c'est le premier geste
+ * d'un visiteur venu d'une publicité, et une lettre isolée dans une pastille
+ * grise ne se lit pas comme « choisissez votre langue ».
  *
  * Les deux options sont affichées en permanence, avec la langue courante
  * mise en évidence : un bouton qui n'affiche que la langue cible ("عربي")
@@ -23,9 +28,13 @@ export default function LanguageSwitch({ tone, size = 'sm' }: { tone: 'light' | 
   const href = bilingual ? altLangPath(pathname, search, target) : target === 'ar' ? '/ar' : '/'
 
   const big = size === 'lg'
-  const seg = `flex items-center justify-center rounded-full font-semibold leading-none transition-colors ${
-    big ? 'min-h-11 min-w-[52px] px-4 text-sm' : 'min-h-8 min-w-[38px] px-2.5 text-xs'
+  // Drapeau + libellé, et une cible d'au moins 40 px : c'est le premier
+  // geste d'un visiteur venu d'une publicité, il doit être visible et
+  // atteignable au pouce, pas deviné.
+  const seg = `flex items-center justify-center gap-1.5 rounded-full font-semibold leading-none transition-colors ${
+    big ? 'min-h-11 px-4 text-sm' : 'min-h-10 px-3 text-[13px]'
   }`
+  const flagCls = big ? 'h-4 w-6' : 'h-3.5 w-5'
   const activeCls = tone === 'light' ? 'bg-ink text-[#faf6f3]' : 'bg-[#faf6f3] text-ink'
   const idleCls = tone === 'light' ? 'text-ink/60' : 'text-[#faf6f3]/80'
   const frameCls =
@@ -39,15 +48,28 @@ export default function LanguageSwitch({ tone, size = 'sm' }: { tone: 'light' | 
     >
       {(['fr', 'ar'] as const).map((code) => {
         const isCurrent = code === lang
-        const label = code === 'ar' ? 'ع' : 'FR'
-        const full = code === 'ar' ? 'العربية' : 'Français'
+        // « عربي » plutôt que « ع » : une seule lettre ne se lit pas comme
+        // un nom de langue. Le drapeau tunisien, et non un drapeau
+        // panarabe : les clients sont tunisiens.
+        const label = code === 'ar' ? 'العربية' : 'Français'
+        const short = code === 'ar' ? 'عربي' : 'FR'
         return isCurrent ? (
-          <span key={code} aria-current="true" className={`${seg} ${activeCls}`} title={full}>
-            {label}
+          <span key={code} aria-current="true" className={`${seg} ${activeCls}`} title={label}>
+            <FlagIcon lang={code} className={flagCls} />
+            <span>{short}</span>
           </span>
         ) : (
-          <Link key={code} to={href} lang={code} hrefLang={code} aria-label={full} title={full} className={`${seg} ${idleCls}`}>
-            {label}
+          <Link
+            key={code}
+            to={href}
+            lang={code}
+            hrefLang={code}
+            aria-label={label}
+            title={label}
+            className={`${seg} ${idleCls}`}
+          >
+            <FlagIcon lang={code} className={flagCls} />
+            <span>{short}</span>
           </Link>
         )
       })}

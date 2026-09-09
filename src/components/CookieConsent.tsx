@@ -11,7 +11,15 @@ const HEIGHT_VAR = '--cookie-banner-h'
 
 /** Bandeau de consentement — n'apparaît qu'une fois, tant qu'aucun choix
  * n'a été fait. Les cookies de mesure (GA4) et publicitaires (Meta Pixel)
- * ne se chargent qu'après acceptation, voir useTrackVisit.ts. */
+ * ne se chargent qu'après acceptation, voir useTrackVisit.ts.
+ *
+ * DISCRET PAR CONSTRUCTION. Mesuré sur un téléphone de 844 px de haut,
+ * l'ancienne version en occupait 230 — un quart de la première impression,
+ * et le premier élément que l'œil rencontrait sur une page d'arrivée
+ * publicitaire. Elle est désormais sur une seule ligne, texte court, deux
+ * boutons compacts : le visiteur choisit sans que le makroudh disparaisse
+ * derrière. Le texte long et le lien vers la politique restent, en plus
+ * petit — informer n'oblige pas à occuper l'écran. */
 export default function CookieConsent() {
   // Lu une seule fois au montage (pas dans un effet : localStorage est
   // disponible dès le premier rendu côté navigateur, aucune synchronisation
@@ -49,44 +57,41 @@ export default function CookieConsent() {
   return (
     <div
       ref={ref}
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-sand/70 bg-[#faf6f3] px-5 pt-4 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:px-10"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-sand/70 bg-[#faf6f3]/97 px-4 pt-2.5 backdrop-blur-sm md:px-10"
       // pb-[env(safe-area-inset-bottom)] : sur iPhone, la barre d'accueil
       // recouvre sinon les boutons du bandeau.
-      style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+      style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))' }}
     >
-      <div className="mx-auto flex max-w-5xl flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
-        <p className="text-[13px] font-light leading-relaxed text-ink/75">
+      <div className="mx-auto flex max-w-5xl items-center gap-3 md:gap-6">
+        <p className="min-w-0 flex-1 text-[11px] font-light leading-snug text-ink/60 md:text-[13px]">
           {isAr ? (
             <>
-              نستعمل ملفات تعريف الارتباط لقياس الزيارات وتحسين إعلاناتنا وتجربتكم.{' '}
+              نستعمل ملفات تعريف الارتباط لقياس الزيارات.{' '}
               <Link to="/politique-de-confidentialite" className="underline underline-offset-2">
-                اعرفوا المزيد
+                المزيد
               </Link>
-              .
             </>
           ) : (
             <>
-              Nous utilisons des cookies de mesure d'audience et publicitaires pour améliorer votre
-              expérience et nos campagnes.{' '}
+              Cookies de mesure d'audience et publicitaires.{' '}
               <Link to="/politique-de-confidentialite" className="underline underline-offset-2">
                 En savoir plus
               </Link>
-              .
             </>
           )}
         </p>
-        <div className="flex shrink-0 gap-3">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => choose('declined')}
-            className="min-h-11 flex-1 rounded-full border border-ink/25 px-5 text-[12px] uppercase tracking-[0.15em] text-ink/70 transition hover:border-ink/40 md:flex-none"
+            className="min-h-9 rounded-full px-3 text-[11px] font-medium text-ink/50 transition hover:text-ink md:text-xs"
           >
             {isAr ? 'رفض' : 'Refuser'}
           </button>
           <button
             type="button"
             onClick={() => choose('accepted')}
-            className="min-h-11 flex-1 rounded-full bg-[#b8912e] px-5 text-[12px] uppercase tracking-[0.15em] text-white transition hover:bg-[#a37f27] md:flex-none"
+            className="min-h-9 rounded-full bg-[#b8912e] px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#a37f27] md:text-xs"
           >
             {isAr ? 'موافق' : 'Accepter'}
           </button>
