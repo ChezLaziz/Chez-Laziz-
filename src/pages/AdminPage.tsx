@@ -455,7 +455,7 @@ function OrdersTab({
   const utils = trpc.useUtils()
   // Les commandes arrivent pendant que le tableau de bord est ouvert :
   // sans rafraîchissement automatique, rien ne le signalait.
-  const { data: orders, isLoading } = trpc.orders.list.useQuery(
+  const { data: orders, isLoading, isError } = trpc.orders.list.useQuery(
     { token },
     { refetchInterval: 30000, refetchOnWindowFocus: true },
   )
@@ -480,28 +480,58 @@ function OrdersTab({
   const [payFilter, setPayFilter] = useState<'all' | 'cod' | 'd17' | 'd17_pending' | 'to_collect'>('all')
 
   const query = search.trim().toLowerCase()
-  const filtered = (orders ?? []).filter((o) => {
+  const isToCollect = (o: { paymentMethod: string; paymentStatus: string; status: string }) =>
+    // Argent pas encore rentré : espèces non encaissées, hors annulées.
+    o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee'
+  const isD17Pending = (o: { paymentMethod: string; paymentStatus: string }) =>
+    o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification'
+
+  // Deux niveaux, et pas un seul : les compteurs des boutons de paiement se
+  // lisent sur `scoped` (statut + recherche), sinon activer « À encaisser »
+  // recalculerait son propre compteur sur sa propre sélection et afficherait
+  // toujours le total complet. La liste, elle, part de `filtered`.
+  const scoped = (orders ?? []).filter((o) => {
     if (statusFilter && o.status !== statusFilter) return false
-    if (payFilter === 'cod' && o.paymentMethod !== 'cod') return false
-    if (payFilter === 'd17' && o.paymentMethod !== 'd17') return false
-    if (payFilter === 'd17_pending' && !(o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification')) return false
-    // Argent pas encore rentré : espèces non encaissées, hors commandes annulées.
-    if (payFilter === 'to_collect' && !(o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee')) return false
     if (query) {
       const hay = `#${o.id} ${o.customerName} ${o.phone} ${o.city} ${o.governorate} ${o.address}`.toLowerCase()
       if (!hay.includes(query)) return false
     }
     return true
   })
-  const d17Pending = (orders ?? []).filter(
-    (o) => o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification',
-  ).length
-  const toCollect = (orders ?? []).filter(
-    (o) => o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee',
-  )
+  const filtered = scoped.filter((o) => {
+    if (payFilter === 'cod' && o.paymentMethod !== 'cod') return false
+    if (payFilter === 'd17' && o.paymentMethod !== 'd17') return false
+    if (payFilter === 'd17_pending' && !isD17Pending(o)) return false
+    if (payFilter === 'to_collect' && !isToCollect(o)) return false
+    return true
+  })
+
+  // Quelle ligne enregistre en ce moment. `isPending` seul est global à la
+  // mutation : un clic sur « Encaissé » figeait les boutons de toutes les
+  // commandes affichées, pas seulement celle-là.
+  const savingPayment = setPaymentStatus.isPending
+    ? (setPaymentStatus.variables as { id: number } | undefined)?.id
+    : undefined
+
+  const d17Pending = scoped.filter(isD17Pending).length
+  const toCollect = scoped.filter(isToCollect)
   const toCollectMillimes = toCollect.reduce((s, o) => s + o.totalMillimes, 0)
 
   if (isLoading) return <p className="text-sm text-ink/50">Chargement…</p>
+  // Sans ceci, une requête en échec tombait dans « Aucune commande pour
+  // l'instant » plus bas : une panne réseau s'affichait comme un carnet vide.
+  if (isError || !orders)
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+        <span>
+          Impossible de charger les commandes.
+          <br />
+          <span className="text-red-600/80">
+            Vérifiez votre connexion. Ceci ne signifie pas que vous n'avez aucune commande.
+          </span>
+        </span>
+      </div>
+    )
 
   return (
     <div className="space-y-4">
@@ -683,7 +713,7 @@ function OrdersTab({
                     <button
                       type="button"
                       onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'pending' })}
-                      disabled={setPaymentStatus.isPending}
+                      disabled={savingPayment === o.id}
                       className="ml-auto min-h-11 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/60 hover:border-ink/40 disabled:opacity-40"
                     >
                       Annuler l'encaissement
@@ -697,10 +727,10 @@ function OrdersTab({
                     <button
                       type="button"
                       onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'paid' })}
-                      disabled={setPaymentStatus.isPending}
+                      disabled={savingPayment === o.id}
                       className="ml-auto min-h-11 rounded-full bg-green-600 px-5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-green-700 disabled:opacity-40"
                     >
-                      {setPaymentStatus.isPending ? 'Enregistrement…' : 'Encaissé ✓'}
+                      {savingPayment === o.id ? 'Enregistrement…' : 'Encaissé ✓'}
                     </button>
                   </>
                 )}
@@ -793,7 +823,7 @@ const EMPTY_FORM: ProductForm = {
 
 function ProductsTab({ token }: { token: string }) {
   const utils = trpc.useUtils()
-  const { data: products, isLoading } = trpc.products.listAll.useQuery({ token })
+  const { data: products, isLoading, isError } = trpc.products.listAll.useQuery({ token })
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM)
   const [showForm, setShowForm] = useState(false)
@@ -836,16 +866,36 @@ function ProductsTab({ token }: { token: string }) {
    * (`direction` -1 = monter, +1 = descendre). Normalise au passage tous les
    * `sortOrder` de la liste affichée (souvent tous à 0 par défaut) pour que
    * le geste ait toujours un effet visible, même la toute première fois. */
-  const moveProduct = (index: number, direction: -1 | 1) => {
+  // Réordonner écrit un rang absolu par produit : l'ordre d'arrivée des
+  // réponses n'a donc pas d'importance. Ce qui en avait, c'est qu'un envoi
+  // échoué au milieu laissait la liste à moitié renumérotée, sans un mot —
+  // on attend l'ensemble et on signale l'échec.
+  const [reordering, setReordering] = useState(false)
+  const moveProduct = async (index: number, direction: -1 | 1) => {
     const list = products ?? []
     const swapIndex = index + direction
-    if (swapIndex < 0 || swapIndex >= list.length) return
-    list.forEach((p, i) => {
-      const desired = i === index ? swapIndex : i === swapIndex ? index : i
-      if (p.sortOrder !== desired) {
-        update.mutate({ token, id: p.id, data: { sortOrder: desired } })
-      }
-    })
+    if (swapIndex < 0 || swapIndex >= list.length || reordering) return
+    const writes = list
+      .map((p, i) => ({
+        p,
+        desired: i === index ? swapIndex : i === swapIndex ? index : i,
+      }))
+      .filter(({ p, desired }) => p.sortOrder !== desired)
+    if (writes.length === 0) return
+
+    setReordering(true)
+    try {
+      await Promise.all(
+        writes.map(({ p, desired }) =>
+          update.mutateAsync({ token, id: p.id, data: { sortOrder: desired } }),
+        ),
+      )
+    } catch {
+      // Le message précis est déjà posé par onError de la mutation.
+    } finally {
+      setReordering(false)
+      utils.products.listAll.invalidate()
+    }
   }
 
   const toMillimes = (tnd: string) => Math.round(parseFloat(tnd.replace(',', '.')) * 1000)
@@ -882,7 +932,10 @@ function ProductsTab({ token }: { token: string }) {
       available: form.available,
       isExclusiveCreation: form.isExclusiveCreation,
     }
-    if (Number.isNaN(data.priceMillimes)) return
+    if (Number.isNaN(data.priceMillimes)) {
+      setSaveError('Le prix doit être un nombre, par exemple 8 ou 8,5.')
+      return
+    }
     if (editingId) {
       update.mutate({ token, id: editingId, data }, { onSuccess: () => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM) } })
     } else {
@@ -891,13 +944,19 @@ function ProductsTab({ token }: { token: string }) {
   }
 
   const saving = create.isPending || update.isPending
+  const savingProduct = update.isPending
+    ? (update.variables as { id: number } | undefined)?.id
+    : undefined
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <p className="text-sm text-ink/55">
-          {products?.length ?? 0} produit{(products?.length ?? 0) > 1 ? 's' : ''} — les modifications
-          s'affichent immédiatement sur le site.
+          {products
+            ? `${products.length} produit${products.length > 1 ? 's' : ''} — les modifications s'affichent immédiatement sur le site.`
+            : isError
+              ? 'Catalogue non chargé.'
+              : 'Chargement du catalogue…'}
         </p>
         <button
           onClick={() => {
@@ -911,6 +970,12 @@ function ProductsTab({ token }: { token: string }) {
           + Ajouter
         </button>
       </div>
+
+      {saveError && !showForm && (
+        <p className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700" role="alert">
+          Enregistrement impossible : {saveError}
+        </p>
+      )}
 
       {showForm && (
         <form onSubmit={submit} className="mb-8 space-y-4 rounded-xl border border-[#b8912e]/50 bg-[#f5ece5] p-6">
@@ -1025,6 +1090,17 @@ function ProductsTab({ token }: { token: string }) {
       )}
 
       {isLoading && <p className="text-sm text-ink/50">Chargement…</p>}
+      {isError && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          Impossible de charger le catalogue. Vérifiez votre connexion — ceci ne signifie pas que
+          vos produits ont disparu.
+        </p>
+      )}
+      {products && products.length === 0 && (
+        <p className="rounded-2xl border border-sand/70 bg-white p-8 text-center text-sm text-ink/50">
+          Aucun produit pour l'instant. Utilisez « + Ajouter » pour créer le premier.
+        </p>
+      )}
       <div className="space-y-3">
         {(products ?? []).map((p, index) => (
           <div key={p.id} className="flex flex-col gap-3 rounded-2xl border border-sand/70 bg-white shadow-sm p-4 sm:flex-row sm:items-center sm:gap-4 md:p-5">
@@ -1035,7 +1111,7 @@ function ProductsTab({ token }: { token: string }) {
                 <button
                   type="button"
                   onClick={() => moveProduct(index, -1)}
-                  disabled={index === 0}
+                  disabled={index === 0 || reordering}
                   aria-label="Monter"
                   className="flex h-6 w-6 items-center justify-center rounded border border-ink/20 text-ink/60 transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-25"
                 >
@@ -1044,7 +1120,7 @@ function ProductsTab({ token }: { token: string }) {
                 <button
                   type="button"
                   onClick={() => moveProduct(index, 1)}
-                  disabled={index === (products?.length ?? 0) - 1}
+                  disabled={index === (products?.length ?? 0) - 1 || reordering}
                   aria-label="Descendre"
                   className="flex h-6 w-6 items-center justify-center rounded border border-ink/20 text-ink/60 transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-25"
                 >
@@ -1092,7 +1168,7 @@ function ProductsTab({ token }: { token: string }) {
                   ouvrir le formulaire, décocher "Visible", puis enregistrer. */}
               <button
                 onClick={() => update.mutate({ token, id: p.id, data: { available: !p.available } })}
-                disabled={update.isPending}
+                disabled={savingProduct === p.id}
                 aria-pressed={!p.available}
                 className={`min-h-11 rounded-full border px-4 text-xs font-semibold uppercase tracking-wide transition-colors disabled:opacity-40 ${
                   p.available
@@ -1106,7 +1182,7 @@ function ProductsTab({ token }: { token: string }) {
                   en un clic que la rupture de stock, sans ouvrir le formulaire. */}
               <button
                 onClick={() => update.mutate({ token, id: p.id, data: { isExclusiveCreation: !p.isExclusiveCreation } })}
-                disabled={update.isPending}
+                disabled={savingProduct === p.id}
                 aria-pressed={p.isExclusiveCreation}
                 title="Nom/recette inventé par nous, absent du marché — affiche ™ à côté du nom sur le site"
                 className={`min-h-11 rounded-full border px-4 text-xs font-semibold uppercase tracking-wide transition-colors disabled:opacity-40 ${
@@ -1140,12 +1216,21 @@ function ProductsTab({ token }: { token: string }) {
 
 function MessagesTab({ token }: { token: string }) {
   const utils = trpc.useUtils()
-  const { data: messages, isLoading } = trpc.contact.list.useQuery({ token })
+  const { data: messages, isLoading, isError } = trpc.contact.list.useQuery({ token })
+  const [markError, setMarkError] = useState<string | null>(null)
   const markRead = trpc.contact.markRead.useMutation({
-    onSuccess: () => utils.contact.list.invalidate(),
+    onSuccess: () => { setMarkError(null); utils.contact.list.invalidate() },
+    onError: (e) => setMarkError(e.message),
   })
 
   if (isLoading) return <p className="text-sm text-ink/50">Chargement…</p>
+  if (isError)
+    return (
+      <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+        Impossible de charger les messages. Vérifiez votre connexion — ceci ne signifie pas que
+        votre boîte est vide.
+      </p>
+    )
   if (!messages?.length)
     return (
       <p className="rounded-2xl border border-sand/70 bg-white shadow-sm p-8 text-center text-sm text-ink/50">
@@ -1155,6 +1240,11 @@ function MessagesTab({ token }: { token: string }) {
 
   return (
     <div className="space-y-3">
+      {markError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700" role="alert">
+          Le message n'a pas pu être marqué : {markError}
+        </p>
+      )}
       {messages.map((m) => (
         <div
           key={m.id}
@@ -1496,12 +1586,18 @@ const NETWORKS: {
 
 function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: string }) {
   const utils = trpc.useUtils()
-  const { data: history } = trpc.social.history.useQuery({ token, network: net.key })
+  const { data: history, isLoading, isError } = trpc.social.history.useQuery({
+    token,
+    network: net.key,
+  })
+  const [recordError, setRecordError] = useState<string | null>(null)
   const record = trpc.social.record.useMutation({
     onSuccess: () => {
+      setRecordError(null)
       utils.social.latest.invalidate()
       utils.social.history.invalidate()
     },
+    onError: (e) => setRecordError(e.message),
   })
 
   const [followers, setFollowers] = useState('')
@@ -1513,7 +1609,7 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
   const diff = latest && prev ? latest.followers - prev.followers : null
 
   const chartData = (history ?? []).map((h) => ({
-    date: new Date(h.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+    at: new Date(h.createdAt).getTime(),
     followers: h.followers,
   }))
 
@@ -1521,7 +1617,10 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
     e.preventDefault()
     const f = parseInt(followers, 10)
     const m = parseInt(messages || '0', 10)
-    if (Number.isNaN(f)) return
+    if (Number.isNaN(f)) {
+      setRecordError("Le nombre d'abonnés doit être un nombre entier.")
+      return
+    }
     record.mutate(
       { token, network: net.key, followers: f, messages: Number.isNaN(m) ? 0 : m },
       { onSuccess: () => { setEditing(false); setFollowers(''); setMessages('') } },
@@ -1547,9 +1646,17 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
         </div>
         <div className="text-right">
           <p className="font-display text-3xl text-ink">
-            {latest ? latest.followers.toLocaleString('fr-FR') : '—'}
+            {isLoading ? (
+              <span className="inline-block h-7 w-16 animate-pulse rounded bg-ink/[0.07] align-middle" />
+            ) : latest ? (
+              latest.followers.toLocaleString('fr-FR')
+            ) : (
+              '—'
+            )}
           </p>
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink/45">abonnés</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink/45">
+            {isError ? 'non chargé' : isLoading ? 'chargement…' : !latest ? 'aucun relevé' : 'abonnés'}
+          </p>
           {diff !== null && diff !== 0 && (
             <p className={`mt-1 text-xs font-semibold ${diff > 0 ? 'text-green-600' : 'text-red-500'}`}>
               {diff > 0 ? '+' : ''}{diff} depuis le dernier relevé
@@ -1557,6 +1664,12 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
           )}
         </div>
       </div>
+
+      {recordError && (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+          {recordError}
+        </p>
+      )}
 
       {latest && (
         <p className="mt-3 text-xs font-light text-ink/50">
@@ -1569,9 +1682,24 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
         <div className="mt-4 h-32">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#3c3835' }} axisLine={false} tickLine={false} />
+              {/* Échelle de TEMPS et non catégorielle : deux relevés espacés
+                  d'un mois ne doivent pas s'afficher côte à côte comme deux
+                  relevés du même jour. */}
+              <XAxis
+                dataKey="at"
+                type="number"
+                scale="time"
+                domain={['dataMin', 'dataMax']}
+                tickFormatter={(t: number) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                tick={{ fontSize: 10, fill: '#3c3835' }}
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis domain={['dataMin - 5', 'dataMax + 5']} tick={{ fontSize: 10, fill: '#3c3835' }} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v) => [String(v), 'Abonnés']} />
+              <Tooltip
+                formatter={(v) => [String(v), 'Abonnés']}
+                labelFormatter={(l) => new Date(Number(l)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+              />
               <Line type="monotone" dataKey="followers" stroke={net.color} strokeWidth={2} dot={{ r: 3, fill: net.color }} />
             </LineChart>
           </ResponsiveContainer>
@@ -1608,20 +1736,8 @@ function NetworkCard({ net, token }: { net: (typeof NETWORKS)[number]; token: st
 }
 
 function MarketingTab({ token }: { token: string }) {
-  const { data: siteMessages } = trpc.contact.list.useQuery({ token })
-  const unread = (siteMessages ?? []).filter((m) => !m.isRead).length
-
   return (
     <div>
-      {unread > 0 && (
-        <div className="mb-6 flex items-center justify-between rounded-xl border border-[#b8912e]/50 bg-[#f5ece5] px-5 py-4">
-          <p className="text-sm">
-            📩 <strong>{unread}</strong> message{unread > 1 ? 's' : ''} du site non lu{unread > 1 ? 's' : ''}
-          </p>
-          <span className="text-xs text-ink/50">Voir l'onglet Messages</span>
-        </div>
-      )}
-
       <p className="mb-6 text-sm font-light text-ink/60">
         Ouvre chaque réseau, note le nombre d'abonnés et de messages, puis clique sur
         « Mettre à jour » — le site garde l'historique et trace l'évolution. 30 secondes par réseau.
