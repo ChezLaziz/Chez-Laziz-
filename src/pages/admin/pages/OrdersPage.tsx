@@ -12,6 +12,7 @@ import {
   fullAddress,
   hasCompleteWeight,
   packageContents,
+  parseOrderItems,
   totalWeightKg,
   type CarrierKey,
   type ShippableOrder,
@@ -110,17 +111,8 @@ const STATUS_META: Record<Status, { label: string; cls: string; icon: React.Reac
   },
 }
 
-function parseItems(json: string): ShippableOrder['items'] {
-  try {
-    const parsed = JSON.parse(json)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
 function toShippable(o: Order): ShippableOrder {
-  return { ...o, items: parseItems(o.items) }
+  return { ...o, items: parseOrderItems(o.items) }
 }
 
 function formatDate(d: Date | string) {
@@ -317,6 +309,8 @@ export default function OrdersPage({
         <ShipmentBar
           orders={selectedOrders.map(toShippable)}
           delegationFor={delegationFor}
+          token={token}
+          onSent={() => void utils.orders.list.invalidate()}
           onAssign={(carrier) => {
             for (const o of selectedOrders) setCarrier.mutate({ token, id: o.id, carrier })
             setSelected(new Set())
@@ -385,32 +379,76 @@ export default function OrdersPage({
 
 /* --------------------------- Remise au transporteur --------------------------- */
 
-/** Ce que l'on peut réellement faire aujourd'hui avec une sélection.
+/** Ce que l'on peut faire d'une sélection de commandes.
  *
- * Aucun bouton « envoyer au transporteur » : aucune de leurs API n'est
- * joignable (voir contracts/carriers.ts). Promettre un envoi qui n'a pas lieu
- * serait pire que ne rien promettre — on prépare le fichier et le bordereau,
- * et on note qui transporte quoi. */
+ * DEUX MONDES, parce que les deux transporteurs ne se valent pas :
+ *
+ *   Team Parcel Express — un vrai envoi. Un clic crée les colis chez eux et
+ *   range les numéros de suivi ici. Le bouton fait donc ce qu'il annonce, et
+ *   l'avertissement ne dit plus « rien n'est envoyé » : il dit l'inverse, et
+ *   rappelle d'appeler le client d'abord, parce qu'un colis créé est un
+ *   engagement.
+ *
+ *   Jetpack — aucune API marchand n'existe (voir contracts/carriers.ts). On
+ *   prépare le fichier et le bordereau, et on note qui transporte quoi.
+ *   Promettre un envoi qui n'a pas lieu serait pire que ne rien promettre. */
 function ShipmentBar({
   orders,
   delegationFor,
+  token,
+  onSent,
   onAssign,
   onClear,
   pending,
 }: {
   orders: ShippableOrder[]
   delegationFor: (o: ShippableOrder) => string | null
+  token: string
+  onSent: () => void
   onAssign: (carrier: CarrierKey) => void
   onClear: () => void
   pending: boolean
 }) {
   const [carrier, setCarrier] = useState<CarrierKey>('tpe')
+  const [results, setResults] = useState<SendResult[]>([])
+  const [sending, setSending] = useState(false)
 
   const incompleteWeight = orders.filter((o) => !hasCompleteWeight(o.items)).length
   const alreadyPaid = orders.filter((o) => amountToCollectMillimes(o) === 0).length
   // Team Parcel Express est le seul des deux à travailler par délégation.
   const noDelegation =
     carrier === 'tpe' ? orders.filter((o) => delegationFor(o) === null).length : 0
+
+  const send = trpc.carriers.send.useMutation()
+
+  /** Envoi UNE COMMANDE À LA FOIS, en série.
+   *
+   * Pas en parallèle : chaque appel crée un vrai colis chez le transporteur,
+   * et une rafale simultanée rend impossible de dire lequel est passé si la
+   * connexion lâche au milieu. Chaque résultat s'affiche dès qu'il tombe. */
+  const sendAll = async () => {
+    setSending(true)
+    setResults([])
+    for (const o of orders) {
+      try {
+        const r = await send.mutateAsync({ token, id: o.id })
+        setResults((prev) => [...prev, { id: o.id, name: o.customerName, ...r }])
+      } catch (e) {
+        setResults((prev) => [
+          ...prev,
+          {
+            id: o.id,
+            name: o.customerName,
+            ok: false,
+            reason: 'incertain',
+            message: e instanceof Error ? e.message : String(e),
+          },
+        ])
+      }
+    }
+    setSending(false)
+    onSent()
+  }
 
   const downloadCsv = () => {
     const forCarrier = carrier === 'tpe' ? delegationFor : () => null
@@ -450,54 +488,102 @@ function ShipmentBar({
         </button>
       </div>
 
-      {/* AVERTISSEMENT EN PREMIER, PAS EN NOTE DE BAS DE PAGE.
-       *
-       * Un utilisateur a cliqué « Affecter », est allé sur le site du
-       * transporteur, et n'y a rien trouvé — ce qui est le comportement
-       * correct, mais le bouton laissait croire le contraire. L'explication
-       * existait, en petit, sous les boutons : personne ne lit une note
-       * après avoir cliqué. Elle passe donc AVANT, et le bouton dit
-       * exactement ce qu'il fait. */}
-      <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-        <strong className="font-semibold">Rien n'est envoyé automatiquement.</strong>{' '}
-        {CARRIERS[carrier].label} ne donne aucun accès automatique : pour que le colis arrive chez
-        eux, téléchargez le fichier ci-dessous et déposez-le sur {CARRIERS[carrier].platform}.
-      </p>
+      {carrier === 'tpe' ? (
+        <>
+          {/* L'AVERTISSEMENT DIT CE QUI VA SE PASSER, avant le bouton.
+           *
+           * Il disait l'inverse tant que rien ne partait. Maintenant qu'un
+           * clic crée de vrais colis, c'est cela qu'il doit annoncer — et le
+           * rappel qui compte vraiment : le client se confirme au téléphone
+           * AVANT, pas après. */}
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+            <strong className="font-semibold">Ce bouton crée de vrais colis.</strong> Les{' '}
+            {orders.length} commande{orders.length > 1 ? 's' : ''} apparaîtront chez Team Parcel
+            Express et seront ramassées. Appelez les clients pour confirmer avant d'envoyer.
+          </p>
 
-      <ol className="mt-3 space-y-2.5">
-        <li className="flex flex-wrap items-center gap-2.5">
-          <StepNumber n={1} />
-          <button
-            type="button"
-            onClick={downloadCsv}
-            className="min-h-10 rounded-full bg-ink px-4 text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-85"
-          >
-            Télécharger le fichier
-          </button>
-          <span className="text-xs text-ink/55">puis déposez-le sur leur site</span>
-          <button
-            type="button"
-            onClick={() => printBordereau(orders, CARRIERS[carrier].label)}
-            className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent"
-          >
-            ou imprimer un bordereau
-          </button>
-        </li>
-        <li className="flex flex-wrap items-center gap-2.5">
-          <StepNumber n={2} />
-          <button
-            type="button"
-            onClick={() => onAssign(carrier)}
-            disabled={pending}
-            className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent disabled:opacity-40"
-          >
-            {pending ? 'Enregistrement…' : 'Noter comme confiées'}
-          </button>
-          <span className="text-xs text-ink/55">
-            marque ces commandes « chez {CARRIERS[carrier].label} » — dans votre carnet seulement
-          </span>
-        </li>
-      </ol>
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => void sendAll()}
+              disabled={sending}
+              className="min-h-10 rounded-full bg-ink px-4 text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-85 disabled:opacity-40"
+            >
+              {sending
+                ? `Envoi… ${results.length}/${orders.length}`
+                : `Envoyer à Team Parcel Express (${orders.length})`}
+            </button>
+            <button
+              type="button"
+              onClick={() => printBordereau(orders, CARRIERS[carrier].label)}
+              className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent"
+            >
+              Imprimer un bordereau
+            </button>
+            <button
+              type="button"
+              onClick={downloadCsv}
+              className="text-xs text-ink/45 underline underline-offset-4 hover:text-ink"
+            >
+              ou télécharger le fichier
+            </button>
+          </div>
+
+          {results.length > 0 && (
+            <ul className="mt-3 space-y-1">
+              {results.map((r) => (
+                <SendLine key={r.id} result={r} />
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Jetpack : aucune API. Le bouton ne doit rien promettre. */}
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+            <strong className="font-semibold">Rien n'est envoyé automatiquement.</strong>{' '}
+            {CARRIERS[carrier].label} ne donne aucun accès automatique : pour que le colis arrive
+            chez eux, téléchargez le fichier ci-dessous et déposez-le sur{' '}
+            {CARRIERS[carrier].platform}.
+          </p>
+
+          <ol className="mt-3 space-y-2.5">
+            <li className="flex flex-wrap items-center gap-2.5">
+              <StepNumber n={1} />
+              <button
+                type="button"
+                onClick={downloadCsv}
+                className="min-h-10 rounded-full bg-ink px-4 text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-85"
+              >
+                Télécharger le fichier
+              </button>
+              <span className="text-xs text-ink/55">puis déposez-le sur leur site</span>
+              <button
+                type="button"
+                onClick={() => printBordereau(orders, CARRIERS[carrier].label)}
+                className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent"
+              >
+                ou imprimer un bordereau
+              </button>
+            </li>
+            <li className="flex flex-wrap items-center gap-2.5">
+              <StepNumber n={2} />
+              <button
+                type="button"
+                onClick={() => onAssign(carrier)}
+                disabled={pending}
+                className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent disabled:opacity-40"
+              >
+                {pending ? 'Enregistrement…' : 'Noter comme confiées'}
+              </button>
+              <span className="text-xs text-ink/55">
+                marque ces commandes « chez {CARRIERS[carrier].label} » — dans votre carnet
+                seulement
+              </span>
+            </li>
+          </ol>
+        </>
+      )}
 
       {alreadyPaid > 0 && (
         <p className="mt-3 text-[11px] font-medium text-green-700">
@@ -507,8 +593,8 @@ function ShipmentBar({
       )}
       {noDelegation > 0 && (
         <p className="mt-1.5 text-[11px] font-medium text-amber-700">
-          {noDelegation} commande{noDelegation > 1 ? 's' : ''} sans délégation reconnue : la colonne
-          part vide. Reliez la ville dans « Villes et délégations », plus bas.
+          {noDelegation} commande{noDelegation > 1 ? 's' : ''} sans délégation reconnue :{' '}
+          {noDelegation > 1 ? 'elles seront refusées' : 'elle sera refusée'} plutôt qu'envoyée{noDelegation > 1 ? 's' : ''} au hasard. Reliez la ville dans « Villes et délégations », plus bas.
         </p>
       )}
       {incompleteWeight > 0 && (
@@ -519,6 +605,66 @@ function ShipmentBar({
       )}
     </div>
   )
+}
+
+type SendResult = {
+  id: number
+  name: string
+  ok: boolean
+  trackingNumber?: string
+  reason?: string
+  message?: string
+}
+
+/** Le sort d'une commande, dit sans détour.
+ *
+ * Trois issues, pas deux. « Incertain » existe parce qu'une requête peut
+ * partir sans que la réponse revienne : le colis est peut-être créé, et
+ * réessayer en ferait un deuxième. Le seul conseil honnête est alors d'aller
+ * regarder chez le transporteur — surtout pas de recliquer. */
+function SendLine({ result }: { result: SendResult }) {
+  if (result.ok) {
+    return (
+      <li className="flex flex-wrap items-center gap-2 text-[11px] text-green-800">
+        <span aria-hidden>✓</span>
+        <span className="font-medium">{result.name}</span>
+        <span className="text-ink/45">colis</span>
+        <span className="font-mono font-semibold">{result.trackingNumber}</span>
+      </li>
+    )
+  }
+
+  const uncertain = result.reason === 'incertain'
+  return (
+    <li
+      className={`flex flex-wrap items-center gap-2 text-[11px] ${uncertain ? 'text-amber-800' : 'text-red-700'}`}
+    >
+      <span aria-hidden>{uncertain ? '!' : '✗'}</span>
+      <span className="font-medium">{result.name}</span>
+      <span>{refusalText(result)}</span>
+    </li>
+  )
+}
+
+function refusalText(r: SendResult): string {
+  switch (r.reason) {
+    case 'already_sent':
+      return 'déjà partie — aucun deuxième colis créé'
+    case 'no_delegation':
+      return "ville non reliée à une délégation : reliez-la dans « Villes et délégations »"
+    case 'cancelled':
+      return 'commande annulée'
+    case 'no_phone':
+      return 'téléphone inutilisable'
+    case 'no_address':
+      return 'adresse vide'
+    case 'incertain':
+      return `envoi interrompu — VÉRIFIEZ chez Team Parcel Express avant de réessayer (${r.message ?? ''})`
+    case 'introuvable':
+      return 'commande introuvable'
+    default:
+      return `refusée par le transporteur : ${r.message ?? ''}`
+  }
 }
 
 function StepNumber({ n }: { n: number }) {
@@ -609,7 +755,7 @@ function OrderRow({
   onDelete: () => void
   savingPayment: boolean
 }) {
-  const items = parseItems(o.items)
+  const items = parseOrderItems(o.items)
   const meta = STATUS_META[o.status as Status] ?? STATUS_META.nouvelle
   const d17Pending = o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification'
   const [tracking, setTracking] = useState('')

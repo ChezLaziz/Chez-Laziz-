@@ -68,6 +68,22 @@ export type ShippableOrder = {
   note?: string | null;
 };
 
+/** Les articles d'une commande, stockés en JSON.
+ *
+ * Une seule lecture pour le serveur et l'interface : c'est à partir de cette
+ * liste que se calculent le poids et le contenu du colis, et deux façons de
+ * la lire finiraient par produire deux colis différents pour une commande.
+ * Un JSON illisible donne une liste vide — visible et signalée — plutôt
+ * qu'une erreur au milieu d'un envoi. */
+export function parseOrderItems(json: string): ShippableOrder["items"] {
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as ShippableOrder["items"]) : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Numéro tunisien à 8 chiffres, débarrassé de l'indicatif et des espaces.
  *
  * Les clients saisissent « +216 20 123 456 », « 0020123456 », « 20 123 456 ».

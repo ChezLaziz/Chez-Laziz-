@@ -5,20 +5,27 @@
  * autorisé. Ce qui manque n'est pas la permission, c'est la CONNAISSANCE de
  * la forme des requêtes. Ce module sert à l'acquérir, et rien d'autre.
  *
- * TROIS RÈGLES, toutes vérifiables dans le code ci-dessous :
+ * La phase de reconnaissance est terminée : la forme d'une création de colis
+ * a été observée en direct dans l'onglet réseau du navigateur, pendant que
+ * leur propre interface l'envoyait. Ce module peut donc désormais ÉCRIRE —
+ * mais d'une seule façon, décrite ci-dessous.
  *
- *   1. AUCUNE ÉCRITURE. Uniquement des GET. Ce module ne peut pas créer,
- *      modifier ni supprimer un colis, même par erreur : la méthode est
- *      codée en dur.
+ * TROIS RÈGLES, toutes vérifiables dans le code :
+ *
+ *   1. UNE SEULE ÉCRITURE POSSIBLE. Un unique POST, vers un unique chemin
+ *      écrit en dur : la création d'un colis. Aucune modification, aucune
+ *      suppression, aucun autre chemin. Tout le reste est en GET.
  *   2. LE JETON NE SORT JAMAIS. Il n'apparaît ni dans un retour de fonction,
  *      ni dans un journal, ni dans un message d'erreur. Seul son état
  *      (présent / absent) est observable.
- *   3. RIEN N'EST INVENTÉ. Les chemins essayés viennent du paquet
- *      JavaScript de leur propre interface. Un chemin qui répond 404 est
- *      rapporté comme tel, jamais contourné par une supposition.
+ *   3. RIEN N'EST INVENTÉ. Les chemins viennent de leur propre interface.
+ *      Un chemin qui répond 404 est rapporté comme tel, jamais contourné
+ *      par une supposition.
  *
  * Le conteneur de développement n'a pas d'accès réseau sortant : ces appels
  * ne peuvent aboutir que depuis le serveur déployé. */
+
+import { readTpeCreated } from "@contracts/tpeShipment";
 
 const BASE = "https://api.teamparcelexpress.com";
 
@@ -154,7 +161,15 @@ export async function tpeProbe(): Promise<ProbeResult[]> {
   return results;
 }
 
-export type Delegation = { externalId: string; name: string; governorate: string; raw: string };
+export type Delegation = {
+  externalId: string;
+  name: string;
+  governorate: string;
+  /** L'identifiant du gouvernorat CHEZ EUX. Leur création de colis exige les
+   * DEUX identifiants — délégation et gouvernorat — pas seulement l'un. */
+  governorateExternalId: string;
+  raw: string;
+};
 
 /** Extrait les délégations d'une réponse dont on ne connaît pas encore la
  * forme exacte.
@@ -181,15 +196,21 @@ export function extractDelegations(payload: unknown): Delegation[] {
     if (id === undefined || id === null || typeof name !== "string") continue;
 
     const gov = o.governorate ?? o.gouvernorat ?? o.governorate_name ?? o.state;
+    const govObject = gov && typeof gov === "object" ? (gov as Record<string, unknown>) : null;
+    const govId = govObject?.id ?? o.governorate_id;
     out.push({
       externalId: String(id),
       name: name.trim(),
       governorate:
         typeof gov === "string"
           ? gov.trim()
-          : gov && typeof gov === "object" && typeof (gov as { name?: unknown }).name === "string"
-            ? ((gov as { name: string }).name).trim()
+          : typeof govObject?.name === "string"
+            ? (govObject.name as string).trim()
             : "",
+      // Vide plutôt que deviné : sans lui, l'envoi sera refusé — ce qui vaut
+      // mieux qu'un colis expédié vers le mauvais gouvernorat.
+      governorateExternalId:
+        typeof govId === "string" || typeof govId === "number" ? String(govId) : "",
       raw: JSON.stringify(o).slice(0, 2000),
     });
   }
@@ -212,5 +233,80 @@ export async function tpeFetchDelegations(): Promise<{
     return { probe, delegations: extractDelegations(JSON.parse(raw.text) as unknown) };
   } catch {
     return { probe, delegations: [] };
+  }
+}
+
+/* ------------------------------ Écriture ------------------------------ */
+
+/** LE SEUL chemin d'écriture de tout le projet.
+ *
+ * Observé le 9 septembre 2026 : leur interface poste ici et reçoit 201. */
+const CREATE_PATH = "/api/orders/create/";
+
+export type CreateOutcome =
+  /** Le colis existe chez eux, et on connaît son numéro. */
+  | { kind: "created"; trackingNumber: string; externalId: string | null }
+  /** Ils ont refusé. Rien n'a été créé ; le message vient d'eux. */
+  | { kind: "rejected"; status: number; message: string }
+  /** LE CAS DANGEREUX : la requête est partie mais la réponse n'est jamais
+   *  revenue (coupure, délai dépassé). Le colis PEUT exister. Réessayer
+   *  créerait un doublon — d'où un état distinct, que l'interface traite
+   *  comme « allez vérifier chez eux », jamais comme un échec. */
+  | { kind: "unknown"; message: string };
+
+/** Crée un colis chez Team Parcel Express.
+ *
+ * Le corps lui est fourni tout construit (contracts/tpeShipment.ts) : cette
+ * fonction ne décide d'aucune valeur, elle transporte. */
+export async function tpeCreateShipment(payload: unknown): Promise<CreateOutcome> {
+  const token = (process.env.TPE_API_TOKEN ?? "").trim();
+  if (!token) return { kind: "rejected", status: 0, message: "Aucune clé TPE configurée." };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BASE}${CREATE_PATH}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json;charset=UTF-8",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      return {
+        kind: "rejected",
+        status: res.status,
+        // Leur message d'erreur, tronqué mais pas réécrit : c'est lui qui
+        // dit quel champ ne leur convient pas.
+        message: text.slice(0, 400) || `Refusé (${res.status}).`,
+      };
+    }
+
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = null;
+    }
+    const created = readTpeCreated(parsed);
+    if (!created) {
+      // Ils ont accepté mais on ne sait pas lire le numéro : le colis existe
+      // probablement. Ne pas réessayer à l'aveugle.
+      return {
+        kind: "unknown",
+        message: `Réponse acceptée mais illisible : ${text.slice(0, 200)}`,
+      };
+    }
+    return { kind: "created", ...created };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { kind: "unknown", message: message.slice(0, 200) };
+  } finally {
+    clearTimeout(timer);
   }
 }

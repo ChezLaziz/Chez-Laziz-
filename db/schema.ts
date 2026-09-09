@@ -243,6 +243,11 @@ export const carrierDelegations = pgTable(
     name: varchar("name", { length: 160 }).notNull(),
     // Vide si le transporteur ne le fournit pas — jamais deviné.
     governorate: varchar("governorate", { length: 160 }).notNull().default(""),
+    // Leur identifiant de gouvernorat. La création d'un colis exige les DEUX
+    // identifiants, délégation et gouvernorat.
+    governorateExternalId: varchar("governorate_external_id", { length: 40 })
+      .notNull()
+      .default(""),
     raw: text("raw").notNull().default(""),
     syncedAt: timestamp("synced_at").notNull().defaultNow(),
   },

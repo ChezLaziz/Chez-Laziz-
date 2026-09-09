@@ -10,6 +10,7 @@ import {
   type DelegationMatch,
   type DelegationRef,
 } from "@contracts/delegations";
+import type { TpeDestination } from "@contracts/tpeShipment";
 
 /** Enregistre la table des délégations d'un transporteur.
  *
@@ -34,6 +35,7 @@ export async function saveDelegations(carrier: string, rows: Delegation[]) {
           externalId: d.externalId,
           name: d.name,
           governorate: d.governorate,
+          governorateExternalId: d.governorateExternalId,
           raw: d.raw,
           syncedAt: now,
         })),
@@ -43,6 +45,7 @@ export async function saveDelegations(carrier: string, rows: Delegation[]) {
         set: {
           name: sql`excluded.name`,
           governorate: sql`excluded.governorate`,
+          governorateExternalId: sql`excluded.governorate_external_id`,
           raw: sql`excluded.raw`,
           syncedAt: now,
         },
@@ -91,12 +94,13 @@ export async function listDelegations(carrier: string, search?: string) {
  * Non bornée, contrairement à `listDelegations` : rapprocher une ville
  * suppose de pouvoir la chercher partout. Quelques centaines de lignes très
  * courtes — le coût est négligeable, l'exhaustivité ne l'est pas. */
-export async function allDelegations(carrier: string): Promise<DelegationRef[]> {
+export async function allDelegations(carrier: string): Promise<StoredDelegation[]> {
   return getDb()
     .select({
       externalId: carrierDelegations.externalId,
       name: carrierDelegations.name,
       governorate: carrierDelegations.governorate,
+      governorateExternalId: carrierDelegations.governorateExternalId,
     })
     .from(carrierDelegations)
     .where(eq(carrierDelegations.carrier, carrier));
@@ -165,6 +169,10 @@ export async function deleteAlias(carrier: string, governorate: string, city: st
     );
 }
 
+/** Une délégation telle qu'on la range : le couple d'identifiants qu'exige
+ * la création d'un colis, plus les noms qui servent à la reconnaître. */
+export type StoredDelegation = DelegationRef & { governorateExternalId: string };
+
 export type CityLine = {
   governorate: string;
   city: string;
@@ -210,4 +218,28 @@ export async function cityReport(carrier: string): Promise<CityLine[]> {
       if (aDone !== bDone) return aDone ? 1 : -1;
       return b.orders - a.orders || a.city.localeCompare(b.city);
     });
+}
+
+
+/** La destination du transporteur pour une commande — ou rien.
+ *
+ * SEUL point du serveur d'où sort un couple d'identifiants destiné à un
+ * envoi. Il applique la même règle que l'écran de liaison : correspondance
+ * certaine ou décision humaine, jamais une approximation. Un gouvernorat
+ * manquant chez le transporteur annule aussi la destination — envoyer une
+ * délégation sans son gouvernorat serait une requête à moitié remplie. */
+export async function destinationForOrder(
+  carrier: string,
+  order: { governorate: string; city: string },
+): Promise<TpeDestination | null> {
+  const [delegations, aliases] = await Promise.all([
+    allDelegations(carrier),
+    aliasMap(carrier),
+  ]);
+  const id = resolvedDelegationId(matchDelegation(order, delegations, aliases));
+  if (id === null) return null;
+
+  const found = delegations.find((d) => d.externalId === id);
+  if (!found || found.governorateExternalId === "") return null;
+  return { governorateId: found.governorateExternalId, delegationId: found.externalId };
 }
