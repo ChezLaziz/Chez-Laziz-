@@ -24,6 +24,7 @@ import {
 } from "./lib/metaConversionsApi";
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
+import { metaUserSignals } from "@contracts/metaSignals";
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
@@ -66,6 +67,10 @@ async function maybeReportMetaPurchase(order: {
   paymentStatus: ReportableOrder["paymentStatus"];
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
   metaPurchaseReportedAt: Date | null;
+  metaFbc?: string | null;
+  metaFbp?: string | null;
+  metaClientIp?: string | null;
+  metaClientUserAgent?: string | null;
 }): Promise<void> {
   if (!shouldReportMetaPurchase(order)) return;
   await markMetaPurchaseReported(order.id);
@@ -76,6 +81,12 @@ async function maybeReportMetaPurchase(order: {
     // ignore — contentIds vides plutôt que de bloquer l'envoi
   }
   void sendMetaPurchaseEvent({
+    signals: {
+      fbc: order.metaFbc,
+      fbp: order.metaFbp,
+      clientIp: order.metaClientIp,
+      clientUserAgent: order.metaClientUserAgent,
+    },
     orderId: order.id,
     phone: order.phone,
     totalMillimes: order.totalMillimes,
@@ -174,7 +185,14 @@ export const ordersRouter = createRouter({
         deviceType: z.enum(["mobile", "tablet", "desktop"]).optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const h = ctx.req.headers;
+      const signals = metaUserSignals({
+        cookie: h.get("cookie"),
+        xForwardedFor: h.get("x-forwarded-for"),
+        xRealIp: h.get("x-real-ip"),
+        userAgent: h.get("user-agent"),
+      });
       const catalog = await listAvailableProducts();
       const findProduct = (id: number) => {
         const product = catalog.find((p) => p.id === id);
@@ -289,6 +307,11 @@ export const ordersRouter = createRouter({
         paymentStatus: input.paymentMethod === "d17" ? "pending_verification" : "pending",
         paymentProofKey: input.paymentMethod === "d17" ? input.paymentProofKey : undefined,
         idempotencyKey: input.idempotencyKey,
+        // Captés MAINTENANT : l'événement Purchase ne part que plus tard,
+        // quand un humain confirme la commande, et la requête du client
+        // n'existe plus à ce moment-là. Rien n'est retenu si le Pixel ne
+        // s'est pas chargé — c'est-à-dire si le client a refusé les cookies.
+        ...(signals ?? {}),
       });
       // Notification e-mail : sans attendre, et sans jamais faire échouer la
       // commande si l'envoi échoue (voir api/lib/email.ts). Le Meta

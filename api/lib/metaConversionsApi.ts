@@ -75,6 +75,15 @@ export type MetaPurchaseEvent = {
   totalMillimes: number;
   contentIds: string[];
   sourceUrl?: string;
+  /** Signaux captés à la création de la commande — voir
+   * contracts/metaSignals.ts. Tous absents si le client a refusé les
+   * cookies : on n'envoie alors que le téléphone haché, comme avant. */
+  signals?: {
+    fbc?: string | null;
+    fbp?: string | null;
+    clientIp?: string | null;
+    clientUserAgent?: string | null;
+  };
 };
 
 /** Envoie l'événement "Purchase" ; ne lève jamais (journalise l'échec) —
@@ -93,8 +102,20 @@ export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<void
         event_id: eventId,
         event_source_url: ev.sourceUrl ?? "https://chezlaziz.com/commande",
         action_source: "website",
+        // LE TÉLÉPHONE SEUL NE SUFFIT PAS. Beaucoup de comptes Facebook
+        // tunisiens n'ont aucun numéro rattaché : la vente n'était alors
+        // pas reconnue comme venant de la publicité, et l'algorithme de
+        // Meta, qui apprend sur ce qu'on lui rapporte, optimisait à côté.
+        // fbc porte le clic publicitaire lui-même — c'est le lien
+        // déterministe entre l'annonce et la commande.
         user_data: {
           ph: [sha256(normalizeTunisianPhone(ev.phone))],
+          ...(ev.signals?.fbc ? { fbc: ev.signals.fbc } : {}),
+          ...(ev.signals?.fbp ? { fbp: ev.signals.fbp } : {}),
+          ...(ev.signals?.clientIp ? { client_ip_address: ev.signals.clientIp } : {}),
+          ...(ev.signals?.clientUserAgent
+            ? { client_user_agent: ev.signals.clientUserAgent }
+            : {}),
         },
         custom_data: {
           currency: "TND",
