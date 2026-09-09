@@ -140,6 +140,55 @@ export async function updatePaymentStatus(
   return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
 }
 
+/** Enregistre chez qui part le colis, et sous quel numéro.
+ *
+ * Rien n'est envoyé à quiconque ici : aucune API transporteur n'est
+ * accessible aujourd'hui (voir contracts/carriers.ts). Cette fonction ne fait
+ * qu'inscrire ce que l'admin a fait de la commande.
+ *
+ * Le numéro de suivi ne s'écrase PAS en silence. Une fois un colis remis, le
+ * numéro est la seule trace qui relie la commande au transporteur : l'effacer
+ * par un double clic ferait perdre le colis dans le système. Pour le changer,
+ * il faut d'abord le retirer explicitement (`clear`). */
+export async function setOrderCarrier(
+  id: number,
+  input: { carrier: string | null; trackingNumber?: string | null; clear?: boolean },
+) {
+  const order = await getDb().query.orders.findFirst({ where: eq(orders.id, id) });
+  if (!order) return null;
+
+  if (input.clear) {
+    await getDb()
+      .update(orders)
+      .set({
+        carrier: null,
+        trackingNumber: null,
+        carrierStatus: null,
+        carrierSyncedAt: null,
+        labelUrl: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, id));
+    return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
+  }
+
+  const tracking = input.trackingNumber?.trim() || null;
+  // Un numéro déjà posé ne se remplace pas par une nouvelle valeur.
+  if (order.trackingNumber && tracking && tracking !== order.trackingNumber) {
+    return order;
+  }
+
+  await getDb()
+    .update(orders)
+    .set({
+      carrier: input.carrier,
+      trackingNumber: tracking ?? order.trackingNumber,
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, id));
+  return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
+}
+
 /** Marque la commande comme déjà signalée à Meta (Purchase) — empêche un
  * second envoi si son statut ou son paiement change encore ensuite. */
 export async function markMetaPurchaseReported(id: number) {

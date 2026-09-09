@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
-import { formatWeight, type WeightKg } from '@contracts/shop'
 import Ornament from '@/components/Ornament'
 import { useSEO } from '@/hooks/useSEO'
 import type { PresetRange } from '@contracts/analytics'
@@ -19,6 +18,7 @@ import ProfitabilityPage from './admin/pages/ProfitabilityPage'
 import MarketingPage from './admin/pages/MarketingPage'
 import IntelligencePage from './admin/pages/IntelligencePage'
 import SocialPage from './admin/pages/SocialPage'
+import OrdersPage from './admin/pages/OrdersPage'
 import { useOverview } from './admin/useOverview'
 
 const TOKEN_KEY = 'laziz_admin_token'
@@ -84,55 +84,6 @@ function PasswordField({
       </button>
     </div>
   )
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  nouvelle: 'Nouvelle',
-  en_preparation: 'En préparation',
-  prete: 'Prête',
-  terminee: 'Terminée',
-  annulee: 'Annulée',
-}
-const STATUS_COLORS: Record<string, string> = {
-  nouvelle: 'bg-[#b8912e]/15 text-[#8a5527] border-[#b8912e]/40',
-  en_preparation: 'bg-blue-50 text-blue-700 border-blue-200',
-  prete: 'bg-green-50 text-green-700 border-green-200',
-  terminee: 'bg-ink/5 text-ink/50 border-ink/15',
-  annulee: 'bg-red-50 text-red-600 border-red-200',
-}
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = { cod: 'Espèces à la livraison', d17: 'D17' }
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending: 'À encaisser',
-  pending_verification: 'D17 à vérifier',
-  approved: 'D17 approuvé',
-  rejected: 'D17 rejeté',
-  paid: 'Encaissé',
-}
-const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  pending_verification: 'bg-amber-50 text-amber-700 border-amber-200',
-  approved: 'bg-green-50 text-green-700 border-green-200',
-  rejected: 'bg-red-50 text-red-600 border-red-200',
-  paid: 'bg-green-50 text-green-700 border-green-200',
-}
-
-type OrderItem = {
-  kind?: 'product' | 'pack' | 'custom'
-  productId?: number
-  name: string
-  weightKg: WeightKg
-  qty: number
-  unitPriceMillimes: number
-  contents?: { name: string; weightKg: WeightKg }[]
-}
-
-function parseItems(json: string): OrderItem[] {
-  try {
-    return JSON.parse(json)
-  } catch {
-    return []
-  }
 }
 
 function formatDate(d: Date | string) {
@@ -392,409 +343,6 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 
 /** Preuve de paiement D17 : jamais une URL publique — récupérée via fetch
  * authentifié (Bearer token) et affichée depuis un blob local. */
-function PaymentProofViewer({ token, proofKey }: { token: string; proofKey: string }) {
-  const [open, setOpen] = useState(false)
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const view = async () => {
-    setOpen(true)
-    setError(null)
-    if (blobUrl) return
-    try {
-      const res = await fetch(`/api/admin/proofs/${proofKey}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error('Introuvable')
-      const blob = await res.blob()
-      setBlobUrl(URL.createObjectURL(blob))
-    } catch {
-      setError("Impossible de charger la capture d'écran.")
-    }
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={view}
-        className="text-xs font-semibold uppercase tracking-wide text-accent underline underline-offset-4 hover:text-[#8a5527]"
-      >
-        Voir la capture D17
-      </button>
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
-          onClick={() => setOpen(false)}
-        >
-          <div className="max-h-[85vh] max-w-lg overflow-auto rounded-xl bg-white p-3" onClick={(e) => e.stopPropagation()}>
-            {error && <p className="p-6 text-sm text-red-600">{error}</p>}
-            {!error && !blobUrl && <p className="p-6 text-sm text-ink/50">Chargement…</p>}
-            {blobUrl && <img src={blobUrl} alt="Preuve de paiement D17" className="max-w-full rounded-lg" />}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="mt-2 w-full rounded-lg border border-sand py-2 text-xs font-semibold uppercase tracking-wide text-ink/60 hover:bg-sand/30"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-
-function OrdersTab({
-  token,
-  statusFilter,
-  onClearFilter,
-}: {
-  token: string
-  statusFilter?: string | null
-  onClearFilter?: () => void
-}) {
-  const utils = trpc.useUtils()
-  // Les commandes arrivent pendant que le tableau de bord est ouvert :
-  // sans rafraîchissement automatique, rien ne le signalait.
-  const { data: orders, isLoading, isError } = trpc.orders.list.useQuery(
-    { token },
-    { refetchInterval: 30000, refetchOnWindowFocus: true },
-  )
-  // Un échec (réseau mobile faible, jeton expiré) était totalement
-  // silencieux : le bouton semblait avoir marché. On affiche l'erreur.
-  const [actionError, setActionError] = useState<string | null>(null)
-  const onMutationError = (e: { message: string }) => setActionError(e.message)
-  const setStatus = trpc.orders.setStatus.useMutation({
-    onSuccess: () => { setActionError(null); utils.orders.list.invalidate() },
-    onError: onMutationError,
-  })
-  const setPaymentStatus = trpc.orders.setPaymentStatus.useMutation({
-    onSuccess: () => { setActionError(null); utils.orders.list.invalidate() },
-    onError: onMutationError,
-  })
-  const removeOrder = trpc.orders.delete.useMutation({
-    onSuccess: () => { setActionError(null); utils.orders.list.invalidate() },
-    onError: onMutationError,
-  })
-
-  const [search, setSearch] = useState('')
-  const [payFilter, setPayFilter] = useState<'all' | 'cod' | 'd17' | 'd17_pending' | 'to_collect'>('all')
-
-  const query = search.trim().toLowerCase()
-  const isToCollect = (o: { paymentMethod: string; paymentStatus: string; status: string }) =>
-    // Argent pas encore rentré : espèces non encaissées, hors annulées.
-    o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee'
-  const isD17Pending = (o: { paymentMethod: string; paymentStatus: string }) =>
-    o.paymentMethod === 'd17' && o.paymentStatus === 'pending_verification'
-
-  // Deux niveaux, et pas un seul : les compteurs des boutons de paiement se
-  // lisent sur `scoped` (statut + recherche), sinon activer « À encaisser »
-  // recalculerait son propre compteur sur sa propre sélection et afficherait
-  // toujours le total complet. La liste, elle, part de `filtered`.
-  const scoped = (orders ?? []).filter((o) => {
-    if (statusFilter && o.status !== statusFilter) return false
-    if (query) {
-      const hay = `#${o.id} ${o.customerName} ${o.phone} ${o.city} ${o.governorate} ${o.address}`.toLowerCase()
-      if (!hay.includes(query)) return false
-    }
-    return true
-  })
-  const filtered = scoped.filter((o) => {
-    if (payFilter === 'cod' && o.paymentMethod !== 'cod') return false
-    if (payFilter === 'd17' && o.paymentMethod !== 'd17') return false
-    if (payFilter === 'd17_pending' && !isD17Pending(o)) return false
-    if (payFilter === 'to_collect' && !isToCollect(o)) return false
-    return true
-  })
-
-  // Quelle ligne enregistre en ce moment. `isPending` seul est global à la
-  // mutation : un clic sur « Encaissé » figeait les boutons de toutes les
-  // commandes affichées, pas seulement celle-là.
-  const savingPayment = setPaymentStatus.isPending
-    ? (setPaymentStatus.variables as { id: number } | undefined)?.id
-    : undefined
-
-  const d17Pending = scoped.filter(isD17Pending).length
-  const toCollect = scoped.filter(isToCollect)
-  const toCollectMillimes = toCollect.reduce((s, o) => s + o.totalMillimes, 0)
-
-  if (isLoading) return <p className="text-sm text-ink/50">Chargement…</p>
-  // Sans ceci, une requête en échec tombait dans « Aucune commande pour
-  // l'instant » plus bas : une panne réseau s'affichait comme un carnet vide.
-  if (isError || !orders)
-    return (
-      <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-        <span>
-          Impossible de charger les commandes.
-          <br />
-          <span className="text-red-600/80">
-            Vérifiez votre connexion. Ceci ne signifie pas que vous n'avez aucune commande.
-          </span>
-        </span>
-      </div>
-    )
-
-  return (
-    <div className="space-y-4">
-      {/* Recherche + filtre paiement : retrouver une commande par nom, téléphone
-          ou numéro, et isoler les D17 qui attendent une vérification. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher : nom, téléphone, n°, ville…"
-          aria-label="Rechercher une commande"
-          className={`${inputCls} sm:max-w-xs`}
-        />
-        <div className="flex flex-wrap gap-1.5">
-          {(
-            [
-              ['all', 'Toutes'],
-              ['cod', 'Espèces'],
-              ['d17', 'D17'],
-              ['d17_pending', `D17 à vérifier${d17Pending ? ` (${d17Pending})` : ''}`],
-              ['to_collect', `À encaisser${toCollect.length ? ` (${toCollect.length})` : ''}`],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setPayFilter(value)}
-              className={`min-h-11 rounded-full border px-4 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                payFilter === value
-                  ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#8a5527]'
-                  : 'border-sand text-ink/55 hover:border-[#b8912e]/50'
-              } ${value === 'd17_pending' && d17Pending ? 'ring-1 ring-amber-300' : ''}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {actionError && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-          <span className="flex-1">
-            L'action n'a pas été enregistrée : {actionError}
-            <br />
-            <span className="text-red-600/80">Vérifiez votre connexion, puis réessayez. Si le problème persiste, reconnectez-vous.</span>
-          </span>
-          <button type="button" onClick={() => setActionError(null)} aria-label="Fermer" className="min-h-8 min-w-8 shrink-0 rounded-full text-lg leading-none text-red-500 hover:bg-red-100">
-            ×
-          </button>
-        </div>
-      )}
-
-      {toCollect.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setPayFilter(payFilter === 'to_collect' ? 'all' : 'to_collect')}
-          className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
-        >
-          <span className="text-sm text-amber-800">
-            Argent à encaisser · {toCollect.length} commande{toCollect.length > 1 ? 's' : ''} en espèces
-          </span>
-          <span className="font-display text-lg text-amber-900">{formatTND(toCollectMillimes)} DT</span>
-        </button>
-      )}
-
-      {statusFilter && (
-        <div className="flex items-center gap-3 rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/10 px-5 py-3 text-sm">
-          <span className="font-medium text-accent">
-            Filtré : {STATUS_LABELS[statusFilter] ?? statusFilter}
-          </span>
-          <span className="text-ink/40">({filtered.length})</span>
-          <button
-            onClick={onClearFilter}
-            className="ml-auto text-xs font-semibold uppercase tracking-wide text-ink/50 underline underline-offset-4 hover:text-ink"
-          >
-            Retirer le filtre
-          </button>
-        </div>
-      )}
-
-      {!filtered.length && (
-        <p className="rounded-2xl border border-sand/70 bg-white shadow-sm p-8 text-center text-sm text-ink/50">
-          {statusFilter || query || payFilter !== 'all'
-            ? 'Aucune commande ne correspond à ce filtre.'
-            : "Aucune commande pour l'instant."}
-        </p>
-      )}
-
-      {filtered.map((o) => {
-        const items = parseItems(o.items)
-        return (
-          <div key={o.id} className="rounded-2xl border border-sand/70 bg-white shadow-sm p-5 md:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex flex-wrap items-baseline gap-3">
-                  <span className="font-display text-lg">#{o.id}</span>
-                  <span className="font-medium">{o.customerName}</span>
-                  <a href={`tel:${o.phone}`} className="text-sm text-accent underline underline-offset-2">
-                    {o.phone}
-                  </a>
-                </div>
-                <p className="mt-0.5 text-xs text-ink/45">{formatDate(o.createdAt)}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${PAYMENT_STATUS_COLORS[o.paymentStatus]}`}
-                >
-                  {PAYMENT_METHOD_LABELS[o.paymentMethod]}
-                  {o.paymentMethod === 'd17' ? ` · ${PAYMENT_STATUS_LABELS[o.paymentStatus]}` : ''}
-                </span>
-                <select
-                  value={o.status}
-                  onChange={(e) =>
-                    setStatus.mutate({
-                      token,
-                      id: o.id,
-                      status: e.target.value as typeof o.status,
-                    })
-                  }
-                  className={`min-h-11 rounded-full border px-3 text-xs font-semibold uppercase tracking-wide outline-none ${STATUS_COLORS[o.status]}`}
-                >
-                  {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <p className="mt-3 border-t border-sand/60 pt-3 text-sm font-light text-ink/65">
-              {o.address}, {o.city}{o.postalCode ? ` ${o.postalCode}` : ''}, {o.governorate}
-            </p>
-
-            <ul className="mt-4 space-y-1.5 border-t border-sand/60 pt-4 text-sm font-light">
-              {items.map((it, i) => (
-                <li key={i}>
-                  <div className="flex items-baseline">
-                    <span>
-                      {it.qty} × {it.name} <span className="text-ink/40">({formatWeight(it.weightKg)})</span>
-                    </span>
-                    <span className="mx-3 flex-1 border-b border-dotted border-ink/15" />
-                    <span className="font-display text-accent">{formatTND(it.qty * it.unitPriceMillimes)}</span>
-                  </div>
-                  {it.contents && it.contents.length > 0 && (
-                    <ul className="mt-1 space-y-0.5 pl-4 text-xs text-ink/55">
-                      {it.contents.map((c, j) => (
-                        <li key={j}>
-                          · {c.name} — {formatWeight(c.weightKg)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {o.note && (
-              <p className="mt-3 rounded-lg bg-[#f5ece5] px-4 py-2.5 text-sm font-light text-ink/70">
-                « {o.note} »
-              </p>
-            )}
-
-            {/* Espèces à la livraison : enregistrer l'encaissement. Sans ce
-                bouton, une commande payée en liquide restait "à encaisser"
-                pour toujours et l'admin n'avait aucune trace de l'argent
-                réellement rentré. */}
-            {o.paymentMethod === 'cod' && o.status !== 'annulee' && (
-              <div
-                className={`mt-4 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 ${
-                  o.paymentStatus === 'paid'
-                    ? 'border-green-200 bg-green-50'
-                    : 'border-amber-200 bg-amber-50'
-                }`}
-              >
-                {o.paymentStatus === 'paid' ? (
-                  <>
-                    <span className="text-sm font-medium text-green-700">✓ Encaissé</span>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'pending' })}
-                      disabled={savingPayment === o.id}
-                      className="ml-auto min-h-11 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/60 hover:border-ink/40 disabled:opacity-40"
-                    >
-                      Annuler l'encaissement
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-sm text-amber-800">
-                      À encaisser : <strong className="font-display">{formatTND(o.totalMillimes)} DT</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'paid' })}
-                      disabled={savingPayment === o.id}
-                      className="ml-auto min-h-11 rounded-full bg-green-600 px-5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-green-700 disabled:opacity-40"
-                    >
-                      {savingPayment === o.id ? 'Enregistrement…' : 'Encaissé ✓'}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {o.paymentMethod === 'd17' && o.paymentProofKey && (
-              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                <PaymentProofViewer token={token} proofKey={o.paymentProofKey} />
-                {o.paymentStatus === 'pending_verification' && (
-                  <>
-                    <button
-                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'approved' })}
-                      className="ml-auto min-h-11 rounded-full bg-green-600 px-5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-green-700"
-                    >
-                      Approuver
-                    </button>
-                    <button
-                      onClick={() => setPaymentStatus.mutate({ token, id: o.id, paymentStatus: 'rejected' })}
-                      className="min-h-11 rounded-full bg-red-500 px-5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-red-600"
-                    >
-                      Rejeter
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 space-y-1 border-t border-sand/60 pt-3 text-sm font-light text-ink/50">
-              <div className="flex items-baseline">
-                <span>Sous-total</span>
-                <span className="mx-3 flex-1" />
-                <span>{formatTND(o.subtotalMillimes)} DT</span>
-              </div>
-              <div className="flex items-baseline">
-                <span>Livraison</span>
-                <span className="mx-3 flex-1" />
-                <span>{formatTND(o.deliveryFeeMillimes)} DT</span>
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline">
-              <span className="text-xs uppercase tracking-[0.2em] text-ink/50">Total</span>
-              <span className="mx-3 flex-1" />
-              <span className="font-display text-xl text-accent">{formatTND(o.totalMillimes)} DT</span>
-              <button
-                onClick={() => {
-                  if (window.confirm(`Supprimer la commande #${o.id} ?`)) {
-                    removeOrder.mutate({ token, id: o.id })
-                  }
-                }}
-                className="ml-4 text-xs font-semibold uppercase tracking-wide text-red-500 underline underline-offset-4 hover:text-red-600"
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 /* ------------------------------ Produits ------------------------------ */
 
 type ProductForm = {
@@ -1548,7 +1096,6 @@ function SettingsTab({ token }: { token: string }) {
   )
 }
 
-
 /* ------------------------------ Contenu (galerie + pied de page) ------------------------------ */
 
 function GalleryManager({ token }: { token: string }) {
@@ -2013,7 +1560,6 @@ function ContenuTab({ token }: { token: string }) {
   )
 }
 
-
 /* ------------------------------ Page ------------------------------ */
 
 export default function AdminPage() {
@@ -2083,7 +1629,7 @@ export default function AdminPage() {
       {tab === 'marketing' && <MarketingPage token={token} period={period} />}
       {tab === 'intelligence' && <IntelligencePage token={token} period={period} />}
       {tab === 'commandes' && (
-        <OrdersTab token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
+        <OrdersPage token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
       )}
       {tab === 'catalogue' && <ProductsTab token={token} />}
       {tab === 'messages' && <MessagesTab token={token} />}
