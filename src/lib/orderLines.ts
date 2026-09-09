@@ -41,6 +41,10 @@ export type DisplayLine = {
   packagingMillimes: number
   analyticsId: string
   variant: string
+  /** Vignette de la ligne, pour le résumé replié du tunnel de commande.
+   * Un pack ou un pack sur mesure prend l'image de son premier produit —
+   * une pastille grise entre le client et son propre panier n'aide personne. */
+  imageUrl: string | null
   /** Vrai seulement pour une ligne "produit" dont le nom est une création
    * exclusive Chez Laziz (voir CatalogProduct) — jamais pour un pack, dont
    * le nom n'est pas lui-même l'une de ces créations. */
@@ -71,6 +75,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         packagingMillimes: 0,
         analyticsId: String(p.id),
         variant: formatWeight(line.weightKg, lang),
+        imageUrl: p.imageUrl,
         isExclusiveCreation: p.isExclusiveCreation,
       })
     } else if (line.kind === 'pack') {
@@ -91,6 +96,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         packagingMillimes: 0,
         analyticsId: `pack:${pack.id}`,
         variant: kgLabel(packWeightKg(pack), lang),
+        imageUrl: catalog.find((c) => c.name === pack.contents[0])?.imageUrl ?? null,
         isExclusiveCreation: false,
       })
     } else {
@@ -108,6 +114,7 @@ export function buildDisplayLines(lines: CartLine[], catalog: CatalogProduct[], 
         packagingMillimes: CUSTOM_PACK_PACKAGING_MILLIMES,
         analyticsId: `custom:${line.productIds.join('-')}`,
         variant: kgLabel(CUSTOM_PACK_WEIGHT_KG, lang),
+        imageUrl: found[0]?.imageUrl ?? null,
         isExclusiveCreation: false,
       })
     }

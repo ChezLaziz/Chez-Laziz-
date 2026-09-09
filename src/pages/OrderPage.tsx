@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { detectDevice, getAttribution } from '@/lib/attribution'
 import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
-import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL, WHATSAPP_URL } from '@/lib/shop'
+import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL, WHATSAPP_DIGITS } from '@/lib/shop'
+import { whatsAppOrderMessage, whatsAppOrderUrl } from '@contracts/whatsappOrder'
+import { CUSTOMER_MEMORY_KEY, parseRememberedCustomer, serializeRememberedCustomer } from '@contracts/customerMemory'
+import ProductImage from '@/components/ProductImage'
 import { track } from '@/lib/analytics'
 import { trackMeta, type MetaContentItem } from '@/lib/metaPixel'
 import { buildDisplayLines, kgLabel, type CatalogProduct, type DisplayLine } from '@/lib/orderLines'
@@ -39,7 +42,31 @@ import {
   type FixedPackId,
 } from '@contracts/packs'
 
-function TopBar() {
+/** Ce que le client a écrit la dernière fois.
+ *
+ * Un habitué qui recommande ne doit pas retaper son nom, son téléphone et
+ * son adresse : c'est cinq champs de friction pour une information qui n'a
+ * pas changé. Rien de sensible n'est rangé : ni paiement, ni preuve D17,
+ * ni panier. */
+function readRememberedCustomer() {
+  let saved: ReturnType<typeof parseRememberedCustomer> = null
+  try {
+    saved = parseRememberedCustomer(localStorage.getItem(CUSTOMER_MEMORY_KEY))
+  } catch {
+    return null
+  }
+  if (!saved) return null
+  // Un gouvernorat qui ne figure plus dans la liste laisserait le sélecteur
+  // vide alors que l'état le croit rempli : le client cliquerait
+  // « Commander » et se ferait refuser par le serveur. On repart alors de
+  // zéro sur toute l'adresse, qui n'a plus de sens sans son gouvernorat.
+  if (!(TUNISIA_GOVERNORATES as readonly string[]).includes(saved.governorate)) {
+    return { ...saved, governorate: '', city: '', delegationId: '' }
+  }
+  return saved
+}
+
+function TopBar({ whatsAppHref }: { whatsAppHref: string }) {
   const { count } = useCart()
   const lang = useLang()
   const isAr = lang === 'ar'
@@ -63,7 +90,7 @@ function TopBar() {
               prend un client qui ne veut pas remplir de formulaire, et le
               lien téléphone ci-dessous est masqué sur mobile. */}
           <a
-            href={WHATSAPP_URL}
+            href={whatsAppHref}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={isAr ? 'اطلبوا عبر واتساب' : 'Commander par WhatsApp'}
@@ -163,7 +190,11 @@ function WhatsAppIcon() {
 }
 
 type Tab = 'produits' | 'packs' | 'custom'
-const TAB_HASH: Record<Tab, string> = { produits: '#produits', packs: '#packs', custom: '#custom' }
+const TAB_HASH: Record<Tab, string> = {
+  produits: '#produits',
+  packs: '#packs',
+  custom: '#custom',
+}
 function tabFromHash(hash: string): Tab {
   if (hash === '#packs') return 'packs'
   if (hash === '#custom') return 'custom'
@@ -211,7 +242,12 @@ type Placed = {
   recapText: string
   paymentMethod: PaymentMethod
   recap: {
-    lines: { key: string; label: string; contents: string[]; totalMillimes: number }[]
+    lines: {
+      key: string
+      label: string
+      contents: string[]
+      totalMillimes: number
+    }[]
     subtotalMillimes: number
     totalMillimes: number
     address: string
@@ -262,13 +298,24 @@ export default function OrderPage() {
     track('view_item_list', {
       item_list_id: 'order_spotlight',
       item_list_name: 'Commande — article mis en avant (pub)',
-      items: [{ item_id: String(spotlight.id), item_name: spotlight.name, price: spotlight.priceMillimes / 1000 }],
+      items: [
+        {
+          item_id: String(spotlight.id),
+          item_name: spotlight.name,
+          price: spotlight.priceMillimes / 1000,
+        },
+      ],
     })
     // Signal Meta équivalent à celui de la page produit dédiée — nécessaire
     // ici car les publicités pointent désormais directement vers /commande.
     trackMeta('ViewContent', {
       value: spotlight.priceMillimes / 1000,
-      contents: [{ id: String(spotlight.id), item_price: spotlight.priceMillimes / 1000 }],
+      contents: [
+        {
+          id: String(spotlight.id),
+          item_price: spotlight.priceMillimes / 1000,
+        },
+      ],
     })
   }, [spotlight])
   const switchTab = (next: Tab) => {
@@ -287,13 +334,17 @@ export default function OrderPage() {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < CUSTOM_PACK_SIZE ? [...s, id] : s))
   const removeSelected = (id: number) => setSelected((s) => s.filter((x) => x !== id))
 
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [governorate, setGovernorate] = useState('')
-  const [city, setCity] = useState('')
+  // Lu une seule fois, à la construction — jamais dans un effet, sinon on
+  // écraserait une saisie en cours.
+  const [remembered] = useState(readRememberedCustomer)
+
+  const [name, setName] = useState(remembered?.name ?? '')
+  const [phone, setPhone] = useState(remembered?.phone ?? '')
+  const [governorate, setGovernorate] = useState(remembered?.governorate ?? '')
+  const [city, setCity] = useState(remembered?.city ?? '')
   // L'identifiant de la délégation chez le transporteur. La ville n'est plus
   // écrite par le client : il la choisit dans la liste du gouvernorat.
-  const [delegationId, setDelegationId] = useState('')
+  const [delegationId, setDelegationId] = useState(remembered?.delegationId ?? '')
   const delegationsQuery = trpc.orders.delegations.useQuery(
     { governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number] },
     { enabled: !!governorate, staleTime: 60 * 60 * 1000 },
@@ -307,7 +358,7 @@ export default function OrderPage() {
   const listUnavailable =
     !!governorate && !delegationsQuery.isLoading && (delegationsQuery.isError || delegations.length === 0)
   const useDelegationList = !listUnavailable
-  const [address, setAddress] = useState('')
+  const [address, setAddress] = useState(remembered?.address ?? '')
   const [note, setNote] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [proofKey, setProofKey] = useState<string | null>(null)
@@ -328,6 +379,37 @@ export default function OrderPage() {
   // La barre flottante disparaît quand le récapitulatif est déjà à l'écran.
   const recapRef = useRef<HTMLDivElement>(null)
   const [recapVisible, setRecapVisible] = useState(false)
+  /** Le détail des articles, replié dès qu'on entre dans la commande.
+   *
+   * Le client vient de les choisir : les lui remontrer en grand entre lui et
+   * le formulaire ajoutait 1,8 écran de défilement avant le bouton final.
+   * Replié, il reste une ligne — vignettes, quantité, total — dépliable d'un
+   * geste par qui veut vérifier. */
+  const [linesOpen, setLinesOpen] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  /** Le vrai bouton « Commander », observé.
+   *
+   * La barre flottante ne s'efface que lorsque CE bouton est à l'écran :
+   * tant qu'il ne l'est pas — y compris au milieu du formulaire — le client
+   * garde son total et son bouton sous le pouce. C'est la seule règle qui
+   * garantit qu'il n'existe aucun moment du tunnel sans moyen de valider. */
+  const [submitVisible, setSubmitVisible] = useState(false)
+  const submitObserverRef = useRef<IntersectionObserver | null>(null)
+  /** Ref de rappel, pas useEffect : le bouton n'existe pas au montage — le
+   * panier est vide et le formulaire n'est pas rendu. Un effet lancé une
+   * fois n'observerait donc jamais rien, et la barre resterait collée à
+   * l'écran par-dessus le vrai bouton. */
+  const attachSubmit = useCallback((el: HTMLDivElement | null) => {
+    submitObserverRef.current?.disconnect()
+    submitObserverRef.current = null
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setSubmitVisible(false)
+      return
+    }
+    const io = new IntersectionObserver(([entry]) => setSubmitVisible(entry.isIntersecting), { threshold: 0.6 })
+    io.observe(el)
+    submitObserverRef.current = io
+  }, [])
   useEffect(() => {
     const el = recapRef.current
     if (!el || typeof IntersectionObserver === 'undefined') return
@@ -350,7 +432,11 @@ export default function OrderPage() {
       quantity: l.qty,
     }))
   const metaContents = (): MetaContentItem[] =>
-    items.map((l) => ({ id: l.analyticsId, quantity: l.qty, item_price: l.unitPriceMillimes / 1000 }))
+    items.map((l) => ({
+      id: l.analyticsId,
+      quantity: l.qty,
+      item_price: l.unitPriceMillimes / 1000,
+    }))
 
   useEffect(() => {
     if (items.length > 0 && !cartViewedRef.current) {
@@ -374,11 +460,24 @@ export default function OrderPage() {
     addPack(packId)
     track('add_to_cart', {
       value: pack.priceMillimes / 1000,
-      items: [{ item_id: `pack:${packId}`, item_name: pack.name, price: pack.priceMillimes / 1000, quantity: 1 }],
+      items: [
+        {
+          item_id: `pack:${packId}`,
+          item_name: pack.name,
+          price: pack.priceMillimes / 1000,
+          quantity: 1,
+        },
+      ],
     })
     trackMeta('AddToCart', {
       value: pack.priceMillimes / 1000,
-      contents: [{ id: `pack:${packId}`, quantity: 1, item_price: pack.priceMillimes / 1000 }],
+      contents: [
+        {
+          id: `pack:${packId}`,
+          quantity: 1,
+          item_price: pack.priceMillimes / 1000,
+        },
+      ],
     })
   }
 
@@ -400,11 +499,27 @@ export default function OrderPage() {
       contents: [{ id: String(product.id), quantity: 1, item_price: unitPrice }],
     })
   }
+  /** DEUX rayons, pas trois.
+   *
+   * « Les nouveautés » a disparu comme titre : au bout de quelques mois
+   * tout y devient ancien, et un client venu d'une publicité ne cherche pas
+   * la nouveauté — il cherche du makroudh. Ces produits rejoignent les
+   * signatures, qui sont de toute façon des créations elles aussi.
+   *
+   * Les classiques d'abord, et c'est délibéré : ce sont les moins chers
+   * (8 à 12 DT contre 17 à 40). Sur du trafic froid, le premier prix vu
+   * décide si la page paraît accessible ou hors de portée.
+   *
+   * Une catégorie inconnue, créée un jour depuis l'admin, ne disparaît pas :
+   * elle rejoint les signatures plutôt que de laisser ses produits invisibles. */
   const categories = useMemo(() => {
-    const order = ['Les classiques', 'Les signatures', 'Les nouveautés']
-    const groups = new Map<string, CatalogProduct[]>()
-    for (const p of catalog) groups.set(p.category, [...(groups.get(p.category) ?? []), p])
-    return [...groups.entries()].sort(([a], [b]) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)))
+    const classiques: CatalogProduct[] = []
+    const signatures: CatalogProduct[] = []
+    for (const p of catalog) (p.category === 'Les classiques' ? classiques : signatures).push(p)
+    return [
+      ['Les classiques', classiques],
+      ['Les signatures', signatures],
+    ].filter(([, items]) => (items as CatalogProduct[]).length > 0) as [string, CatalogProduct[]][]
   }, [catalog])
 
   const handleAddCustom = () => {
@@ -415,11 +530,24 @@ export default function OrderPage() {
     addCustom(selected)
     track('add_to_cart', {
       value: price / 1000,
-      items: [{ item_id: `custom:${selected.join('-')}`, item_name: 'Custom Pack', price: price / 1000, quantity: 1 }],
+      items: [
+        {
+          item_id: `custom:${selected.join('-')}`,
+          item_name: 'Custom Pack',
+          price: price / 1000,
+          quantity: 1,
+        },
+      ],
     })
     trackMeta('AddToCart', {
       value: price / 1000,
-      contents: [{ id: `custom:${selected.join('-')}`, quantity: 1, item_price: price / 1000 }],
+      contents: [
+        {
+          id: `custom:${selected.join('-')}`,
+          quantity: 1,
+          item_price: price / 1000,
+        },
+      ],
     })
     setSelected([])
     setCustomJustAdded(true)
@@ -441,17 +569,121 @@ export default function OrderPage() {
   const paymentValid = paymentMethod === 'cod' || !!proofKey
   const canSubmit = items.length > 0 && addressValid && paymentValid && !createOrder.isPending && !proofUploading
 
+  /** Le premier champ qui manque, avec de quoi le montrer.
+   *
+   * UN BOUTON GRISÉ EST UNE IMPASSE : le client voit qu'il ne peut pas
+   * commander et n'apprend jamais pourquoi — il s'en va. Le bouton reste
+   * donc actif ; au clic, on l'emmène au champ qui bloque et on le nomme. */
+  const firstMissing = (): { id: string; message: string } | null => {
+    if (name.trim().length < 2)
+      return {
+        id: 'f-name',
+        message: isAr ? 'أدخلوا اسمكم.' : 'Indiquez votre nom.',
+      }
+    if (!phoneValid)
+      return {
+        id: 'f-phone',
+        message: isAr ? 'رقم هاتف تونسي (8 أرقام).' : 'Un numéro tunisien à 8 chiffres.',
+      }
+    if (!governorate)
+      return {
+        id: 'f-gov',
+        message: isAr ? 'اختاروا الولاية.' : 'Choisissez le gouvernorat.',
+      }
+    if (useDelegationList ? !delegationId : city.trim().length === 0)
+      return {
+        id: 'f-city',
+        message: isAr ? 'اختاروا المعتمدية.' : 'Choisissez la délégation.',
+      }
+    if (address.trim().length < 5)
+      return {
+        id: 'f-address',
+        message: isAr ? 'أدخلوا العنوان الكامل.' : 'Indiquez votre adresse complète.',
+      }
+    if (paymentMethod === 'd17' && !proofKey)
+      return {
+        id: 'f-proof',
+        message: isAr ? 'أرفقوا صورة الدفع D17.' : 'Joignez la capture du paiement D17.',
+      }
+    return null
+  }
+  const [missingHint, setMissingHint] = useState<{
+    id: string
+    message: string
+  } | null>(null)
+
+  /** Le lien WhatsApp, panier compris.
+   *
+   * Un lien wa.me nu ouvre une conversation vide et demande au client de
+   * retaper sa commande : il ne le fait pas. Ici le message est déjà écrit,
+   * il ne reste qu'à l'envoyer — c'est la porte de sortie de ceux qui ne
+   * rempliront jamais un formulaire, et en Tunisie ils sont nombreux. */
+  const whatsAppHref = useMemo(
+    () =>
+      whatsAppOrderUrl(
+        WHATSAPP_DIGITS,
+        whatsAppOrderMessage(
+          items.map((l) => ({
+            label: `${l.qty > 1 ? `${l.qty} × ` : ''}${l.variant} ${l.name}`,
+            contents: l.contents,
+            totalMillimes: l.qty * l.unitPriceMillimes,
+          })),
+          {
+            subtotalMillimes: subtotal,
+            deliveryMillimes: DELIVERY_FEE_MILLIMES,
+            totalMillimes: total,
+          },
+          lang,
+        ),
+      ),
+    [items, subtotal, total, lang],
+  )
+
+  /** Le message est affiché AU CHAMP, pas trois écrans plus bas.
+   *
+   * On l'emmène au champ qui bloque : s'il y arrive sans rien lire, il voit
+   * un curseur clignoter et ne sait toujours pas ce qu'on lui demande. Le
+   * message disparaît de lui-même dès que le champ est rempli — pas besoin
+   * d'un second clic pour l'effacer. */
+  const activeHint = missingHint && firstMissing()?.id === missingHint.id ? missingHint : null
+  const hintFor = (id: string) =>
+    activeHint?.id === id ? (
+      <p className="mt-1.5 text-xs font-medium text-amber-200" role="alert">
+        {activeHint.message}
+      </p>
+    ) : null
+
+  const goToMissing = (miss: { id: string; message: string }) => {
+    setMissingHint(miss)
+    const el = document.getElementById(miss.id)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // Le focus après le défilement : sur iOS, ouvrir le clavier pendant
+    // l'animation la fait sauter et le champ finit hors écran.
+    setTimeout(() => (el as HTMLElement).focus({ preventScroll: true }), 350)
+  }
+
   const onCheckoutStart = () => {
     if (checkoutStartedRef.current || items.length === 0) return
     checkoutStartedRef.current = true
     track('begin_checkout', { value: total / 1000, items: analyticsItems() })
-    trackMeta('InitiateCheckout', { value: total / 1000, contents: metaContents() })
+    trackMeta('InitiateCheckout', {
+      value: total / 1000,
+      contents: metaContents(),
+    })
   }
 
   const choosePayment = (method: PaymentMethod) => {
     setPaymentMethod(method)
-    track('add_payment_info', { payment_type: method === 'd17' ? 'D17' : 'Cash on delivery', value: total / 1000, items: analyticsItems() })
-    trackMeta('AddPaymentInfo', { value: total / 1000, contents: metaContents() })
+    track('add_payment_info', {
+      payment_type: method === 'd17' ? 'D17' : 'Cash on delivery',
+      value: total / 1000,
+      items: analyticsItems(),
+    })
+    trackMeta('AddPaymentInfo', {
+      value: total / 1000,
+      contents: metaContents(),
+    })
   }
 
   const handleProofChange = async (file: File | null) => {
@@ -473,7 +705,10 @@ export default function OrderPage() {
     try {
       const body = new FormData()
       body.append('file', file)
-      const res = await fetch('/api/uploads/payment-proof', { method: 'POST', body })
+      const res = await fetch('/api/uploads/payment-proof', {
+        method: 'POST',
+        body,
+      })
       const data = await res.json().catch(() => ({}))
       const uploadFailedMsg = isAr ? "فشل إرسال الصورة" : "Échec de l'envoi de la capture"
       if (!res.ok) throw new Error(data.error || uploadFailedMsg)
@@ -487,6 +722,13 @@ export default function OrderPage() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (createOrder.isPending || proofUploading) return
+    const miss = firstMissing()
+    if (miss) {
+      goToMissing(miss)
+      return
+    }
+    setMissingHint(null)
     if (!canSubmit) return
     const snapshot = items.map((l) => ({
       key: l.key,
@@ -507,10 +749,19 @@ export default function OrderPage() {
         note: note.trim() || undefined,
         items: items.map(({ line }) =>
           line.kind === 'product'
-            ? { kind: 'product' as const, productId: line.productId, weightKg: line.weightKg, qty: line.qty }
+            ? {
+                kind: 'product' as const,
+                productId: line.productId,
+                weightKg: line.weightKg,
+                qty: line.qty,
+              }
             : line.kind === 'pack'
               ? { kind: 'pack' as const, packId: line.packId, qty: line.qty }
-              : { kind: 'custom' as const, productIds: line.productIds, qty: line.qty },
+              : {
+                  kind: 'custom' as const,
+                  productIds: line.productIds,
+                  qty: line.qty,
+                },
         ),
         paymentMethod,
         paymentProofKey: paymentMethod === 'd17' ? (proofKey ?? undefined) : undefined,
@@ -528,6 +779,25 @@ export default function OrderPage() {
       },
       {
         onSuccess: (order) => {
+          // Rangé seulement après une commande RÉELLEMENT acceptée : une
+          // adresse que le serveur a refusée n'a rien à revenir toute seule
+          // dans le formulaire de la prochaine.
+          try {
+            localStorage.setItem(
+              CUSTOMER_MEMORY_KEY,
+              serializeRememberedCustomer({
+                name: name.trim(),
+                phone: phone.trim(),
+                governorate,
+                city: city.trim(),
+                delegationId,
+                address: address.trim(),
+              }),
+            )
+          } catch {
+            // Navigation privée ou stockage plein : la commande est passée,
+            // c'est tout ce qui compte.
+          }
           const text = isAr
             ? `مرحبًا Chez Laziz! الطلب رقم ${order?.id ?? ''} — ${name.trim()} :\n${snapshot
                 .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
@@ -554,7 +824,12 @@ export default function OrderPage() {
             id: order?.id ?? 0,
             recapText: text,
             paymentMethod,
-            recap: { lines: snapshot, subtotalMillimes: subtotal, totalMillimes: total, address: addressLine },
+            recap: {
+              lines: snapshot,
+              subtotalMillimes: subtotal,
+              totalMillimes: total,
+              address: addressLine,
+            },
           })
           clear()
           setIdempotencyKey(newIdempotencyKey())
@@ -579,7 +854,11 @@ export default function OrderPage() {
   const submitMessage = (e: React.FormEvent) => {
     e.preventDefault()
     sendMessage.mutate(
-      { name: msgName.trim(), phone: msgPhone.trim() || undefined, message: msgText.trim() },
+      {
+        name: msgName.trim(),
+        phone: msgPhone.trim() || undefined,
+        message: msgText.trim(),
+      },
       {
         onSuccess: () => {
           setMsgSent(true)
@@ -594,7 +873,7 @@ export default function OrderPage() {
   if (placed) {
     return (
       <div className="min-h-screen bg-[#faf6f3]">
-        <TopBar />
+        <TopBar whatsAppHref={whatsAppHref} />
         <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-20 text-center md:py-28">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#b8912e]/15 text-accent">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -692,11 +971,13 @@ export default function OrderPage() {
     .map((id) => catalog.find((p) => p.id === id))
     .filter((p): p is CatalogProduct => !!p)
   const customBarTotal = customPackTotal(chosenForBar.map((p) => p.priceMillimes))
-  const showBar = !recapVisible && (composing || count > 0)
+  // La barre reste tant que le bouton final n'est pas sous les yeux du
+  // client — pas seulement avant d'atteindre le récapitulatif.
+  const showBar = composing || (count > 0 && !submitVisible)
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">
-      <TopBar />
+      <TopBar whatsAppHref={whatsAppHref} />
 
       {/* ── En-tête ──
           COURT PAR NÉCESSITÉ. Mesuré sur un téléphone de 844 px : l'ancienne
@@ -967,11 +1248,8 @@ export default function OrderPage() {
         </section>
 
         {/* ── Votre commande : lignes + coordonnées + paiement ── */}
-        <section id="recap" ref={recapRef} className="mt-20 scroll-mt-24 border-t border-sand/60 pt-14 md:mt-24">
-          <div className="text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'طلبكم' : 'Votre commande'}</p>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl">{isAr ? 'الملخص والتوصيل' : 'Récapitulatif et livraison'}</h2>
-          </div>
+        <section id="recap" ref={recapRef} className="mt-12 scroll-mt-20 border-t border-sand/60 pt-8 md:mt-20 md:scroll-mt-24 md:pt-12">
+          <h2 className="text-center font-display text-2xl md:text-3xl">{isAr ? 'إتمام الطلب' : 'Votre commande'}</h2>
 
           {items.length === 0 ? (
             <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-dashed border-sand bg-white p-8 text-center">
@@ -1020,10 +1298,69 @@ export default function OrderPage() {
               </p>
             </div>
           ) : (
-            <form onSubmit={submit} className="mt-10 grid gap-8 lg:grid-cols-12 lg:gap-10">
-              {/* Lignes */}
+            <form
+              onSubmit={submit}
+              ref={formRef}
+              // La validation native est écartée volontairement. Elle
+              // affichait une bulle du navigateur, dans SA langue et non
+              // celle du client, qui disparaît au premier geste — et elle
+              // court-circuitait firstMissing(), donc nos messages en arabe
+              // et en français ne s'affichaient jamais. Les `required`
+              // restent : ils portent le sens pour les lecteurs d'écran.
+              noValidate
+              className="mt-5 grid gap-5 lg:grid-cols-12 lg:gap-10"
+            >
+              {/* Lignes — repliées sur mobile, toujours ouvertes à partir de
+                  lg où la place ne manque pas. */}
               <div className="min-w-0 lg:col-span-7">
-                <ul className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setLinesOpen((v) => !v)}
+                  aria-expanded={linesOpen}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-sand/80 bg-white px-4 py-3 text-start shadow-sm lg:hidden"
+                >
+                  <span className="flex shrink-0 -space-x-2 rtl:space-x-reverse">
+                    {items.slice(0, 3).map((l) => (
+                      <span
+                        key={l.key}
+                        className="h-9 w-9 overflow-hidden rounded-full border-2 border-white bg-sand/40"
+                      >
+                        <ProductImage src={l.imageUrl} alt="" compact />
+                      </span>
+                    ))}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-medium text-ink">
+                      {isAr
+                        ? `${count} عنصر · ${kgLabel(totalWeightKg, lang)}`
+                        : `${count} article${count > 1 ? 's' : ''} · ${kgLabel(totalWeightKg, lang)}`}
+                    </span>
+                    <span className="block text-[11px] text-ink/50">
+                      {linesOpen
+                        ? isAr
+                          ? 'إخفاء التفاصيل'
+                          : 'Masquer le détail'
+                        : isAr
+                          ? 'عرض التفاصيل'
+                          : 'Voir le détail'}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-display text-lg text-accent">{formatPriceDT(total, lang)}</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                    className={`shrink-0 text-ink/35 transition-transform ${linesOpen ? 'rotate-180' : ''}`}
+                  >
+                    <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                <ul className={`space-y-4 ${linesOpen ? 'mt-4' : 'hidden lg:block'}`}>
                   {items.map((l) => (
                     <li key={l.key} className="rounded-2xl border border-sand/80 bg-white p-5 shadow-sm">
                       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1091,7 +1428,17 @@ export default function OrderPage() {
                   ))}
                 </ul>
 
-                <div className="mt-6 rounded-2xl border border-sand/80 bg-white p-5 text-[15px] shadow-sm">
+                {/* Le détail des totaux suit le même pli que les lignes.
+                    Déplié il rassure ; replié il n'a plus de raison d'être :
+                    la ligne du haut porte déjà le total, la barre du bas
+                    précise « livraison incluse », et le pavé de commande
+                    reprend le total juste au-dessus du bouton. Trois fois le
+                    même chiffre, c'est 350 px de défilement pour rien. */}
+                <div
+                  className={`rounded-2xl border border-sand/80 bg-white p-5 text-[15px] shadow-sm ${
+                    linesOpen ? 'mt-4' : 'hidden lg:mt-6 lg:block'
+                  }`}
+                >
                   <div className="space-y-2 font-light text-ink/70">
                     <div className="flex items-baseline justify-between">
                       <span>{isAr ? 'الوزن الإجمالي' : 'Poids total'}</span>
@@ -1126,18 +1473,23 @@ export default function OrderPage() {
                     {isAr ? 'سنتصل بكم للتأكيد قبل التحضير.' : 'Nous vous appelons pour confirmer avant préparation.'}
                   </p>
                   <div className="mt-6 space-y-4">
-                    <input
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onFocus={onCheckoutStart}
-                      placeholder={isAr ? 'اسمكم' : 'Votre nom'}
-                      aria-label={isAr ? 'اسمكم' : 'Votre nom'}
-                      autoComplete="name"
-                      className={inputCls}
-                    />
                     <div>
                       <input
+                        id="f-name"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onFocus={onCheckoutStart}
+                        placeholder={isAr ? 'اسمكم' : 'Votre nom'}
+                        aria-label={isAr ? 'اسمكم' : 'Votre nom'}
+                        autoComplete="name"
+                        className={inputCls}
+                      />
+                      {hintFor('f-name')}
+                    </div>
+                    <div>
+                      <input
+                        id="f-phone"
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
@@ -1151,90 +1503,113 @@ export default function OrderPage() {
                         dir="ltr"
                         className={inputCls}
                       />
-                      {phone.length > 0 && !phoneValid && (
+                      {phone.length > 0 && !phoneValid ? (
                         <p className="mt-1.5 text-xs text-red-300" role="alert">
                           {isAr ? 'رقم هاتف تونسي غير صحيح (8 أرقام).' : 'Numéro tunisien invalide (8 chiffres).'}
                         </p>
+                      ) : (
+                        hintFor('f-phone')
                       )}
                     </div>
-                    <select
-                      required
-                      value={governorate}
-                      onChange={(e) => {
-                        setGovernorate(e.target.value)
-                        // Une délégation appartient à un gouvernorat : en
-                        // changer invalide le choix précédent.
-                        setDelegationId('')
-                        setCity('')
-                      }}
-                      aria-label={isAr ? 'الولاية' : 'Gouvernorat'}
-                      autoComplete="address-level1"
-                      className={`${inputCls} h-[50px] ${governorate ? '' : 'text-ink/35'}`}
-                    >
-                      <option value="" disabled>
-                        {isAr ? 'الولاية' : 'Gouvernorat'}
-                      </option>
-                      {TUNISIA_GOVERNORATES.map((g) => (
-                        // value = nom français (validé et stocké côté
-                        // serveur) ; seul le libellé affiché est traduit.
-                        <option key={g} value={g} className="text-ink">
-                          {governorateLabel(g, lang)}
+                    <div>
+                      <select
+                        id="f-gov"
+                        required
+                        value={governorate}
+                        onChange={(e) => {
+                          setGovernorate(e.target.value)
+                          // Une délégation appartient à un gouvernorat : en
+                          // changer invalide le choix précédent.
+                          setDelegationId('')
+                          setCity('')
+                        }}
+                        aria-label={isAr ? 'الولاية' : 'Gouvernorat'}
+                        autoComplete="address-level1"
+                        className={`${inputCls} h-[50px] ${governorate ? '' : 'text-ink/35'}`}
+                      >
+                        <option value="" disabled>
+                          {isAr ? 'الولاية' : 'Gouvernorat'}
                         </option>
-                      ))}
-                    </select>
+                        {TUNISIA_GOVERNORATES.map((g) => (
+                          // value = nom français (validé et stocké côté
+                          // serveur) ; seul le libellé affiché est traduit.
+                          <option key={g} value={g} className="text-ink">
+                            {governorateLabel(g, lang)}
+                          </option>
+                        ))}
+                      </select>
+                      {hintFor('f-gov')}
+                    </div>
                     {/* La délégation se CHOISIT, elle ne s'écrit plus. Dix-sept
                         commandes avaient donné dix-sept graphies différentes —
                         arabe, nom de quartier, gouvernorat contradictoire — et
                         aucune ne se retrouvait telle quelle chez le
                         transporteur. La liste est la sienne. */}
-                    {useDelegationList ? (
-                      <select
-                        required
-                        value={delegationId}
-                        disabled={!governorate || delegationsQuery.isLoading}
-                        onChange={(e) => {
-                          const chosen = delegations.find((d) => d.externalId === e.target.value)
-                          setDelegationId(e.target.value)
-                          setCity(chosen?.name ?? '')
-                        }}
-                        aria-label={isAr ? 'المعتمدية' : 'Délégation'}
-                        autoComplete="address-level2"
-                        className={`${inputCls} h-[50px] ${delegationId ? '' : 'text-ink/35'}`}
-                      >
-                        <option value="" disabled>
-                          {!governorate
-                            ? isAr ? 'اختاروا الولاية أولاً' : "Choisissez d'abord le gouvernorat"
-                            : delegationsQuery.isLoading
-                              ? '…'
-                              : isAr ? 'المعتمدية' : 'Délégation'}
-                        </option>
-                        {delegations.map((d) => (
-                          <option key={d.externalId} value={d.externalId} className="text-ink">
-                            {d.name}
+                    <div>
+                      {useDelegationList ? (
+                        <select
+                          id="f-city"
+                          required
+                          value={delegationId}
+                          disabled={!governorate || delegationsQuery.isLoading}
+                          onChange={(e) => {
+                            const chosen = delegations.find((d) => d.externalId === e.target.value)
+                            setDelegationId(e.target.value)
+                            setCity(chosen?.name ?? '')
+                          }}
+                          aria-label={isAr ? 'المعتمدية' : 'Délégation'}
+                          autoComplete="address-level2"
+                          className={`${inputCls} h-[50px] ${delegationId ? '' : 'text-ink/35'}`}
+                        >
+                          <option value="" disabled>
+                            {!governorate
+                              ? isAr
+                                ? 'اختاروا الولاية أولاً'
+                                : "Choisissez d'abord le gouvernorat"
+                              : delegationsQuery.isLoading
+                                ? '…'
+                                : isAr
+                                  ? 'المعتمدية'
+                                  : 'Délégation'}
                           </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
+                          {delegations.map((d) => (
+                            <option key={d.externalId} value={d.externalId} className="text-ink">
+                              {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id="f-city"
+                          required
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder={isAr ? 'المدينة / المعتمدية' : 'Ville / délégation'}
+                          aria-label={isAr ? 'المدينة أو المعتمدية' : 'Ville ou délégation'}
+                          autoComplete="address-level2"
+                          className={inputCls}
+                        />
+                      )}
+                      {hintFor('f-city')}
+                    </div>
+                    <div>
+                      <textarea
+                        id="f-address"
                         required
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder={isAr ? 'المدينة / المعتمدية' : 'Ville / délégation'}
-                        aria-label={isAr ? 'المدينة أو المعتمدية' : 'Ville ou délégation'}
-                        autoComplete="address-level2"
-                        className={inputCls}
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder={
+                          isAr
+                            ? 'العنوان الكامل (الشارع، الرقم، معلم قريب…)'
+                            : 'Adresse complète (rue, numéro, repère…)'
+                        }
+                        aria-label={isAr ? 'العنوان الكامل' : 'Adresse complète'}
+                        autoComplete="street-address"
+                        rows={2}
+                        className={`${inputCls} resize-none`}
                       />
-                    )}
-                    <textarea
-                      required
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder={isAr ? 'العنوان الكامل (الشارع، الرقم، معلم قريب…)' : 'Adresse complète (rue, numéro, repère…)'}
-                      aria-label={isAr ? 'العنوان الكامل' : 'Adresse complète'}
-                      autoComplete="street-address"
-                      rows={2}
-                      className={`${inputCls} resize-none`}
-                    />
+                      {hintFor('f-address')}
+                    </div>
                     <textarea
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
@@ -1332,20 +1707,54 @@ export default function OrderPage() {
                     <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
                     <span className="font-display text-2xl text-[#b8912e]">{formatPriceDT(total, lang)}</span>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={!canSubmit}
-                    className="gold-cta mt-5 h-13 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {createOrder.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'اطلبوا الآن' : 'Commander'}
-                  </button>
+                  {/* Jamais grisé, sauf pendant l'envoi : voir firstMissing. */}
+                  <div ref={attachSubmit} className="mt-5">
+                    <button
+                      type="submit"
+                      disabled={createOrder.isPending || proofUploading}
+                      className="gold-cta h-13 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {createOrder.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'اطلب الآن' : 'Commander'}
+                    </button>
+                  </div>
+
+                  {activeHint && (
+                    <p className="mt-2.5 text-center text-xs font-medium text-amber-200" role="alert">
+                      {activeHint.message}
+                    </p>
+                  )}
+
+                  {/* LA PHRASE QUI LÈVE LE DERNIER DOUTE, à l'endroit exact
+                      où il se pose. Un visiteur venu d'une publicité ne
+                      connaît pas la maison : en Tunisie, le paiement à la
+                      livraison EST la garantie — encore faut-il la lire au
+                      moment de confirmer, pas trois écrans plus haut. */}
+                  {paymentMethod === 'cod' && (
+                    <p className="mt-3 flex items-center justify-center gap-2 text-center text-[13px] font-medium text-[#faf6f3]/85">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        aria-hidden="true"
+                        className="shrink-0 text-[#b8912e]"
+                      >
+                        <path d="m5 13 4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {isAr
+                        ? 'ما تخلّصو شي توّا — تخلّصو كي يوصلكم الطلب.'
+                        : 'Vous ne payez rien maintenant — vous payez à la livraison.'}
+                    </p>
+                  )}
 
                   {/* Un client bloqué devant un formulaire s'en va sans rien
                       dire. Ici il a deux autres portes, à l'endroit exact où
                       il hésite — et elles mènent à une vraie personne. */}
                   <div className="mt-4 flex items-center gap-3">
                     <a
-                      href={WHATSAPP_URL}
+                      href={whatsAppHref}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
@@ -1517,12 +1926,20 @@ export default function OrderPage() {
                   </p>
                   <p className="font-display text-lg text-accent">{formatPriceDT(total, lang)}</p>
                 </div>
+                {/* Un seul bouton, deux moments : avant le formulaire il y
+                    conduit ; une fois dedans il envoie vraiment la commande
+                    (et, s'il manque un champ, emmène le client dessus — voir
+                    firstMissing). Le client n'a jamais à chercher où valider. */}
                 <button
                   type="button"
-                  onClick={() => scrollToId('recap')}
-                  className="gold-cta shrink-0 rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+                  disabled={createOrder.isPending || proofUploading}
+                  onClick={() => {
+                    if (recapVisible && formRef.current) formRef.current.requestSubmit()
+                    else scrollToId('recap')
+                  }}
+                  className="gold-cta shrink-0 rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {isAr ? 'اطلبوا الآن' : 'Commander'}
+                  {createOrder.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'اطلب الآن' : 'Commander'}
                 </button>
               </>
             )}
