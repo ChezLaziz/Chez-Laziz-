@@ -2,7 +2,15 @@ import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { assertAdmin } from "./queries/admin";
 import { tpeProbe, tpeFetchDelegations, tpeTokenPresent } from "./lib/tpe";
-import { countDelegations, listDelegations, saveDelegations } from "./queries/delegations";
+import {
+  allDelegations,
+  cityReport,
+  countDelegations,
+  deleteAlias,
+  listDelegations,
+  saveAlias,
+  saveDelegations,
+} from "./queries/delegations";
 
 /** Reconnaissance de l'API transporteur — LECTURE SEULE.
  *
@@ -61,6 +69,63 @@ export const carriersRouter = createRouter({
         found: delegations.length,
         saved,
       };
+    }),
+
+  /** Où en est le rapprochement ville → délégation, commande par commande.
+   *
+   * La question à laquelle cet écran répond : « qu'est-ce qui empêche encore
+   * d'envoyer une commande au transporteur ? ». */
+  cities: publicQuery
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await assertAdmin(input.token);
+      const lines = await cityReport("tpe");
+      return {
+        lines,
+        pending: lines.filter((l) => l.match.delegation === null).length,
+      };
+    }),
+
+  /** Enregistre la décision d'un humain pour une ville.
+   *
+   * Le seul endroit du code où un identifiant de délégation est choisi sans
+   * correspondance automatique — et il faut un clic explicite pour y arriver. */
+  linkCity: publicQuery
+    .input(
+      z.object({
+        token: z.string(),
+        governorate: z.string().min(1),
+        city: z.string().min(1),
+        delegationExternalId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+      await saveAlias("tpe", input);
+      return { ok: true as const };
+    }),
+
+  /** Annule une décision : la ville redevient à décider. */
+  unlinkCity: publicQuery
+    .input(z.object({ token: z.string(), governorate: z.string(), city: z.string() }))
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+      await deleteAlias("tpe", input.governorate, input.city);
+      return { ok: true as const };
+    }),
+
+  /** La table complète, pour offrir un choix exhaustif à qui doit trancher.
+   *
+   * Non filtrée par gouvernorat : quand une commande porte un gouvernorat
+   * faux, la bonne délégation est justement ailleurs. */
+  catalogue: publicQuery
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await assertAdmin(input.token);
+      const rows = await allDelegations("tpe");
+      return rows.sort(
+        (a, b) => a.governorate.localeCompare(b.governorate) || a.name.localeCompare(b.name),
+      );
     }),
 
   /** Les délégations déjà stockées, pour vérifier ce qu'on a récupéré. */
