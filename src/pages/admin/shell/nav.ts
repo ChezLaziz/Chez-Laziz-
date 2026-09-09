@@ -7,11 +7,14 @@
  * d'ensemble » et « Paramètres » côte à côte, alors qu'on ne les ouvre pas
  * dans le même état d'esprit.
  *
- * Absents volontairement : Marketing (attribution), Tunnel et Stock. Les
- * données qui les alimenteraient — source d'acquisition, dépense
- * publicitaire, identifiant de session, quantité en stock — ne sont
- * collectées nulle part. Quatre pages vides coûtent plus qu'elles
- * n'apportent ; elles reviendront quand la donnée existera. */
+ * Absent volontairement : Tunnel de vente. Ce qui l'alimenterait — un
+ * identifiant de session, un ajout au panier enregistré côté serveur — n'est
+ * collecté nulle part. Une page vide coûte plus qu'elle n'apporte ; elle
+ * reviendra quand la donnée existera.
+ *
+ * Marketing, lui, a désormais de quoi vivre : l'origine des commandes est
+ * captée (src/lib/attribution.ts) et la dépense publicitaire est saisie à la
+ * main (table ad_spend). Rien n'y est calculé sans montant réel. */
 
 export type NavId =
   | 'apercu'
@@ -50,8 +53,9 @@ export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] 
       { id: 'catalogue', label: 'Catalogue & prix' },
       { id: 'messages', label: 'Messages' },
       // Nommé « Réseaux sociaux » et non « Marketing » : ce sont des nombres
-      // d'abonnés saisis à la main, pas une attribution publicitaire. Le mot
-      // « Marketing » laisserait croire à un ROAS qu'on ne sait pas calculer.
+      // d'abonnés saisis à la main. L'attribution des commandes et le retour
+      // sur dépense vivent dans la page Marketing, qui est une lecture ;
+      // celle-ci est une saisie.
       { id: 'reseaux', label: 'Réseaux sociaux' },
       { id: 'contenu', label: 'Contenu du site' },
       { id: 'parametres', label: 'Paramètres' },

@@ -8,6 +8,7 @@ import {
   boolean,
   timestamp,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const orderStatusEnum = pgEnum("order_status", [
@@ -173,6 +174,34 @@ export const socialStats = pgTable("social_stats", {
   messages: integer("messages").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// Dépenses publicitaires, SAISIES À LA MAIN : aucune API publicitaire n'est
+// connectée, et aucun montant n'est jamais déduit ni estimé.
+//
+// Une ligne par (plateforme, mois). Le mois entier est l'unité — voir
+// api/queries/analytics/adspend.ts : rapprocher une dépense mensuelle de
+// ventes hebdomadaires supposerait une dépense étale, ce qui est faux dès
+// qu'une publication est boostée trois jours. Mieux vaut une période imposée
+// et exacte qu'une période choisie et estimée.
+export const adSpend = pgTable(
+  "ad_spend",
+  {
+    id: serial("id").primaryKey(),
+    // instagram | facebook | tiktok | google | autre. Pas de « direct » :
+    // on n'achète pas du trafic direct.
+    source: varchar("source", { length: 30 }).notNull(),
+    // `YYYY-MM`, en mois LOCAL (Tunis), jamais UTC.
+    month: varchar("month", { length: 7 }).notNull(),
+    amountMillimes: integer("amount_millimes").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  // Un seul montant par plateforme et par mois : la saisie est une mise à
+  // jour, jamais un cumul de lignes qu'on additionnerait par erreur.
+  (t) => [uniqueIndex("ad_spend_source_month_idx").on(t.source, t.month)],
+);
+
+export type AdSpend = typeof adSpend.$inferSelect;
 
 export type SocialStat = typeof socialStats.$inferSelect;
 
