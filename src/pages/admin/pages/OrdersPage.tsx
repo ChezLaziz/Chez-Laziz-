@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { ErrorState, Skeleton } from '../ui/State'
+import CarrierSetup from './CarrierSetup'
 import {
   CARRIERS,
   CARRIER_KEYS,
@@ -357,6 +358,8 @@ export default function OrdersPage({
           </ul>
         )}
       </div>
+
+      <CarrierSetup token={token} />
     </div>
   )
 }

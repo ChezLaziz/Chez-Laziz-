@@ -224,6 +224,33 @@ export const adSpend = pgTable(
 
 export type AdSpend = typeof adSpend.$inferSelect;
 
+// Table des délégations d'un transporteur, telle QU'IL la définit.
+//
+// Nos commandes portent une ville en texte libre ; Team Parcel Express exige
+// un identifiant de délégation. Sans cette correspondance aucun colis ne peut
+// leur être transmis — c'est le verrou principal de l'intégration.
+//
+// `raw` garde la ligne d'origine entière : leur API n'étant pas documentée,
+// un champ qu'on ne sait pas encore lire aujourd'hui reste récupérable demain
+// sans redemander la liste.
+export const carrierDelegations = pgTable(
+  "carrier_delegations",
+  {
+    id: serial("id").primaryKey(),
+    carrier: varchar("carrier", { length: 30 }).notNull(),
+    // Identifiant CHEZ LE TRANSPORTEUR, jamais le nôtre.
+    externalId: varchar("external_id", { length: 40 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    // Vide si le transporteur ne le fournit pas — jamais deviné.
+    governorate: varchar("governorate", { length: 160 }).notNull().default(""),
+    raw: text("raw").notNull().default(""),
+    syncedAt: timestamp("synced_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("carrier_delegations_key_idx").on(t.carrier, t.externalId)],
+);
+
+export type CarrierDelegation = typeof carrierDelegations.$inferSelect;
+
 export type SocialStat = typeof socialStats.$inferSelect;
 
 export type Product = typeof products.$inferSelect;
