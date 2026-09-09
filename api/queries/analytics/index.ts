@@ -18,6 +18,7 @@ import {
 import { dayKey, daysInPeriod, type Period, type PeriodPair } from "./period";
 import { buildCustomerHistories, computeCustomerMetrics } from "./customers";
 import { computeMargins, type CostsByProductId } from "./margin";
+import { computeAcquisition } from "./acquisition";
 import {
   attachGrowth,
   computeGovernorateDelivery,
@@ -32,6 +33,7 @@ export * from "./period";
 export * from "./customers";
 export * from "./breakdowns";
 export * from "./margin";
+export * from "./acquisition";
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -58,6 +60,10 @@ const ANALYTICS_COLUMNS = {
   subtotalMillimes: orders.subtotalMillimes,
   deliveryFeeMillimes: orders.deliveryFeeMillimes,
   items: orders.items,
+  acquisitionSource: orders.acquisitionSource,
+  acquisitionCampaign: orders.acquisitionCampaign,
+  acquisitionContent: orders.acquisitionContent,
+  deviceType: orders.deviceType,
   createdAt: orders.createdAt,
 } as const;
 
@@ -156,13 +162,14 @@ export type DataQuality = {
   governorateCoverage: number;
   /** Part du chiffre d'affaires dont le coût de revient est saisi. */
   productCostCoverage: number;
-  /** Reste à 0 : aucune source d'acquisition n'est collectée en base. */
+  /** Part du chiffre d'affaires dont l'origine est connue. */
   acquisitionSourceCoverage: number;
 };
 
 function computeDataQuality(
   allOrders: AnalyticsOrder[],
   costCoverage: number,
+  sourceCoverage: number,
 ): DataQuality {
   const total = allOrders.length;
   let withCustomerId = 0;
@@ -176,7 +183,7 @@ function computeDataQuality(
     customerIdCoverage: total === 0 ? 0 : withCustomerId / total,
     governorateCoverage: total === 0 ? 0 : withGovernorate / total,
     productCostCoverage: costCoverage,
-    acquisitionSourceCoverage: 0,
+    acquisitionSourceCoverage: sourceCoverage,
   };
 }
 
@@ -209,6 +216,7 @@ export type OverviewData = {
   customerMetrics: ReturnType<typeof computeCustomerMetrics>;
   margins: ReturnType<typeof computeMargins>;
   previousMargins: ReturnType<typeof computeMargins>;
+  acquisition: ReturnType<typeof computeAcquisition>;
 };
 
 /** Toutes les données de la Vue d'ensemble en UNE passe.
@@ -237,6 +245,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
   }
 
   const margins = computeMargins(current, costs);
+  const acquisition = computeAcquisition(current);
   const productsNow = computeProductStats(current);
   const governoratesNow = computeGovernorateStats(current);
 
@@ -267,7 +276,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     delivery: computeDeliveryImpact(currentAll),
     statusCounts,
     pageViews: withTrend(viewsNow, viewsBefore),
-    dataQuality: computeDataQuality(currentAll, margins.revenueCoverage),
+    dataQuality: computeDataQuality(currentAll, margins.revenueCoverage, acquisition.revenueCoverage),
 
     // Détail consommé par les pages Ventes / Clients / Produits / Géographie.
     // Servi dans la même réponse pour qu'aucune page ne recalcule un chiffre
@@ -285,5 +294,6 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     customerMetrics: computeCustomerMetrics(current, histories, periods.current.start),
     margins,
     previousMargins: computeMargins(previous, costs),
+    acquisition,
   };
 }

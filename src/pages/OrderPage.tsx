@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
+import { detectDevice, getAttribution } from '@/lib/attribution'
 import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
 import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL } from '@/lib/shop'
@@ -439,6 +440,7 @@ export default function OrderPage() {
       totalMillimes: l.qty * l.unitPriceMillimes,
     }))
     const addressLine = `${address.trim()}, ${city.trim()}, ${governorate}`
+    const attribution = getAttribution()
     createOrder.mutate(
       {
         customerName: name.trim(),
@@ -457,6 +459,16 @@ export default function OrderPage() {
         paymentMethod,
         paymentProofKey: paymentMethod === 'd17' ? (proofKey ?? undefined) : undefined,
         idempotencyKey,
+        // Origine de la visite, captée à l'arrivée sur le site. Rien n'est
+        // demandé au client et rien n'est affiché ici.
+        ...(attribution
+          ? {
+              acquisitionSource: attribution.source,
+              acquisitionCampaign: attribution.campaign,
+              acquisitionContent: attribution.content,
+            }
+          : {}),
+        deviceType: detectDevice(),
       },
       {
         onSuccess: (order) => {

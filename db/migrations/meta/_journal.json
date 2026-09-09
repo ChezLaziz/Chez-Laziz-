@@ -50,6 +50,13 @@
       "when": 1788919645108,
       "tag": "0006_steady_felicia_hardy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788921990081,
+      "tag": "0007_hot_cyclops",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,7 @@ export type NavId =
   | 'produits'
   | 'geographie'
   | 'rentabilite'
+  | 'marketing'
   | 'intelligence'
   | 'commandes'
   | 'catalogue'
@@ -38,6 +39,7 @@ export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] 
       { id: 'produits', label: 'Produits' },
       { id: 'geographie', label: 'Géographie' },
       { id: 'rentabilite', label: 'Rentabilité' },
+      { id: 'marketing', label: 'Marketing' },
       { id: 'intelligence', label: 'Intelligence' },
     ],
   },
@@ -67,5 +69,6 @@ export const ANALYTICS_PAGES = new Set<NavId>([
   'produits',
   'geographie',
   'rentabilite',
+  'marketing',
   'intelligence',
 ])
