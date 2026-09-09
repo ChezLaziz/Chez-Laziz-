@@ -1,9 +1,9 @@
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatTND } from '@/lib/shop'
 import { Card, Kpi } from '../ui/Card'
 import { EmptyState, ErrorState, Skeleton } from '../ui/State'
 import { useOverview } from '../useOverview'
-import { buildSignals } from '@contracts/signals'
+import { MIN_ORDERS_FOR_SIGNALS, buildSignals } from '@contracts/signals'
 import type { PresetRange } from '@contracts/analytics'
 
 const dayLabel = (iso: string) =>
@@ -46,6 +46,9 @@ export default function OverviewPage({
 
   const signals = buildSignals(data)
   const hasSales = data.orders.value > 0
+  // Une variation n'a de sens qu'avec une vraie période de référence. Même
+  // seuil que les signaux : en dessous, on écrit qu'on ne compare pas.
+  const comparable = data.orders.previous >= MIN_ORDERS_FOR_SIGNALS
 
   return (
     <div className="space-y-5">
@@ -53,11 +56,11 @@ export default function OverviewPage({
           combien j'ai gagné, combien j'ai vendu, à quel panier, à combien
           de personnes, en quelle quantité. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi label="Chiffre d'affaires" trend={data.revenueMillimes} format="money" />
-        <Kpi label="Commandes" trend={data.orders} />
-        <Kpi label="Panier moyen" trend={data.aovMillimes} format="money" />
-        <Kpi label="Clients" trend={data.customers} />
-        <Kpi label="Articles vendus" trend={data.unitsSold} />
+        <Kpi label="Chiffre d'affaires" trend={data.revenueMillimes} format="money" comparable={comparable} />
+        <Kpi label="Commandes" trend={data.orders} comparable={comparable} />
+        <Kpi label="Panier moyen" trend={data.aovMillimes} format="money" comparable={comparable} />
+        <Kpi label="Clients" trend={data.customers} comparable={comparable} />
+        <Kpi label="Articles vendus" trend={data.unitsSold} comparable={comparable} />
       </div>
 
       {/* Le CA exclut les 8 DT de livraison : dit une fois, ici, plutôt que
@@ -111,6 +114,43 @@ export default function OverviewPage({
                   activeDot={{ r: 4 }}
                 />
               </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </Card>
+
+      {/* Venue de l'ancienne page Ventes : la seule carte qui n'y faisait
+          pas doublon. Le CA dit combien ; les barres disent quand. */}
+      <Card title="Commandes par jour">
+        {!hasSales ? (
+          <EmptyState label="Aucune vente sur cette période." />
+        ) : (
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.revenueTrend} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
+                <XAxis
+                  dataKey="day"
+                  tickFormatter={dayLabel}
+                  tick={{ fontSize: 10, fill: '#9c9490' }}
+                  axisLine={false}
+                  tickLine={false}
+                  minTickGap={24}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 10, fill: '#9c9490' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={34}
+                />
+                <Tooltip
+                  formatter={(v) => [String(v), 'Commandes']}
+                  labelFormatter={(l) => dayLabel(String(l))}
+                  cursor={{ fill: 'rgba(184,145,46,0.08)' }}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #dec9b8' }}
+                />
+                <Bar dataKey="orders" fill="#b8912e" radius={[3, 3, 0, 0]} maxBarSize={26} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         )}
@@ -188,30 +228,10 @@ export default function OverviewPage({
         </Card>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-        <Card title="Nouveaux vs revenants">
-          {data.customerSplit.newCustomers + data.customerSplit.returningCustomers === 0 ? (
-            <EmptyState label="Aucun client identifiable sur cette période." />
-          ) : (
-            <div className="space-y-3">
-              <SplitRow
-                label="Nouveaux clients"
-                count={data.customerSplit.newCustomers}
-                revenue={data.customerSplit.newRevenueMillimes}
-              />
-              <SplitRow
-                label="Clients revenants"
-                count={data.customerSplit.returningCustomers}
-                revenue={data.customerSplit.returningRevenueMillimes}
-              />
-              <p className="border-t border-sand/50 pt-3 text-xs text-ink/50">
-                {(data.customerSplit.repeatOrderRate * 100).toFixed(0)}% des commandes viennent d'un
-                client déjà connu.
-              </p>
-            </div>
-          )}
-        </Card>
-
+      {/* Pas de « Nouveaux vs revenants » : dix-huit clients, zéro revenant, et
+          cinq jours d'historique. La carte reviendra avec le premier client
+          qui recommande. */}
+      <div>
         {/* Impact business de la livraison — pas sa gestion. Chez Laziz
             sous-traite le transport : ce bloc mesure ce que l'entreprise
             perd, il ne pilote ni tournées ni livreurs. */}
@@ -297,18 +317,6 @@ const STATUS_LABELS: Record<string, string> = {
   annulee: 'Annulées',
 }
 
-function SplitRow({ label, count, revenue }: { label: string; count: number; revenue: number }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-sm text-ink/70">{label}</span>
-      <span className="text-sm">
-        <span className="font-medium text-ink">{count}</span>
-        <span className="ml-2 text-ink/45">{formatTND(revenue)} DT</span>
-      </span>
-    </div>
-  )
-}
-
 function MiniStat({
   label,
   value,
@@ -349,13 +357,6 @@ function DataQualityNote({
       <ul className="mt-3 space-y-1.5 text-xs text-ink/55">
         <li>Identité client (téléphone exploitable) : {pct(quality.customerIdCoverage)}</li>
         <li>Gouvernorat renseigné : {pct(quality.governorateCoverage)}</li>
-        <li>
-          Coût de revient : non collecté — aucun calcul de marge ni de profit n'est possible
-          aujourd'hui.
-        </li>
-        <li>
-          Source d'acquisition : non collectée — impossible de savoir d'où viennent les commandes.
-        </li>
         <li className="pt-1.5 text-ink/45">
           {pageViews.toLocaleString('fr-FR')} pages vues sur la période. Comptées une fois par page
           et par session : ce n'est ni un nombre de visiteurs ni un total de pages vues, et aucun

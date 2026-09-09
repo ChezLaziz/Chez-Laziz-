@@ -35,7 +35,21 @@ export type Trend = { value: number; previous: number; changePercent: number | n
  *
  * `inverse` : pour une métrique où la baisse est une bonne nouvelle
  * (annulations), sinon le vert et le rouge diraient l'inverse du sens métier. */
-export function TrendBadge({ trend, inverse = false }: { trend: Trend; inverse?: boolean }) {
+export function TrendBadge({
+  trend,
+  inverse = false,
+  comparable = true,
+}: {
+  trend: Trend
+  inverse?: boolean
+  /** Faux tant que la période précédente est trop maigre pour servir de
+   * base : dix-huit commandes contre une, c'est « +1700 % » — un chiffre
+   * vrai qui ne dit rien. On préfère l'écrire en toutes lettres. */
+  comparable?: boolean
+}) {
+  if (!comparable) {
+    return <span className="text-[11px] text-ink/40">pas encore assez d'historique</span>
+  }
   if (trend.changePercent === null) {
     return <span className="text-[11px] text-ink/40">pas de comparaison</span>
   }
@@ -59,11 +73,13 @@ export function Kpi({
   trend,
   format = 'number',
   inverse = false,
+  comparable = true,
 }: {
   label: string
   trend: Trend
   format?: 'money' | 'number' | 'percent'
   inverse?: boolean
+  comparable?: boolean
 }) {
   const display =
     format === 'money'
@@ -77,7 +93,7 @@ export function Kpi({
       <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-ink/45">{label}</p>
       <p className="mt-1.5 font-display text-2xl leading-none text-ink">{display}</p>
       <p className="mt-2">
-        <TrendBadge trend={trend} inverse={inverse} />
+        <TrendBadge trend={trend} inverse={inverse} comparable={comparable} />
       </p>
     </div>
   )

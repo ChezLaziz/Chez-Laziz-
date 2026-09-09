@@ -3,7 +3,6 @@ import { createRouter, publicQuery } from "./middleware";
 import { assertAdmin } from "./queries/admin";
 import { getOverview, PRESET_RANGES, resolveCustom, resolvePreset } from "./queries/analytics";
 import { listContactMessages } from "./queries/orders";
-import { getLatestSocialStats } from "./queries/social";
 
 /** Période demandée par le client : un preset, ou deux dates. */
 const periodInput = z
@@ -28,11 +27,7 @@ export const dashboardRouter = createRouter({
     .query(async ({ input }) => {
       await assertAdmin(input.token);
       const periods = resolvePeriod(input.period);
-      const [analytics, messages, social] = await Promise.all([
-        getOverview(periods),
-        listContactMessages(),
-        getLatestSocialStats(),
-      ]);
+      const [analytics, messages] = await Promise.all([getOverview(periods), listContactMessages()]);
       const unread = messages.filter((m) => !m.isRead);
       return {
         ...analytics,
@@ -44,7 +39,6 @@ export const dashboardRouter = createRouter({
         },
         unreadMessages: unread.slice(0, 5),
         unreadCount: unread.length,
-        social,
       };
     }),
 });

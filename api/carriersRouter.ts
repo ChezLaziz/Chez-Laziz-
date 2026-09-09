@@ -1,57 +1,32 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { assertAdmin } from "./queries/admin";
-import { tpeProbe, tpeFetchDelegations, tpeTokenPresent, tpeCreateShipment } from "./lib/tpe";
+import { tpeFetchDelegations, tpeCreateShipment } from "./lib/tpe";
 import { getOrderById, setOrderCarrier } from "./queries/orders";
 import { buildTpePayload, refusalToSend } from "@contracts/tpeShipment";
 import { parseOrderItems } from "@contracts/carriers";
 import {
   allDelegations,
   cityReport,
-  destinationForOrder,
-  countDelegations,
   deleteAlias,
-  listDelegations,
+  destinationForOrder,
   saveAlias,
   saveDelegations,
 } from "./queries/delegations";
 
-/** Reconnaissance de l'API transporteur — LECTURE SEULE.
+/** Le transporteur, côté serveur.
  *
- * Ce routeur ne crée aucun colis. Il sert à répondre à deux questions qu'on
- * ne peut pas trancher depuis un poste de développement (pas d'accès réseau
- * sortant) : le jeton fonctionne-t-il, et quelle est la forme des données
- * que Team Parcel Express attend ?
+ * Trois responsabilités : tenir à jour leur table des délégations, relier nos
+ * villes à ces délégations (automatiquement quand c'est sûr, par décision
+ * humaine sinon), et créer les colis. La phase de reconnaissance — sonder
+ * leurs chemins, inspecter la forme des réponses — a fait son travail et a
+ * été retirée : la forme est connue, elle vit dans contracts/tpeShipment.ts.
  *
- * Tout est réservé à l'admin : ces réponses décrivent l'infrastructure d'un
- * partenaire et n'ont rien à faire côté public. */
+ * `syncDelegations` reste sans bouton dans l'interface : on ne la relance
+ * que si le transporteur ajoute des délégations, ce qui est rare.
+ *
+ * Tout est réservé à l'admin. */
 export const carriersRouter = createRouter({
-  /** État de la configuration, sans jamais exposer le jeton lui-même. */
-  status: publicQuery
-    .input(z.object({ token: z.string() }))
-    .query(async ({ input }) => {
-      await assertAdmin(input.token);
-      return {
-        tpeTokenConfigured: tpeTokenPresent(),
-        delegationsStored: await countDelegations("tpe"),
-      };
-    }),
-
-  /** Interroge les chemins de lecture connus et rapporte ce qu'ils répondent.
-   *
-   * Une mutation plutôt qu'une requête : elle sort vers un service tiers et
-   * ne doit partir que sur un clic explicite, jamais sur un rafraîchissement
-   * automatique de l'interface. */
-  probe: publicQuery
-    .input(z.object({ token: z.string() }))
-    .mutation(async ({ input }) => {
-      await assertAdmin(input.token);
-      if (!tpeTokenPresent()) {
-        return { configured: false as const, results: [] };
-      }
-      return { configured: true as const, results: await tpeProbe() };
-    }),
-
   /** Récupère la table des délégations et la stocke.
    *
    * C'est le verrou de l'intégration : nos commandes portent une ville en
@@ -202,11 +177,4 @@ export const carriersRouter = createRouter({
       );
     }),
 
-  /** Les délégations déjà stockées, pour vérifier ce qu'on a récupéré. */
-  delegations: publicQuery
-    .input(z.object({ token: z.string(), search: z.string().optional() }))
-    .query(async ({ input }) => {
-      await assertAdmin(input.token);
-      return listDelegations("tpe", input.search);
-    }),
 });

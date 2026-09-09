@@ -1,6 +1,6 @@
 import { getDb } from "./connection";
 import { carrierCityAliases, carrierDelegations, orders } from "@db/schema";
-import { and, eq, ilike, or, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Delegation } from "../lib/tpe";
 import {
   cityKey,
@@ -55,44 +55,9 @@ export async function saveDelegations(carrier: string, rows: Delegation[]) {
   return saved;
 }
 
-export async function countDelegations(carrier: string): Promise<number> {
-  const [row] = await getDb()
-    .select({ count: sql<number>`count(*)` })
-    .from(carrierDelegations)
-    .where(eq(carrierDelegations.carrier, carrier));
-  return Number(row?.count ?? 0);
-}
-
-/** Délégations stockées, filtrées par nom ou gouvernorat. Bornée : cette
- * liste sert à vérifier une correspondance, pas à tout parcourir. */
-export async function listDelegations(carrier: string, search?: string) {
-  const term = search?.trim();
-  const where = term
-    ? and(
-        eq(carrierDelegations.carrier, carrier),
-        or(
-          ilike(carrierDelegations.name, `%${term}%`),
-          ilike(carrierDelegations.governorate, `%${term}%`),
-        ),
-      )
-    : eq(carrierDelegations.carrier, carrier);
-
-  return getDb()
-    .select({
-      externalId: carrierDelegations.externalId,
-      name: carrierDelegations.name,
-      governorate: carrierDelegations.governorate,
-    })
-    .from(carrierDelegations)
-    .where(where)
-    .orderBy(carrierDelegations.governorate, carrierDelegations.name)
-    .limit(200);
-}
-
 /** Toute la table, pour la mise en correspondance.
  *
- * Non bornée, contrairement à `listDelegations` : rapprocher une ville
- * suppose de pouvoir la chercher partout. Quelques centaines de lignes très
+ * Non bornée : rapprocher une ville suppose de pouvoir la chercher partout. Quelques centaines de lignes très
  * courtes — le coût est négligeable, l'exhaustivité ne l'est pas. */
 export async function allDelegations(carrier: string): Promise<StoredDelegation[]> {
   return getDb()
