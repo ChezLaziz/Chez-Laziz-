@@ -253,3 +253,24 @@ export function matchDelegation(
 export function resolvedDelegationId(m: DelegationMatch): string | null {
   return isResolved(m.status) ? (m.delegation?.externalId ?? null) : null;
 }
+
+/** Les délégations d'un gouvernorat, pour un sélecteur.
+ *
+ * C'est ce qui remplace la saisie libre de la ville sur le site : le client
+ * choisit dans la liste du transporteur au lieu d'écrire « mourouj 1 » ou
+ * « بني خلاد ». Une commande passée ainsi n'a plus rien à rapprocher — le
+ * nom ET l'identifiant sont ceux du transporteur dès le départ.
+ *
+ * Le gouvernorat de notre formulaire (« Le Kef », « La Manouba », « Béja »)
+ * et celui du transporteur (« Kef », « Manouba », « Béja ») ne s'écrivent
+ * pas pareil : on les compare par leur clé normalisée, comme partout. */
+export function delegationsForGovernorate<T extends DelegationRef>(
+  all: readonly T[],
+  governorate: string,
+): T[] {
+  const key = governorateKey(governorate);
+  if (key === "") return [];
+  return all
+    .filter((d) => governorateKey(d.governorate) === key)
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+}

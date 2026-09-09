@@ -27,7 +27,7 @@ export async function createOrder(data: {
   governorate: string;
   city: string;
   address: string;
-  postalCode?: string;
+  delegationExternalId?: string;
   items: OrderItem[];
   subtotalMillimes: number;
   deliveryFeeMillimes: number;
@@ -57,7 +57,7 @@ export async function createOrder(data: {
         governorate: data.governorate,
         city: data.city,
         address: data.address,
-        postalCode: data.postalCode,
+        delegationExternalId: data.delegationExternalId,
         items: JSON.stringify(data.items),
         subtotalMillimes: data.subtotalMillimes,
         deliveryFeeMillimes: data.deliveryFeeMillimes,

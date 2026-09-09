@@ -80,7 +80,13 @@ export const orders = pgTable("orders", {
   governorate: varchar("governorate", { length: 100 }).notNull(),
   city: varchar("city", { length: 150 }).notNull(),
   address: text("address").notNull(),
+  // Plus demandé depuis septembre 2026 (17 commandes sur 18 le laissaient
+  // vide). La colonne reste pour les commandes qui l'ont.
   postalCode: varchar("postal_code", { length: 10 }),
+  // L'identifiant de délégation CHEZ LE TRANSPORTEUR, choisi par le client
+  // dans une liste à la commande. Nul pour les commandes antérieures, qui
+  // passent par le rapprochement de contracts/delegations.ts.
+  delegationExternalId: varchar("delegation_external_id", { length: 40 }),
   // JSON : [{ productId, name, weightKg, qty, unitPriceMillimes }]
   items: text("items").notNull(),
   subtotalMillimes: integer("subtotal_millimes").notNull(),
