@@ -5,6 +5,7 @@ import { contactRouter, adminRouter } from "./contactRouter";
 import { statsRouter } from "./statsRouter";
 import { socialRouter } from "./socialRouter";
 import { marketingRouter } from "./marketingRouter";
+import { carriersRouter } from "./carriersRouter";
 import { dashboardRouter } from "./dashboardRouter";
 import { galleryRouter } from "./galleryRouter";
 import { contentRouter } from "./contentRouter";
@@ -18,6 +19,7 @@ export const appRouter = createRouter({
   stats: statsRouter,
   social: socialRouter,
   marketing: marketingRouter,
+  carriers: carriersRouter,
   dashboard: dashboardRouter,
   gallery: galleryRouter,
   content: contentRouter,
