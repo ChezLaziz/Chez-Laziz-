@@ -3,6 +3,7 @@ import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { ErrorState, Skeleton } from '../ui/State'
 import CarrierSetup from './CarrierSetup'
+import DelegationLinks from './DelegationLinks'
 import {
   CARRIERS,
   CARRIER_KEYS,
@@ -164,6 +165,21 @@ export default function OrdersPage({
 
   const orders = useMemo(() => (data ?? []) as unknown as Order[], [data])
 
+  /** Le rapprochement ville → délégation, tel que le serveur l'a établi.
+   *
+   * On le LIT, on ne le recalcule pas : deux règles de correspondance qui
+   * divergeraient, c'est un colis exporté avec un numéro que l'écran de
+   * liaison n'a jamais validé. */
+  const cityLinks = trpc.carriers.cities.useQuery({ token })
+  const delegationFor = useMemo(() => {
+    const byCity = new Map(
+      (cityLinks.data?.lines ?? [])
+        .filter((l) => l.match.delegation !== null)
+        .map((l) => [`${l.governorate}|${l.city}`, l.match.delegation!.externalId] as const),
+    )
+    return (o: ShippableOrder) => byCity.get(`${o.governorate}|${o.city}`) ?? null
+  }, [cityLinks.data])
+
   const isToCollect = (o: Order) =>
     o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && o.status !== 'annulee'
   const isD17Pending = (o: Order) =>
@@ -300,6 +316,7 @@ export default function OrdersPage({
       {selectedOrders.length > 0 && (
         <ShipmentBar
           orders={selectedOrders.map(toShippable)}
+          delegationFor={delegationFor}
           onAssign={(carrier) => {
             for (const o of selectedOrders) setCarrier.mutate({ token, id: o.id, carrier })
             setSelected(new Set())
@@ -359,6 +376,8 @@ export default function OrdersPage({
         )}
       </div>
 
+      <DelegationLinks token={token} />
+
       <CarrierSetup token={token} />
     </div>
   )
@@ -374,11 +393,13 @@ export default function OrdersPage({
  * et on note qui transporte quoi. */
 function ShipmentBar({
   orders,
+  delegationFor,
   onAssign,
   onClear,
   pending,
 }: {
   orders: ShippableOrder[]
+  delegationFor: (o: ShippableOrder) => string | null
   onAssign: (carrier: CarrierKey) => void
   onClear: () => void
   pending: boolean
@@ -387,9 +408,13 @@ function ShipmentBar({
 
   const incompleteWeight = orders.filter((o) => !hasCompleteWeight(o.items)).length
   const alreadyPaid = orders.filter((o) => amountToCollectMillimes(o) === 0).length
+  // Team Parcel Express est le seul des deux à travailler par délégation.
+  const noDelegation =
+    carrier === 'tpe' ? orders.filter((o) => delegationFor(o) === null).length : 0
 
   const downloadCsv = () => {
-    const blob = new Blob([buildCsv(orders)], { type: 'text/csv;charset=utf-8' })
+    const forCarrier = carrier === 'tpe' ? delegationFor : () => null
+    const blob = new Blob([buildCsv(orders, forCarrier)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -478,6 +503,12 @@ function ShipmentBar({
         <p className="mt-3 text-[11px] font-medium text-green-700">
           {alreadyPaid} commande{alreadyPaid > 1 ? 's' : ''} déjà payée{alreadyPaid > 1 ? 's' : ''} :
           montant à encaisser mis à 0, pour que le client ne paie pas deux fois.
+        </p>
+      )}
+      {noDelegation > 0 && (
+        <p className="mt-1.5 text-[11px] font-medium text-amber-700">
+          {noDelegation} commande{noDelegation > 1 ? 's' : ''} sans délégation reconnue : la colonne
+          part vide. Reliez la ville dans « Villes et délégations », plus bas.
         </p>
       )}
       {incompleteWeight > 0 && (

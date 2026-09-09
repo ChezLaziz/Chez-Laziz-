@@ -1,7 +1,15 @@
 import { getDb } from "./connection";
-import { carrierDelegations } from "@db/schema";
+import { carrierCityAliases, carrierDelegations, orders } from "@db/schema";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import type { Delegation } from "../lib/tpe";
+import {
+  cityKey,
+  governorateKey,
+  matchDelegation,
+  resolvedDelegationId,
+  type DelegationMatch,
+  type DelegationRef,
+} from "@contracts/delegations";
 
 /** Enregistre la table des délégations d'un transporteur.
  *
@@ -76,4 +84,130 @@ export async function listDelegations(carrier: string, search?: string) {
     .where(where)
     .orderBy(carrierDelegations.governorate, carrierDelegations.name)
     .limit(200);
+}
+
+/** Toute la table, pour la mise en correspondance.
+ *
+ * Non bornée, contrairement à `listDelegations` : rapprocher une ville
+ * suppose de pouvoir la chercher partout. Quelques centaines de lignes très
+ * courtes — le coût est négligeable, l'exhaustivité ne l'est pas. */
+export async function allDelegations(carrier: string): Promise<DelegationRef[]> {
+  return getDb()
+    .select({
+      externalId: carrierDelegations.externalId,
+      name: carrierDelegations.name,
+      governorate: carrierDelegations.governorate,
+    })
+    .from(carrierDelegations)
+    .where(eq(carrierDelegations.carrier, carrier));
+}
+
+/** Les décisions humaines déjà prises, prêtes pour `matchDelegation`. */
+export async function aliasMap(carrier: string): Promise<Map<string, string>> {
+  const rows = await getDb()
+    .select({
+      governorateKey: carrierCityAliases.governorateKey,
+      cityKey: carrierCityAliases.cityKey,
+      delegationExternalId: carrierCityAliases.delegationExternalId,
+    })
+    .from(carrierCityAliases)
+    .where(eq(carrierCityAliases.carrier, carrier));
+  return new Map(rows.map((r) => [`${r.governorateKey}|${r.cityKey}`, r.delegationExternalId]));
+}
+
+/** Enregistre — ou corrige — le rapprochement décidé pour une ville.
+ *
+ * Une seule ligne par ville : re-décider remplace, ne s'empile pas. Les
+ * libellés bruts sont conservés pour que la liste reste relisible par la
+ * personne qui l'a remplie. */
+export async function saveAlias(
+  carrier: string,
+  input: { governorate: string; city: string; delegationExternalId: string },
+) {
+  const govKey = governorateKey(input.governorate);
+  const cKey = cityKey(input.city);
+  await getDb()
+    .insert(carrierCityAliases)
+    .values({
+      carrier,
+      governorateKey: govKey,
+      cityKey: cKey,
+      delegationExternalId: input.delegationExternalId,
+      governorateLabel: input.governorate.trim().slice(0, 160),
+      cityLabel: input.city.trim().slice(0, 160),
+      decidedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [
+        carrierCityAliases.carrier,
+        carrierCityAliases.governorateKey,
+        carrierCityAliases.cityKey,
+      ],
+      set: {
+        delegationExternalId: input.delegationExternalId,
+        governorateLabel: input.governorate.trim().slice(0, 160),
+        cityLabel: input.city.trim().slice(0, 160),
+        decidedAt: new Date(),
+      },
+    });
+}
+
+/** Retire un rapprochement : la ville redevient « à décider ». */
+export async function deleteAlias(carrier: string, governorate: string, city: string) {
+  await getDb()
+    .delete(carrierCityAliases)
+    .where(
+      and(
+        eq(carrierCityAliases.carrier, carrier),
+        eq(carrierCityAliases.governorateKey, governorateKey(governorate)),
+        eq(carrierCityAliases.cityKey, cityKey(city)),
+      ),
+    );
+}
+
+export type CityLine = {
+  governorate: string;
+  city: string;
+  /** Nombre de commandes qui portent exactement cette ville. */
+  orders: number;
+  match: DelegationMatch;
+};
+
+/** L'état de la correspondance, ville par ville, pour toutes nos commandes.
+ *
+ * C'est la vue dont un humain a besoin pour savoir ce qu'il reste à décider :
+ * les villes déjà reliées, et celles qui bloquent une remise au transporteur.
+ * Les villes non résolues remontent en premier, les plus fréquentes d'abord —
+ * décider une seule ligne peut débloquer plusieurs commandes. */
+export async function cityReport(carrier: string): Promise<CityLine[]> {
+  const [pairs, delegations, aliases] = await Promise.all([
+    getDb()
+      .select({
+        governorate: orders.governorate,
+        city: orders.city,
+        count: sql<number>`count(*)`,
+      })
+      .from(orders)
+      .groupBy(orders.governorate, orders.city),
+    allDelegations(carrier),
+    aliasMap(carrier),
+  ]);
+
+  return pairs
+    .map((p) => ({
+      governorate: p.governorate,
+      city: p.city,
+      orders: Number(p.count),
+      match: matchDelegation(
+        { governorate: p.governorate, city: p.city },
+        delegations,
+        aliases,
+      ),
+    }))
+    .sort((a, b) => {
+      const aDone = resolvedDelegationId(a.match) !== null;
+      const bDone = resolvedDelegationId(b.match) !== null;
+      if (aDone !== bDone) return aDone ? 1 : -1;
+      return b.orders - a.orders || a.city.localeCompare(b.city);
+    });
 }

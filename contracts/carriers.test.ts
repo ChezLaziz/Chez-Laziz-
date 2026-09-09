@@ -178,3 +178,24 @@ describe("isCarrierKey", () => {
     expect(isCarrierKey("")).toBe(false);
   });
 });
+
+describe("colonne delegation", () => {
+  const col = EXPORT_COLUMNS.indexOf("delegation");
+
+  it("porte l'identifiant du transporteur quand il est établi", () => {
+    const csv = buildCsv([order({ id: 30 })], () => "12");
+    expect(csv.trim().split("\r\n")[1]!.split(";")[col]).toBe("12");
+  });
+
+  it("reste VIDE quand la ville n'est pas reliée — jamais approchée", () => {
+    // Une case vide se voit au dépôt ; un mauvais numéro fait partir le colis
+    // dans une autre ville sans que personne ne s'en aperçoive.
+    const csv = buildCsv([order({ id: 30 })], () => null);
+    expect(csv.trim().split("\r\n")[1]!.split(";")[col]).toBe("");
+  });
+
+  it("reste vide si aucune correspondance n'est fournie", () => {
+    const csv = buildCsv([order({ id: 30 })]);
+    expect(csv.trim().split("\r\n")[1]!.split(";")[col]).toBe("");
+  });
+});

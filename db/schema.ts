@@ -249,6 +249,34 @@ export const carrierDelegations = pgTable(
   (t) => [uniqueIndex("carrier_delegations_key_idx").on(t.carrier, t.externalId)],
 );
 
+/** Les rapprochements ville → délégation décidés par un humain.
+ *
+ * Une ligne ici est une phrase du type « à Nabeul, بني خلاد veut dire la
+ * délégation 127 ». Elle est écrite une fois, sur un clic explicite, et sert
+ * ensuite à toutes les commandes qui portent la même ville.
+ *
+ * Les clés sont NORMALISÉES (voir contracts/delegations.ts) pour qu'une
+ * différence de casse ou d'accent ne redemande pas la même décision. Les
+ * libellés bruts sont conservés à côté : ce sont eux qu'un humain relit. */
+export const carrierCityAliases = pgTable(
+  "carrier_city_aliases",
+  {
+    id: serial("id").primaryKey(),
+    carrier: varchar("carrier", { length: 30 }).notNull(),
+    governorateKey: varchar("governorate_key", { length: 160 }).notNull(),
+    cityKey: varchar("city_key", { length: 160 }).notNull(),
+    /** L'identifiant CHEZ LE TRANSPORTEUR. */
+    delegationExternalId: varchar("delegation_external_id", { length: 40 }).notNull(),
+    /** Tels qu'écrits dans la commande, pour que la décision reste relisible. */
+    governorateLabel: varchar("governorate_label", { length: 160 }).notNull().default(""),
+    cityLabel: varchar("city_label", { length: 160 }).notNull().default(""),
+    decidedAt: timestamp("decided_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("carrier_city_aliases_key_idx").on(t.carrier, t.governorateKey, t.cityKey)],
+);
+
+export type CarrierCityAlias = typeof carrierCityAliases.$inferSelect;
+
 export type CarrierDelegation = typeof carrierDelegations.$inferSelect;
 
 export type SocialStat = typeof socialStats.$inferSelect;

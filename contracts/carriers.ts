@@ -8,15 +8,17 @@
  * ÉTAT RÉEL AU 9 SEPTEMBRE 2026
  *
  *   Team Parcel Express — une API existe (api.teamparcelexpress.com, Django
- *   REST, en-tête `Authorization: Token …`) mais elle est INTERNE et non
- *   documentée. Deux verrous avant de s'en servir :
- *     1. il faut capturer une vraie création de colis depuis leur interface
- *        pour connaître la forme exacte du corps de requête ;
- *     2. leur champ `delegation` est un IDENTIFIANT, et nous ne stockons que
- *        le nom de la ville en texte libre. Sans la table des délégations
- *        (récupérable une fois le jeton obtenu), aucun envoi ne peut aboutir.
- *   Tant que ces deux points ne sont pas levés, l'adaptateur REST n'existe
- *   pas — et un adaptateur à moitié deviné serait pire que pas d'adaptateur.
+ *   REST, en-tête `Authorization: Token …`) et notre jeton y lit bien. Deux
+ *   verrous barraient la route ; il en reste un :
+ *     1. LEVÉ — leur champ `delegation` est un identifiant et nous ne
+ *        stockions qu'un nom de ville en texte libre. Leur table est
+ *        désormais récupérée (293 délégations, 24 gouvernorats) et le
+ *        rapprochement est traité dans contracts/delegations.ts.
+ *     2. OUVERT — la forme exacte du corps d'une création de colis reste
+ *        inconnue : leurs chemins d'écriture ne sont pas documentés et rien
+ *        ne permet de la deviner sans l'observer.
+ *   Tant que le second point tient, l'adaptateur REST n'existe pas — un
+ *   adaptateur à moitié deviné serait pire que pas d'adaptateur.
  *
  *   Jetpack Delivery — aucune API côté marchand. Leur plateforme tourne sur
  *   ShippingLog, où l'API est une option payante que le TRANSPORTEUR doit
@@ -128,6 +130,7 @@ export function fullAddress(o: ShippableOrder): string {
  * pas un format certifié : l'interface le dit à l'utilisateur. */
 export const EXPORT_COLUMNS = [
   "ref",
+  "delegation",
   "name",
   "phone1",
   "phone2",
@@ -142,12 +145,21 @@ export const EXPORT_COLUMNS = [
   "note",
 ] as const;
 
-export function exportRow(o: ShippableOrder): Record<(typeof EXPORT_COLUMNS)[number], string> {
+export function exportRow(
+  o: ShippableOrder,
+  /** L'identifiant de délégation CHEZ LE TRANSPORTEUR, quand il est certain.
+   *
+   * Vide dès qu'il ne l'est pas — jamais approché, jamais deviné. Une case
+   * vide fait poser la question au dépôt ; un mauvais numéro fait partir le
+   * colis dans une autre ville sans que personne ne le voie. */
+  delegationId?: string | null,
+): Record<(typeof EXPORT_COLUMNS)[number], string> {
   const collect = amountToCollectMillimes(o);
   return {
     // Notre propre référence : c'est elle qui permettra de rapprocher la
     // commande du colis, dans les deux sens.
     ref: `CL-${o.id}`,
+    delegation: delegationId ?? "",
     name: o.customerName.trim(),
     phone1: carrierPhone(o.phone) ?? o.phone.trim(),
     phone2: "",
@@ -180,11 +192,16 @@ function csvCell(value: string): string {
  * configuration française. Avec une virgule et sans BOM, Excel ouvre tout
  * dans une seule colonne et casse les accents — le fichier serait inutilisable
  * par la personne qui doit le déposer chez le transporteur. */
-export function buildCsv(orders: ShippableOrder[]): string {
+export function buildCsv(
+  orders: ShippableOrder[],
+  /** Rend l'identifiant de délégation d'une commande, ou null s'il n'est pas
+   * établi. Absent, la colonne reste vide pour toutes les lignes. */
+  delegationFor?: (o: ShippableOrder) => string | null,
+): string {
   const lines = [
     EXPORT_COLUMNS.join(";"),
     ...orders.map((o) => {
-      const row = exportRow(o);
+      const row = exportRow(o, delegationFor?.(o) ?? null);
       return EXPORT_COLUMNS.map((c) => csvCell(row[c])).join(";");
     }),
   ];
