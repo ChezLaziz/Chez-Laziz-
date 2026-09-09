@@ -4,6 +4,7 @@ import { trpc } from '@/providers/trpc'
 import { initAnalytics, trackPageView } from '@/lib/analytics'
 import { initMetaPixel, trackMetaPageView } from '@/lib/metaPixel'
 import { getConsent, onConsentChange } from '@/lib/cookieConsent'
+import { captureAttribution } from '@/lib/attribution'
 
 /** Enregistre chaque page vue (hors /admin) : compteur interne anonyme
  * (toujours actif, sans cookie tiers), et vue de page GA4/Meta Pixel une
@@ -24,6 +25,9 @@ export function useTrackVisit() {
   useEffect(() => {
     const path = location.pathname
     if (path.startsWith('/admin')) return
+    // Avant tout le reste : c'est la PREMIÈRE vue de la session qui porte
+    // l'origine. La fonction ne réécrit rien si elle a déjà enregistré.
+    captureAttribution()
     if (consented) {
       trackPageView(path)
       trackMetaPageView()

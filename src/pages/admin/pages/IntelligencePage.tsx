@@ -78,9 +78,10 @@ export default function IntelligencePage({
               : `La marge est calculée sur ${Math.round(data.dataQuality.productCostCoverage * 100)}% du chiffre d'affaires (voir « Rentabilité »). Emballage, transport réel, publicité et charges fixes restent hors calcul : c'est une marge produit, pas un bénéfice net.`}
           </li>
           <li>
-            <span className="font-medium text-ink/75">Publicité.</span> Ni source d'acquisition ni
-            dépense publicitaire ne sont collectées : aucun CPA, ROAS ni performance de créa ne peut
-            être calculé.
+            <span className="font-medium text-ink/75">Publicité.</span>{' '}
+            {data.dataQuality.acquisitionSourceCoverage === 0
+              ? "Aucune commande ne porte encore d'origine connue (voir « Marketing » pour les liens à utiliser). La dépense publicitaire n'est pas enregistrée non plus : ni CPA ni ROAS ne sont calculables."
+              : `L'origine est connue pour ${Math.round(data.dataQuality.acquisitionSourceCoverage * 100)}% du chiffre d'affaires (voir « Marketing »). La dépense publicitaire reste non enregistrée : ni CPA ni ROAS ne sont calculables.`}
           </li>
           <li>
             <span className="font-medium text-ink/75">Tunnel de vente.</span> Les visites ne portent

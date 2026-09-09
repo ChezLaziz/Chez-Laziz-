@@ -94,6 +94,20 @@ export const orders = pgTable("orders", {
   // au lieu d'en créer une deuxième.
   idempotencyKey: varchar("idempotency_key", { length: 64 }).unique(),
   note: text("note"),
+  // Origine de la commande, captée sans rien demander au client : UTM du lien
+  // publicitaire, à défaut domaine référent (voir src/lib/attribution.ts).
+  //
+  // NULL = origine inconnue, et c'est le cas majoritaire attendu : un lien
+  // non étiqueté, un navigateur qui masque le référent, une visite tapée à la
+  // main. L'analytique le compte comme non couvert plutôt que de le ranger
+  // d'office en « direct », ce qui ferait passer une mesure manquante pour
+  // une acquisition directe.
+  acquisitionSource: varchar("acquisition_source", { length: 30 }),
+  // utm_campaign / utm_content : étiquettes libres, bornées, venant de l'URL.
+  acquisitionCampaign: varchar("acquisition_campaign", { length: 120 }),
+  acquisitionContent: varchar("acquisition_content", { length: 120 }),
+  // mobile | tablet | desktop, déduit de l'agent utilisateur.
+  deviceType: varchar("device_type", { length: 20 }),
   status: orderStatusEnum("status").notNull().default("nouvelle"),
   // Horodatage de l'envoi de l'événement "Purchase" à Meta (Pixel/Conversions
   // API) — jamais à la création de la commande, seulement une fois la

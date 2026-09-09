@@ -139,6 +139,16 @@ export const ordersRouter = createRouter({
         // Générée par le client pour chaque tentative — protège contre les
         // commandes en double (double clic, nouvelle tentative réseau).
         idempotencyKey: z.string().min(8).max(64).optional(),
+        // Origine, captée côté client sans rien demander au visiteur. Ces
+        // valeurs viennent d'une URL, donc de l'extérieur : la source est
+        // restreinte à une liste fermée, les étiquettes sont bornées, et
+        // rien de tout ceci n'entre dans un calcul de prix.
+        acquisitionSource: z
+          .enum(["instagram", "facebook", "tiktok", "google", "direct", "autre"])
+          .optional(),
+        acquisitionCampaign: z.string().max(120).optional(),
+        acquisitionContent: z.string().max(120).optional(),
+        deviceType: z.enum(["mobile", "tablet", "desktop"]).optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -226,6 +236,10 @@ export const ordersRouter = createRouter({
         address: input.address,
         postalCode: input.postalCode,
         note: input.note,
+        acquisitionSource: input.acquisitionSource,
+        acquisitionCampaign: input.acquisitionCampaign,
+        acquisitionContent: input.acquisitionContent,
+        deviceType: input.deviceType,
         items,
         subtotalMillimes,
         deliveryFeeMillimes,

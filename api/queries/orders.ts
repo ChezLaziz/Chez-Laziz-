@@ -37,6 +37,10 @@ export async function createOrder(data: {
   paymentProofKey?: string;
   idempotencyKey?: string;
   note?: string;
+  acquisitionSource?: string;
+  acquisitionCampaign?: string;
+  acquisitionContent?: string;
+  deviceType?: string;
 }) {
   // Double clic / nouvelle tentative réseau : même clé → même commande.
   if (data.idempotencyKey) {
@@ -63,6 +67,10 @@ export async function createOrder(data: {
         paymentProofKey: data.paymentProofKey,
         idempotencyKey: data.idempotencyKey,
         note: data.note,
+        acquisitionSource: data.acquisitionSource,
+        acquisitionCampaign: data.acquisitionCampaign,
+        acquisitionContent: data.acquisitionContent,
+        deviceType: data.deviceType,
       } satisfies Omit<InsertOrder, "id" | "createdAt" | "updatedAt" | "status">)
       .returning({ id: orders.id });
   } catch (err) {

@@ -40,6 +40,11 @@ export type AnalyticsOrder = {
   subtotalMillimes: number;
   deliveryFeeMillimes: number;
   items: OrderItem[];
+  /** null quand l'origine n'a pas pu être captée — voir acquisition.ts. */
+  acquisitionSource?: string | null;
+  acquisitionCampaign?: string | null;
+  acquisitionContent?: string | null;
+  deviceType?: string | null;
   createdAt: Date;
 };
 
