@@ -396,10 +396,10 @@ function ShipmentBar({
   }
 
   return (
-    <div className="rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/[0.07] px-4 py-3">
+    <div className="rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/[0.07] px-4 py-3.5">
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="text-sm font-medium text-ink">
-          {orders.length} commande{orders.length > 1 ? 's' : ''}
+          {orders.length} commande{orders.length > 1 ? 's' : ''} pour
         </span>
         <select
           value={carrier}
@@ -415,28 +415,6 @@ function ShipmentBar({
         </select>
         <button
           type="button"
-          onClick={() => onAssign(carrier)}
-          disabled={pending}
-          className="min-h-10 rounded-full bg-ink px-4 text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-85 disabled:opacity-40"
-        >
-          {pending ? 'Enregistrement…' : 'Affecter'}
-        </button>
-        <button
-          type="button"
-          onClick={downloadCsv}
-          className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent"
-        >
-          Fichier CSV
-        </button>
-        <button
-          type="button"
-          onClick={() => printBordereau(orders, CARRIERS[carrier].label)}
-          className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent"
-        >
-          Bordereau
-        </button>
-        <button
-          type="button"
           onClick={onClear}
           className="ml-auto text-xs text-ink/45 underline underline-offset-4 hover:text-ink"
         >
@@ -444,13 +422,57 @@ function ShipmentBar({
         </button>
       </div>
 
-      <p className="mt-2.5 text-[11px] leading-relaxed text-ink/50">
-        Aucun des deux transporteurs ne nous donne d'accès automatique aujourd'hui : le fichier et
-        le bordereau se déposent à la main sur leur plateforme. Les colonnes du CSV sont un point de
-        départ — elles seront calées sur leur gabarit dès qu'ils en fournissent un.
+      {/* AVERTISSEMENT EN PREMIER, PAS EN NOTE DE BAS DE PAGE.
+       *
+       * Un utilisateur a cliqué « Affecter », est allé sur le site du
+       * transporteur, et n'y a rien trouvé — ce qui est le comportement
+       * correct, mais le bouton laissait croire le contraire. L'explication
+       * existait, en petit, sous les boutons : personne ne lit une note
+       * après avoir cliqué. Elle passe donc AVANT, et le bouton dit
+       * exactement ce qu'il fait. */}
+      <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+        <strong className="font-semibold">Rien n'est envoyé automatiquement.</strong>{' '}
+        {CARRIERS[carrier].label} ne donne aucun accès automatique : pour que le colis arrive chez
+        eux, téléchargez le fichier ci-dessous et déposez-le sur {CARRIERS[carrier].platform}.
       </p>
+
+      <ol className="mt-3 space-y-2.5">
+        <li className="flex flex-wrap items-center gap-2.5">
+          <StepNumber n={1} />
+          <button
+            type="button"
+            onClick={downloadCsv}
+            className="min-h-10 rounded-full bg-ink px-4 text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-85"
+          >
+            Télécharger le fichier
+          </button>
+          <span className="text-xs text-ink/55">puis déposez-le sur leur site</span>
+          <button
+            type="button"
+            onClick={() => printBordereau(orders, CARRIERS[carrier].label)}
+            className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent"
+          >
+            ou imprimer un bordereau
+          </button>
+        </li>
+        <li className="flex flex-wrap items-center gap-2.5">
+          <StepNumber n={2} />
+          <button
+            type="button"
+            onClick={() => onAssign(carrier)}
+            disabled={pending}
+            className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent disabled:opacity-40"
+          >
+            {pending ? 'Enregistrement…' : 'Noter comme confiées'}
+          </button>
+          <span className="text-xs text-ink/55">
+            marque ces commandes « chez {CARRIERS[carrier].label} » — dans votre carnet seulement
+          </span>
+        </li>
+      </ol>
+
       {alreadyPaid > 0 && (
-        <p className="mt-1.5 text-[11px] font-medium text-green-700">
+        <p className="mt-3 text-[11px] font-medium text-green-700">
           {alreadyPaid} commande{alreadyPaid > 1 ? 's' : ''} déjà payée{alreadyPaid > 1 ? 's' : ''} :
           montant à encaisser mis à 0, pour que le client ne paie pas deux fois.
         </p>
@@ -462,6 +484,14 @@ function ShipmentBar({
         </p>
       )}
     </div>
+  )
+}
+
+function StepNumber({ n }: { n: number }) {
+  return (
+    <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink/[0.08] text-[11px] font-semibold text-ink/60">
+      {n}
+    </span>
   )
 }
 
