@@ -95,6 +95,14 @@ export async function listOrders() {
   });
 }
 
+/** Une commande par son identifiant.
+ *
+ * Utilisée avant un envoi au transporteur : celui-ci doit travailler sur
+ * l'état RÉEL en base, pas sur ce que l'écran croit afficher. */
+export async function getOrderById(id: number) {
+  return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
+}
+
 export async function deleteOrder(id: number) {
   await getDb().delete(orders).where(eq(orders.id, id));
 }

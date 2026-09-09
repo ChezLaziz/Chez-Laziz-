@@ -1,10 +1,14 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { assertAdmin } from "./queries/admin";
-import { tpeProbe, tpeFetchDelegations, tpeTokenPresent } from "./lib/tpe";
+import { tpeProbe, tpeFetchDelegations, tpeTokenPresent, tpeCreateShipment } from "./lib/tpe";
+import { getOrderById, setOrderCarrier } from "./queries/orders";
+import { buildTpePayload, refusalToSend } from "@contracts/tpeShipment";
+import { parseOrderItems } from "@contracts/carriers";
 import {
   allDelegations,
   cityReport,
+  destinationForOrder,
   countDelegations,
   deleteAlias,
   listDelegations,
@@ -112,6 +116,76 @@ export const carriersRouter = createRouter({
       await assertAdmin(input.token);
       await deleteAlias("tpe", input.governorate, input.city);
       return { ok: true as const };
+    }),
+
+  /** ENVOIE VRAIMENT UN COLIS. Le seul endroit du projet qui le fasse.
+   *
+   * Une commande à la fois, sur un clic. Pas de lot : un envoi groupé qui
+   * échoue à mi-chemin laisse un état que personne ne sait démêler, et il
+   * s'agit ici de vrais colis et de vrai argent.
+   *
+   * L'ordre des vérifications est délibéré — tout ce qui peut refuser
+   * refuse AVANT que quoi que ce soit ne parte. */
+  send: publicQuery
+    .input(z.object({ token: z.string(), id: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+
+      const order = await getOrderById(input.id);
+      if (!order) return { ok: false as const, reason: "introuvable" as const };
+
+      const shippable = {
+        id: order.id,
+        customerName: order.customerName,
+        phone: order.phone,
+        governorate: order.governorate,
+        city: order.city,
+        address: order.address,
+        postalCode: order.postalCode,
+        items: parseOrderItems(order.items),
+        subtotalMillimes: order.subtotalMillimes,
+        deliveryFeeMillimes: order.deliveryFeeMillimes,
+        totalMillimes: order.totalMillimes,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        note: order.note,
+      };
+
+      const destination = await destinationForOrder("tpe", order);
+      const refusal = refusalToSend(
+        { ...shippable, status: order.status, trackingNumber: order.trackingNumber },
+        destination,
+      );
+      if (refusal !== null || destination === null) {
+        return { ok: false as const, reason: refusal ?? ("no_delegation" as const) };
+      }
+
+      const outcome = await tpeCreateShipment(buildTpePayload(shippable, destination));
+
+      if (outcome.kind === "created") {
+        // Écrit AVANT de répondre : si l'interface se ferme entre-temps, le
+        // numéro est déjà rangé et la commande ne peut plus repartir.
+        await setOrderCarrier(order.id, {
+          carrier: "tpe",
+          trackingNumber: outcome.trackingNumber,
+        });
+        return {
+          ok: true as const,
+          trackingNumber: outcome.trackingNumber,
+          // Dit si le transporteur a bien conservé notre référence.
+          referenceKept: outcome.externalId !== null,
+        };
+      }
+
+      if (outcome.kind === "unknown") {
+        return { ok: false as const, reason: "incertain" as const, message: outcome.message };
+      }
+      return {
+        ok: false as const,
+        reason: "refuse" as const,
+        status: outcome.status,
+        message: outcome.message,
+      };
     }),
 
   /** La table complète, pour offrir un choix exhaustif à qui doit trancher.
