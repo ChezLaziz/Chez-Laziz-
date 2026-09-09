@@ -4,6 +4,7 @@ import {
   dinars,
   readTpeCreated,
   refusalToSend,
+  SEND_STATUS,
   TPE_RETURN_FEE_DINARS,
   type TpeDestination,
 } from "./tpeShipment";
@@ -158,6 +159,21 @@ describe("refusalToSend — ce qu'on refuse d'envoyer", () => {
   it("refuse un téléphone inexploitable et une adresse vide", () => {
     expect(refusalToSend({ ...NAWEL, phone: "123" }, GAFSA_SUD)).toBe("no_phone");
     expect(refusalToSend({ ...NAWEL, address: "  " }, GAFSA_SUD)).toBe("no_address");
+  });
+
+  it("refuse pendant qu'un envoi est en cours", () => {
+    // Deux clics à une seconde d'écart : le second ne doit pas repartir.
+    expect(refusalToSend({ ...NAWEL, carrierStatus: SEND_STATUS.inFlight }, GAFSA_SUD)).toBe("in_flight");
+  });
+
+  it("refuse tant qu'un envoi précédent reste incertain", () => {
+    // Le colis existe peut-être chez eux : renvoyer en ferait un deuxième.
+    expect(refusalToSend({ ...NAWEL, carrierStatus: SEND_STATUS.uncertain }, GAFSA_SUD)).toBe("uncertain");
+  });
+
+  it("laisse repartir une commande dont l'envoi a été refusé net", () => {
+    // Rien n'a été créé chez eux : l'état retombe à nul, on peut réessayer.
+    expect(refusalToSend({ ...NAWEL, carrierStatus: null }, GAFSA_SUD)).toBeNull();
   });
 
   it("voit le doublon AVANT tout le reste", () => {

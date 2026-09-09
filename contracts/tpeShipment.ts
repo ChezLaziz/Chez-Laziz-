@@ -103,6 +103,22 @@ export function dinars(millimes: number): string {
   return fixed.replace(/\.0+$/, "");
 }
 
+/** Ce que `carrier_status` veut dire pendant et après un envoi.
+ *
+ *   envoi_en_cours  la requête vers le transporteur est partie, la réponse
+ *                   n'est pas encore revenue ;
+ *   cree            le colis existe chez eux, `tracking_number` est posé ;
+ *   incertain       la requête est partie mais la réponse ne reviendra pas —
+ *                   le colis existe PEUT-ÊTRE. Personne ne renvoie sans
+ *                   avoir vérifié chez eux.
+ *
+ * Nul = jamais envoyé, ou envoi refusé net (rien n'a été créé). */
+export const SEND_STATUS = {
+  inFlight: "envoi_en_cours",
+  created: "cree",
+  uncertain: "incertain",
+} as const;
+
 /** Raisons de REFUSER d'envoyer une commande.
  *
  * Chacune correspond à un colis qui partirait faux ou en double. Le refus se
@@ -112,6 +128,11 @@ export type SendRefusal =
   | "no_delegation"
   /** Déjà chez un transporteur : un deuxième envoi crée un doublon. */
   | "already_sent"
+  /** Un envoi est parti il y a un instant et n'a pas encore répondu. */
+  | "in_flight"
+  /** Un envoi précédent n'a jamais répondu : le colis existe peut-être.
+   *  Personne ne renvoie avant d'avoir vérifié chez le transporteur. */
+  | "uncertain"
   /** Commande annulée. */
   | "cancelled"
   /** Sans téléphone exploitable, le livreur ne peut pas joindre le client. */
@@ -120,10 +141,16 @@ export type SendRefusal =
   | "no_address";
 
 export function refusalToSend(
-  order: ShippableOrder & { status?: string; trackingNumber?: string | null },
+  order: ShippableOrder & {
+    status?: string;
+    trackingNumber?: string | null;
+    carrierStatus?: string | null;
+  },
   destination: TpeDestination | null,
 ): SendRefusal | null {
   if (order.trackingNumber) return "already_sent";
+  if (order.carrierStatus === SEND_STATUS.inFlight) return "in_flight";
+  if (order.carrierStatus === SEND_STATUS.uncertain) return "uncertain";
   if (order.status === "annulee") return "cancelled";
   if (!destination) return "no_delegation";
   if (carrierPhone(order.phone) === null) return "no_phone";

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { assertAdmin } from "./queries/admin";
 import { tpeFetchDelegations, tpeCreateShipment } from "./lib/tpe";
-import { getOrderById, setOrderCarrier } from "./queries/orders";
+import { claimOrderForSending, getOrderById, settleSendClaim } from "./queries/orders";
 import { buildTpePayload, refusalToSend } from "@contracts/tpeShipment";
 import { parseOrderItems } from "@contracts/carriers";
 import {
@@ -128,39 +128,62 @@ export const carriersRouter = createRouter({
 
       const destination = await destinationForOrder("tpe", order);
       const refusal = refusalToSend(
-        { ...shippable, status: order.status, trackingNumber: order.trackingNumber },
+        {
+          ...shippable,
+          status: order.status,
+          trackingNumber: order.trackingNumber,
+          carrierStatus: order.carrierStatus,
+        },
         destination,
       );
       if (refusal !== null || destination === null) {
         return { ok: false as const, reason: refusal ?? ("no_delegation" as const) };
       }
 
-      const outcome = await tpeCreateShipment(buildTpePayload(shippable, destination));
+      // La vérification ci-dessus lit un instantané ; la RÉSERVATION, elle,
+      // est atomique en base. Deux clics simultanés arrivent tous deux ici,
+      // un seul obtient la réservation, l'autre est refusé comme doublon.
+      if (!(await claimOrderForSending(order.id))) {
+        return { ok: false as const, reason: "already_sent" as const };
+      }
 
-      if (outcome.kind === "created") {
-        // Écrit AVANT de répondre : si l'interface se ferme entre-temps, le
-        // numéro est déjà rangé et la commande ne peut plus repartir.
-        await setOrderCarrier(order.id, {
-          carrier: "tpe",
-          trackingNumber: outcome.trackingNumber,
-        });
+      let settled = false;
+      try {
+        const outcome = await tpeCreateShipment(buildTpePayload(shippable, destination));
+
+        if (outcome.kind === "created") {
+          // Écrit AVANT de répondre : si l'interface se ferme entre-temps, le
+          // numéro est déjà rangé et la commande ne peut plus repartir.
+          await settleSendClaim(order.id, { kind: "created", trackingNumber: outcome.trackingNumber });
+          settled = true;
+          return {
+            ok: true as const,
+            trackingNumber: outcome.trackingNumber,
+            // Dit si le transporteur a bien conservé notre référence.
+            referenceKept: outcome.externalId !== null,
+          };
+        }
+
+        if (outcome.kind === "unknown") {
+          await settleSendClaim(order.id, { kind: "unknown" });
+          settled = true;
+          return { ok: false as const, reason: "incertain" as const, message: outcome.message };
+        }
+
+        await settleSendClaim(order.id, { kind: "rejected" });
+        settled = true;
         return {
-          ok: true as const,
-          trackingNumber: outcome.trackingNumber,
-          // Dit si le transporteur a bien conservé notre référence.
-          referenceKept: outcome.externalId !== null,
+          ok: false as const,
+          reason: "refuse" as const,
+          status: outcome.status,
+          message: outcome.message,
         };
+      } finally {
+        // Si quelque chose a cassé entre la réservation et sa conclusion, on
+        // ne sait pas si la requête est partie : on laisse la commande en
+        // « incertain » plutôt que réservée à jamais ou libre de repartir.
+        if (!settled) await settleSendClaim(order.id, { kind: "unknown" }).catch(() => undefined);
       }
-
-      if (outcome.kind === "unknown") {
-        return { ok: false as const, reason: "incertain" as const, message: outcome.message };
-      }
-      return {
-        ok: false as const,
-        reason: "refuse" as const,
-        status: outcome.status,
-        message: outcome.message,
-      };
     }),
 
   /** La table complète, pour offrir un choix exhaustif à qui doit trancher.

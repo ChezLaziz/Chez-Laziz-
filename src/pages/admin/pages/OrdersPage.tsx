@@ -640,6 +640,11 @@ function refusalText(r: SendResult): string {
   switch (r.reason) {
     case 'already_sent':
       return 'déjà partie — aucun deuxième colis créé'
+    case 'in_flight':
+      return 'envoi déjà en cours — patientez quelques secondes'
+    case 'uncertain':
+      return "un envoi précédent n'a pas répondu : vérifiez chez Team Parcel Express, puis saisissez le numéro de colis trouvé (ou retirez le transporteur) avant de renvoyer"
+
     case 'no_delegation':
       return "ville non reliée à une délégation : reliez-la dans « Villes et délégations »"
     case 'cancelled':

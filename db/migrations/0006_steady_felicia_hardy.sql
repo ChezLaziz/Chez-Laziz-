@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "cost_per_kg_millimes" integer;
