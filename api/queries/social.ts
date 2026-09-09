@@ -25,6 +25,23 @@ export async function getLatestSocialStats() {
   return Array.from(latest.values());
 }
 
+/** TOUS les relevés, réseaux confondus.
+ *
+ * Une seule requête au lieu de quatre historiques séparés : la vue
+ * d'ensemble compare les réseaux entre eux, elle a besoin de les voir
+ * ensemble. Le tri et le regroupement sont faits par buildSocialOverview,
+ * qui est pur et testé. */
+export async function getAllSocialStats() {
+  return getDb()
+    .select({
+      network: socialStats.network,
+      followers: socialStats.followers,
+      messages: socialStats.messages,
+      createdAt: socialStats.createdAt,
+    })
+    .from(socialStats);
+}
+
 /** Historique complet d'un réseau (du plus ancien au plus récent). */
 export async function getSocialHistory(network: NetworkKey) {
   const rows = await getDb().query.socialStats.findMany({
