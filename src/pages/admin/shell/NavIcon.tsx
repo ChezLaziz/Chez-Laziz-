@@ -24,51 +24,6 @@ function paths(id: NavId) {
           <rect x="3" y="15" width="8" height="6" rx="1.5" />
         </>
       )
-    case 'ventes':
-      return <path d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L20 8" strokeLinecap="round" strokeLinejoin="round" />
-    case 'clients':
-      return (
-        <>
-          <circle cx="9" cy="8" r="3.2" />
-          <path d="M3 20a6 6 0 0 1 12 0M17 11a3 3 0 1 0 0-6M18 20a5.6 5.6 0 0 0-2-4" strokeLinecap="round" />
-        </>
-      )
-    case 'produits':
-      return (
-        <>
-          <path d="M12 3 3 8v8l9 5 9-5V8l-9-5Z" strokeLinejoin="round" />
-          <path d="M3 8l9 5 9-5M12 13v8" />
-        </>
-      )
-    case 'geographie':
-      return (
-        <>
-          <path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z" strokeLinejoin="round" />
-          <circle cx="12" cy="10" r="2.5" />
-        </>
-      )
-    case 'rentabilite':
-      return (
-        <>
-          <path d="M12 4v16M7 20h10" strokeLinecap="round" />
-          <path d="M4.5 9h15M4.5 9 2 14.5h5L4.5 9ZM19.5 9 17 14.5h5L19.5 9Z" strokeLinejoin="round" />
-          <path d="M12 4 6 7M12 4l6 3" strokeLinecap="round" />
-        </>
-      )
-    case 'marketing':
-      return (
-        <>
-          <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z" strokeLinejoin="round" />
-          <path d="M16 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11" strokeLinecap="round" />
-        </>
-      )
-    case 'intelligence':
-      return (
-        <>
-          <path d="M9 18h6M10 21h4" strokeLinecap="round" />
-          <path d="M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1v0h6v0c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3Z" strokeLinejoin="round" />
-        </>
-      )
     case 'commandes':
       return (
         <>
@@ -88,15 +43,6 @@ function paths(id: NavId) {
         <>
           <rect x="3" y="5" width="18" height="14" rx="2" />
           <path d="m4 6.5 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
-        </>
-      )
-    case 'reseaux':
-      return (
-        <>
-          <circle cx="6" cy="12" r="2.6" />
-          <circle cx="17" cy="6" r="2.6" />
-          <circle cx="17" cy="18" r="2.6" />
-          <path d="m8.4 10.8 6.2-3.4M8.4 13.2l6.2 3.4" />
         </>
       )
     case 'contenu':

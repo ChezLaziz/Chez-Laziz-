@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { ErrorState, Skeleton } from '../ui/State'
-import CarrierSetup from './CarrierSetup'
 import DelegationLinks from './DelegationLinks'
 import {
   CARRIERS,
@@ -371,8 +370,6 @@ export default function OrdersPage({
       </div>
 
       <DelegationLinks token={token} />
-
-      <CarrierSetup token={token} />
     </div>
   )
 }
@@ -519,13 +516,6 @@ function ShipmentBar({
               className="min-h-10 rounded-full border border-ink/25 px-4 text-xs font-semibold uppercase tracking-wide text-ink/70 hover:border-[#b8912e] hover:text-accent"
             >
               Imprimer un bordereau
-            </button>
-            <button
-              type="button"
-              onClick={downloadCsv}
-              className="text-xs text-ink/45 underline underline-offset-4 hover:text-ink"
-            >
-              ou télécharger le fichier
             </button>
           </div>
 

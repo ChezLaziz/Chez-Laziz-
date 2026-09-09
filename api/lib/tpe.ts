@@ -37,10 +37,6 @@ const TIMEOUT_MS = 12_000;
  * peser lourd ; on n'en garde qu'un échantillon pour l'inspection. */
 const MAX_SAMPLE = 4_000;
 
-export function tpeTokenPresent(): boolean {
-  return (process.env.TPE_API_TOKEN ?? "").trim().length > 0;
-}
-
 export type ProbeResult = {
   path: string;
   /** Code HTTP, ou null si la requête n'a même pas abouti. */
@@ -135,30 +131,6 @@ function summarise(path: string, r: RawResponse): ProbeResult {
       sample: r.text.slice(0, MAX_SAMPLE),
     };
   }
-}
-
-/** Chemins relevés dans le paquet JavaScript de app.teamparcelexpress.com.
- *
- * Uniquement ceux qui LISENT. Les chemins d'écriture existent dans leur
- * interface (`/api/orders/create/`, `bulk-create`, `delete`…) et sont
- * volontairement absents d'ici : cette phase n'écrit pas. */
-const READ_PATHS = [
-  "/api/v1/users/me/",
-  "/api/governorates/list/",
-  "/api/delegations/",
-  "/api/orders/list/",
-] as const;
-
-/** Interroge chaque chemin de lecture et rapporte ce qu'il répond.
- *
- * Objectif : savoir lesquels existent, et surtout quels champs porte une
- * délégation — l'identifiant qui manque pour pouvoir créer un colis. */
-export async function tpeProbe(): Promise<ProbeResult[]> {
-  const results: ProbeResult[] = [];
-  for (const path of READ_PATHS) {
-    results.push(summarise(path, await rawGet(path)));
-  }
-  return results;
 }
 
 export type Delegation = {

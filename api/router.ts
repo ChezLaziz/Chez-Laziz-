@@ -3,8 +3,6 @@ import { productsRouter } from "./productsRouter";
 import { ordersRouter } from "./ordersRouter";
 import { contactRouter, adminRouter } from "./contactRouter";
 import { statsRouter } from "./statsRouter";
-import { socialRouter } from "./socialRouter";
-import { marketingRouter } from "./marketingRouter";
 import { carriersRouter } from "./carriersRouter";
 import { dashboardRouter } from "./dashboardRouter";
 import { galleryRouter } from "./galleryRouter";
@@ -17,8 +15,6 @@ export const appRouter = createRouter({
   contact: contactRouter,
   admin: adminRouter,
   stats: statsRouter,
-  social: socialRouter,
-  marketing: marketingRouter,
   carriers: carriersRouter,
   dashboard: dashboardRouter,
   gallery: galleryRouter,

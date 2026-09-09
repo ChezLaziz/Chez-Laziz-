@@ -10,14 +10,6 @@ import TopBar from './admin/shell/TopBar'
 import DateRange from './admin/shell/DateRange'
 import { ANALYTICS_PAGES, NAV_GROUPS, type NavId } from './admin/shell/nav'
 import OverviewPage from './admin/pages/OverviewPage'
-import SalesPage from './admin/pages/SalesPage'
-import CustomersPage from './admin/pages/CustomersPage'
-import ProductsPage from './admin/pages/ProductsPage'
-import GeographyPage from './admin/pages/GeographyPage'
-import ProfitabilityPage from './admin/pages/ProfitabilityPage'
-import MarketingPage from './admin/pages/MarketingPage'
-import IntelligencePage from './admin/pages/IntelligencePage'
-import SocialPage from './admin/pages/SocialPage'
 import OrdersPage from './admin/pages/OrdersPage'
 import { useOverview } from './admin/useOverview'
 
@@ -1621,19 +1613,11 @@ export default function AdminPage() {
           }}
         />
       )}
-      {tab === 'ventes' && <SalesPage token={token} period={period} />}
-      {tab === 'clients' && <CustomersPage token={token} period={period} />}
-      {tab === 'produits' && <ProductsPage token={token} period={period} />}
-      {tab === 'geographie' && <GeographyPage token={token} period={period} />}
-      {tab === 'rentabilite' && <ProfitabilityPage token={token} period={period} />}
-      {tab === 'marketing' && <MarketingPage token={token} period={period} />}
-      {tab === 'intelligence' && <IntelligencePage token={token} period={period} />}
       {tab === 'commandes' && (
         <OrdersPage token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
       )}
       {tab === 'catalogue' && <ProductsTab token={token} />}
       {tab === 'messages' && <MessagesTab token={token} />}
-      {tab === 'reseaux' && <SocialPage token={token} period={period} />}
       {tab === 'contenu' && <ContenuTab token={token} />}
       {tab === 'parametres' && <SettingsTab token={token} />}
     </AdminShell>
