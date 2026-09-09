@@ -4,7 +4,7 @@ import { trpc } from '@/providers/trpc'
 import { detectDevice, getAttribution } from '@/lib/attribution'
 import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
-import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL } from '@/lib/shop'
+import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL, WHATSAPP_URL } from '@/lib/shop'
 import { track } from '@/lib/analytics'
 import { trackMeta, type MetaContentItem } from '@/lib/metaPixel'
 import { buildDisplayLines, kgLabel, type CatalogProduct, type DisplayLine } from '@/lib/orderLines'
@@ -47,14 +47,31 @@ function TopBar() {
     <header className="sticky top-0 z-40 border-b border-sand/60 bg-[#faf6f3]/95 backdrop-blur">
       <div className="h-[3px] bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22]" />
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
+        {/* Le nom écrit disparaît sous 640 px : avec le sélecteur de langue,
+            WhatsApp et le panier sur la même ligne, il se réduisait à
+            « …IZ » — un mot tronqué dit moins que le seul logo, qui, lui,
+            reste entier. */}
         <Link to={isAr ? '/ar' : '/'} className="flex min-w-0 items-center gap-2 md:gap-2.5">
           <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 shrink-0 md:h-10 md:w-10" width="40" height="40" />
-          <span className="truncate font-display text-base tracking-[0.08em] text-ink sm:text-xl sm:tracking-[0.14em] md:text-2xl">
+          <span className="hidden truncate font-display tracking-[0.14em] text-ink sm:inline sm:text-xl md:text-2xl">
             CHEZ&nbsp;LAZIZ
           </span>
         </Link>
         <div className="flex items-center gap-2 md:gap-3">
           <LanguageSwitch tone="light" />
+          {/* WhatsApp visible sur TOUS les écrans : c'est la voie d'achat que
+              prend un client qui ne veut pas remplir de formulaire, et le
+              lien téléphone ci-dessous est masqué sur mobile. */}
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={isAr ? 'اطلبوا عبر واتساب' : 'Commander par WhatsApp'}
+            className="flex h-11 items-center gap-2 rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-3 text-xs font-semibold text-[#128C4A] transition-colors hover:bg-[#25D366]/20 md:px-4"
+          >
+            <WhatsAppIcon />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </a>
           <a
             href={PHONE_TEL}
             dir="ltr"
@@ -134,13 +151,13 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-function Divider() {
+/** Logo WhatsApp, tracé à la main : la marque est reconnue à sa forme, un
+ * simple « W » ne la remplace pas. Monochrome, il prend la couleur du
+ * bouton qui le contient. */
+function WhatsAppIcon() {
   return (
-    <svg viewBox="0 0 120 12" className="mx-auto mt-4 h-3 w-28 text-[#b8912e]" aria-hidden="true" fill="none">
-      <path d="M2 6h40M78 6h40" stroke="currentColor" strokeWidth="1" />
-      <path d="M60 1l5 5-5 5-5-5 5-5Z" fill="currentColor" />
-      <circle cx="48" cy="6" r="1.2" fill="currentColor" />
-      <circle cx="72" cy="6" r="1.2" fill="currentColor" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="shrink-0">
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.2 8.2 0 0 1 5.82 2.42 8.18 8.18 0 0 1 2.41 5.82c0 4.54-3.69 8.23-8.23 8.23Zm4.52-6.16c-.25-.13-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.14.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.13-.56-1.35-.77-1.84-.2-.49-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.02 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.14-1.18-.06-.11-.22-.17-.47-.29Z" />
     </svg>
   )
 }
@@ -158,11 +175,33 @@ function tabFromHash(hash: string): Tab {
  * le reste du catalogue, qui reste affiché normalement en dessous.
  * On matche par mot-clé plutôt que par ID : l'ID en base peut changer
  * (produit recréé depuis l'admin), le nom affiché beaucoup plus rarement. */
+/** Raccourcis publicitaires : /commande?produit=<slug> ouvre la page avec
+ * ce makroudh présenté seul, en haut, prêt à être ajouté.
+ *
+ * Une entrée par produit du catalogue. Le rapprochement se fait par MOT-CLÉ
+ * et non par identifiant : un produit recréé depuis l'admin change d'id, son
+ * nom beaucoup plus rarement — et un lien publicitaire mort coûte cher.
+ * Un slug inconnu n'est pas une erreur : la page s'affiche normalement. */
 const SPOTLIGHT_KEYWORDS: Record<string, string> = {
+  dattes: 'dattes',
+  jwayed: 'jwayed',
   'fruits-secs': 'fruits secs',
+  pistache: 'pistache',
+  fraise: 'fraise',
+  vanille: 'vanille',
+  figues: 'figues',
+  ananas: 'ananas',
+  cafe: 'café',
+  noisettes: 'noisettes',
+  samsa: 'samsa',
+  'blanc-laziz': 'blanc laziz',
+  ble: 'blé',
+  amandes: 'amandes',
+  zgougou: 'zgougou',
+  chamia: 'chamia',
 }
 function findSpotlightProduct(catalog: CatalogProduct[], slug: string | null): CatalogProduct | undefined {
-  const keyword = slug ? SPOTLIGHT_KEYWORDS[slug] : undefined
+  const keyword = slug ? SPOTLIGHT_KEYWORDS[slug.toLowerCase()] : undefined
   if (!keyword) return undefined
   return catalog.find((p) => p.name.toLowerCase().includes(keyword))
 }
@@ -659,21 +698,29 @@ export default function OrderPage() {
     <div className="min-h-screen bg-[#faf6f3]">
       <TopBar />
 
-      {/* ── En-tête ── */}
+      {/* ── En-tête ──
+          COURT PAR NÉCESSITÉ. Mesuré sur un téléphone de 844 px : l'ancienne
+          version plaçait le premier bouton « ajouter » à 1337 px, soit une
+          page et demie de défilement avant de pouvoir acheter quoi que ce
+          soit. Sur du trafic publicitaire — un visiteur qui vient de VOIR le
+          makroudh en vidéo et le veut — chaque ligne de préambule est une
+          vente perdue.
+          Le titre reste (il confirme qu'on est au bon endroit), le reste
+          fond : la promesse tient sur une ligne, et les quatre arguments
+          (fait main, livraison, délai, paiement) deviennent une bande fine
+          au lieu d'une carte de 120 px. ── */}
       <section className="relative border-b border-sand/60">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[#f3e9dc] to-transparent" />
-        <div className="relative mx-auto max-w-3xl px-5 pb-10 pt-14 text-center md:px-10 md:pt-20">
-          <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'اطلبوا عبر الإنترنت' : 'Commande en ligne'}</p>
-          <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">{isAr ? 'اطلبوا مقروضكم' : 'Commandez vos makroudh'}</h1>
-          <Divider />
-          <p className="mx-auto mt-5 max-w-xl text-[15px] font-light leading-relaxed text-ink/70 md:text-base">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f3e9dc] to-transparent" />
+        <div className="relative mx-auto max-w-3xl px-5 pb-4 pt-6 text-center md:px-10 md:pb-6 md:pt-14">
+          <h1 className="font-display text-[26px] leading-[1.1] md:text-5xl">{isAr ? 'اطلبوا مقروضكم' : 'Commandez vos makroudh'}</h1>
+          <p className="mx-auto mt-2 max-w-xl text-[13px] font-light leading-snug text-ink/65 md:mt-3 md:text-[15px]">
             {isAr
-              ? `مقروضنا بالوزن، أربع حزم جاهزة للإهداء، أو حزمة على مقاسكم — تُصنع يدويًا في القيروان وتُوصَّل في جميع أنحاء تونس خلال ${
+              ? `يُصنع يدويًا في القيروان ويُوصَّل في كل تونس خلال ${
                   DELIVERY_TIME_LABEL === '24h' ? '24 ساعة' : DELIVERY_TIME_LABEL
                 }.`
-              : `Nos makroudh au poids, quatre packs prêts à offrir, ou votre pack sur mesure — façonnés à la main à Kairouan et livrés partout en Tunisie sous ${DELIVERY_TIME_LABEL}.`}
+              : `Façonnés à la main à Kairouan, livrés partout en Tunisie sous ${DELIVERY_TIME_LABEL}.`}
           </p>
-          <div className="mx-auto mt-8 grid max-w-xl grid-cols-2 gap-3 rounded-2xl border border-sand/70 bg-white py-5 text-center shadow-sm sm:grid-cols-4">
+          <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[11px] text-ink/60 md:mt-4 md:text-xs">
             {(
               isAr
                 ? [
@@ -688,17 +735,18 @@ export default function OrderPage() {
                     [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
                     ['COD / D17', 'Paiement'],
                   ]
-            ).map(([n, label]) => (
-              <div key={label}>
-                <div className="font-display text-xl text-[#b8912e] md:text-2xl">{n}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink/50 md:text-[11px]">{label}</div>
-              </div>
+            ).map(([n, label], i) => (
+              <li key={label} className="flex items-center gap-1.5">
+                {i > 0 && <span aria-hidden="true" className="text-sand">·</span>}
+                <span className="font-semibold text-[#b8912e]">{n}</span>
+                <span>{label}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
         {/* Onglets */}
-        <div className="mx-auto max-w-7xl px-5 pb-8 md:px-10">
+        <div className="mx-auto max-w-7xl px-5 pb-4 md:px-10 md:pb-6">
           <div role="tablist" aria-label={isAr ? 'طريقة الطلب' : 'Mode de commande'} className="mx-auto grid max-w-3xl grid-cols-3 gap-1 rounded-2xl border border-sand bg-white p-1.5 shadow-sm">
             {(
               isAr
@@ -778,20 +826,22 @@ export default function OrderPage() {
         </section>
       )}
 
-      <main className={`mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16 ${showBar ? 'pb-32' : ''}`}>
-        {/* ── Nos produits (à la carte, au poids) ── */}
+      <main className={`mx-auto max-w-7xl px-5 py-6 md:px-10 md:py-12 ${showBar ? 'pb-32' : ''}`}>
+        {/* ── Nos produits (à la carte, au poids) ──
+            Sans titre de section : l'onglet actif, à trois centimètres
+            au-dessus, dit déjà « Produits ». Le répéter en grand coûtait
+            250 px de défilement avant le premier makroudh, sur une page où
+            le visiteur arrive en sachant déjà ce qu'il veut. Le mode
+            d'emploi du poids tient sur une ligne discrète — et le sélecteur
+            de poids, lui, est dans chaque carte. ── */}
         <section id="panel-produits" role="tabpanel" aria-labelledby="tab-produits" hidden={tab !== 'produits'}>
-          <div className="text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-accent">{isAr ? 'بالوزن' : 'À la carte'}</p>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl">{isAr ? 'منتجاتنا' : 'Nos produits'}</h2>
-            <p className="mx-auto mt-3 max-w-md text-[15px] font-light leading-relaxed text-ink/65">
-              {isAr
-                ? 'اختاروا الوزن (500 غ إلى 2.5 كغ) وكمية كل نوع مقروض. الأسعار المعروضة لـ 1 كغ.'
-                : 'Choisissez le poids (500 g à 2,5 kg) et la quantité de chaque makroudh. Prix affichés pour 1 kg.'}
-            </p>
-          </div>
+          <p className="mb-4 text-center text-xs font-light text-ink/50 md:mb-6 md:text-sm">
+            {isAr
+              ? 'اختاروا الوزن والكمية. الأسعار لـ 1 كغ.'
+              : 'Choisissez le poids et la quantité. Prix affichés pour 1 kg.'}
+          </p>
           {isLoading ? (
-            <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-white">
                   <div className="aspect-square bg-sand/40" />
@@ -815,9 +865,12 @@ export default function OrderPage() {
               )}
             </p>
           ) : (
-            categories.map(([category, items]) => (
-              <div key={category} className="mt-10">
-                <h3 className="mb-4 flex items-center gap-4 font-display text-2xl">
+            categories.map(([category, items], ci) => (
+              // La toute première catégorie colle aux onglets : rien ne doit
+              // séparer le visiteur du premier makroudh. Les suivantes
+              // gardent leur respiration.
+              <div key={category} className={ci === 0 ? '' : 'mt-8 md:mt-10'}>
+                <h3 className="mb-3 flex items-center gap-4 font-display text-xl md:mb-4 md:text-2xl">
                   {isAr ? CATEGORY_LABELS_AR[category] || category : category}
                   <span className="h-px flex-1 bg-sand" aria-hidden="true" />
                 </h3>
@@ -1286,6 +1339,30 @@ export default function OrderPage() {
                   >
                     {createOrder.isPending ? (isAr ? 'إرسال…' : 'Envoi…') : isAr ? 'اطلبوا الآن' : 'Commander'}
                   </button>
+
+                  {/* Un client bloqué devant un formulaire s'en va sans rien
+                      dire. Ici il a deux autres portes, à l'endroit exact où
+                      il hésite — et elles mènent à une vraie personne. */}
+                  <div className="mt-4 flex items-center gap-3">
+                    <a
+                      href={WHATSAPP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                    >
+                      <WhatsAppIcon />
+                      {isAr ? 'اطلبوا عبر واتساب' : 'Commander par WhatsApp'}
+                    </a>
+                    <a
+                      href={PHONE_TEL}
+                      aria-label={isAr ? 'اتصلوا بنا' : 'Nous appeler'}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#faf6f3]/30 text-[#faf6f3] transition-colors hover:border-[#faf6f3]"
+                    >
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+                        <path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" strokeLinejoin="round" />
+                      </svg>
+                    </a>
+                  </div>
                   {!canSubmit && !createOrder.isPending && (
                     <p className="mt-3 text-center text-xs font-light text-[#faf6f3]/50">
                       {!addressValid
