@@ -52,9 +52,11 @@ export type AnalyticsOrder = {
 
 /** Commande VALIDE = celle qui compte comme une vente réelle.
  *
- * Exclut les commandes annulées ET les paiements D17 rejetés : une capture
- * D17 refusée signifie que l'argent n'est jamais arrivé, la compter en
- * chiffre d'affaires gonflerait le CA d'une vente qui n'a pas eu lieu. */
+ * Une commande annulée n'est pas une vente. Le statut « rejected » reste
+ * exclu lui aussi : il ne peut plus être posé depuis le retrait de D17 —
+ * il servait à refuser une capture de virement — mais il vit dans
+ * l'énumération de la base, et une mesure ne se fie pas à l'idée qu'une
+ * valeur « n'arrivera plus ». */
 export function isValidOrder(o: Pick<AnalyticsOrder, "status" | "paymentStatus">): boolean {
   return o.status !== "annulee" && o.paymentStatus !== "rejected";
 }

@@ -463,8 +463,8 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
             </Link>
             <p className="mt-4 text-xs font-light leading-relaxed text-[#faf6f3]/50">
               {lang === 'ar'
-                ? `التوصيل لكل الجمهوريات التونسية خلال ${DELIVERY_TIME_LABEL} · ${formatTND(DELIVERY_FEE_MILLIMES)} د.ت · الدفع عند الاستلام أو عبر D17.`
-                : `Livraison partout en Tunisie sous ${DELIVERY_TIME_LABEL} · ${formatTND(DELIVERY_FEE_MILLIMES)} TND · Paiement à la livraison ou D17.`}
+                ? `التوصيل لكل الجمهوريات التونسية خلال ${DELIVERY_TIME_LABEL} · ${formatTND(DELIVERY_FEE_MILLIMES)} د.ت · الدفع نقدًا عند الاستلام.`
+                : `Livraison partout en Tunisie sous ${DELIVERY_TIME_LABEL} · ${formatTND(DELIVERY_FEE_MILLIMES)} TND · Paiement en espèces à la livraison.`}
             </p>
           </div>
         </div>

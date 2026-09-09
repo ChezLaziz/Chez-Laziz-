@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  PAYMENT_METHODS,
   ALLOWED_WEIGHTS_KG,
   isValidWeight,
   formatWeight,
@@ -60,9 +61,15 @@ describe("priceForWeight — 1kg base price is the source of truth", () => {
 });
 
 describe("payment method rules", () => {
-  it("accepts only cod and d17", () => {
+  it("n'accepte plus que le paiement à la livraison", () => {
     expect(isValidPaymentMethod("cod")).toBe(true);
-    expect(isValidPaymentMethod("d17")).toBe(true);
+    expect(PAYMENT_METHODS).toEqual(["cod"]);
+  });
+
+  // Le jour où quelqu'un remet « d17 » dans un formulaire, un script ou un
+  // ancien onglet resté ouvert, ce test dit non.
+  it("refuse D17, qui a été retiré du site", () => {
+    expect(isValidPaymentMethod("d17")).toBe(false);
   });
 
   it("rejects any other payment method", () => {

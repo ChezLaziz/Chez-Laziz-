@@ -58,9 +58,8 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-2 font-display text-xl text-ink">الدفع</h2>
               <p>
-                طريقتين للدفع: نقدًا عند التسليم، أو تحويل عبر D17 (صورة الدفع إجبارية
-                في هذه الحالة، ويتحقق منها فريقنا قبل التأكيد). ما نطلبوش ولا نعالجوش أي
-                بطاقة بنكية في هذا الموقع.
+                الدفع نقدًا عند التسليم، وهذا هو الطريق الوحيد. ما نطلبوش ولا نعالجوش أي
+                بطاقة بنكية في هذا الموقع، وما نطلبو منكم حتّى مليم قبل ما يوصلكم الطلب.
               </p>
             </section>
 
@@ -141,10 +140,9 @@ export default function TermsPage() {
           <section>
             <h2 className="mb-2 font-display text-xl text-ink">Paiement</h2>
             <p>
-              Deux moyens de paiement : en espèces à la livraison, ou par virement D17
-              (une capture d'écran du paiement est alors obligatoire et vérifiée par
-              notre équipe avant confirmation). Aucune carte bancaire n'est demandée
-              ou traitée sur ce site.
+              Le paiement se fait en espèces à la livraison, et c'est le seul moyen.
+              Aucune carte bancaire n'est demandée ni traitée sur ce site, et rien ne
+              vous est réclamé avant la remise de votre commande.
             </p>
           </section>
 

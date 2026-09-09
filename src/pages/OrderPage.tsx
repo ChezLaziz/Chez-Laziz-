@@ -33,9 +33,7 @@ import {
   DELIVERY_REGION,
   formatDinars,
   DELIVERY_TIME_LABEL,
-  D17_NUMBER_DISPLAY,
-  PAYMENT_PROOF_ALLOWED_MIME,
-  PAYMENT_PROOF_MAX_SIZE_BYTES,
+  DEFAULT_PAYMENT_METHOD,
   TUNISIA_GOVERNORATES,
   governorateLabel,
   priceForWeight,
@@ -57,7 +55,7 @@ import {
  *
  * Un habitué qui recommande ne doit pas retaper son nom, son téléphone et
  * son adresse : c'est cinq champs de friction pour une information qui n'a
- * pas changé. Rien de sensible n'est rangé : ni paiement, ni preuve D17,
+ * pas changé. Rien de sensible n'est rangé : ni paiement, ni panier —
  * ni panier. */
 function readRememberedCustomer() {
   let saved: ReturnType<typeof parseRememberedCustomer> = null
@@ -161,7 +159,7 @@ const GENERIC_ERROR_AR = `حدث خطأ — أعيدوا المحاولة، أو
 const MAPS_URL =
   'https://www.google.com/maps/place/Chez+laziz+%D8%A7%D9%84%D9%82%D9%8A%D8%B1%D9%88%D8%A7%D9%86/data=!4m2!3m1!1s0x12fdcf004a648cdf:0xacd6eabb156c7203'
 
-/** Les messages métier du serveur ("preuve D17 obligatoire", "produit
+/** Les messages métier du serveur ("produit indisponible", "délégation
  * indisponible") sont lisibles tels quels ; une erreur de validation
  * technique (JSON, zod) est remplacée par un message humain. */
 /** Ce que le client lit quand ça rate.
@@ -272,14 +270,14 @@ export default function OrderPage() {
       ? {
           title: 'اطلبوا — Chez Laziz | مقروض بالوزن، حزم جاهزة وحزمة على المقاس',
           description:
-            'اطلبوا مقروض Chez Laziz: بالوزن (500 غ إلى 2.5 كغ)، حزم لعزيز الملكية والفاخرة والشهية والكلاسيكية، أو حزمة على مقاسكم (4 × 500 غ). توصيل في جميع أنحاء تونس خلال 24 ساعة، الدفع عند التسليم أو عبر D17.',
+            'اطلبوا مقروض Chez Laziz: بالوزن (500 غ إلى 2.5 كغ)، حزم لعزيز الملكية والفاخرة والشهية والكلاسيكية، أو حزمة على مقاسكم (4 × 500 غ). توصيل في جميع أنحاء تونس خلال 24 ساعة، الدفع نقدًا عند التسليم.',
           path: '/ar/commande',
           breadcrumb: 'اطلبوا',
         }
       : {
           title: 'Commander — Chez Laziz | Makroudh au poids, packs et pack sur mesure',
           description:
-            'Commandez vos makroudh Chez Laziz : à la carte (500 g à 2,5 kg), packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement à la livraison ou D17.',
+            'Commandez vos makroudh Chez Laziz : à la carte (500 g à 2,5 kg), packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement en espèces à la livraison.',
           path: '/commande',
           breadcrumb: 'Commander',
         },
@@ -371,11 +369,9 @@ export default function OrderPage() {
   const useDelegationList = !listUnavailable
   const [address, setAddress] = useState(remembered?.address ?? '')
   const [note, setNote] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
-  const [proofKey, setProofKey] = useState<string | null>(null)
-  const [proofPreview, setProofPreview] = useState<string | null>(null)
-  const [proofUploading, setProofUploading] = useState(false)
-  const [proofError, setProofError] = useState<string | null>(null)
+  // Un seul moyen de paiement : plus rien à choisir, plus rien à téléverser.
+  // Voir le retrait de D17 dans contracts/shop.ts.
+  const paymentMethod: PaymentMethod = DEFAULT_PAYMENT_METHOD
   // Renouvelé après chaque commande réussie ; voir orderIdempotencyKey.
   const [idempotencySalt, setIdempotencySalt] = useState(() => newIdempotencyKey())
   const [placed, setPlaced] = useState<Placed | null>(null)
@@ -617,7 +613,6 @@ export default function OrderPage() {
   const phoneValid = isValidTunisianPhone(phone)
   const addressValid =
     name.trim().length >= 2 && phoneValid && !!governorate && city.trim().length > 0 && address.trim().length >= 5
-  const paymentValid = paymentMethod === 'cod' || !!proofKey
   /** La commande est-elle COMPLÈTE ? Rien d'autre.
    *
    * Elle contenait aussi `!createOrder.isPending`. Résultat : une fois le
@@ -625,7 +620,7 @@ export default function OrderPage() {
    * repartait en silence — un bouton mort de plus, à l'endroit exact où on
    * venait d'en supprimer un. L'envoi en cours se garde à l'entrée de
    * submit(), pas ici. */
-  const canSubmit = items.length > 0 && addressValid && paymentValid
+  const canSubmit = items.length > 0 && addressValid
 
   /** Le premier champ qui manque, avec de quoi le montrer.
    *
@@ -657,11 +652,6 @@ export default function OrderPage() {
       return {
         id: 'f-address',
         message: isAr ? 'أدخلوا العنوان الكامل.' : 'Indiquez votre adresse complète.',
-      }
-    if (paymentMethod === 'd17' && !proofKey)
-      return {
-        id: 'f-proof',
-        message: isAr ? 'أرفقوا صورة الدفع D17.' : 'Joignez la capture du paiement D17.',
       }
     return null
   }
@@ -768,56 +758,9 @@ export default function OrderPage() {
     })
   }
 
-  const choosePayment = (method: PaymentMethod) => {
-    setPaymentMethod(method)
-    track('add_payment_info', {
-      payment_type: method === 'd17' ? 'D17' : 'Cash on delivery',
-      value: total / 1000,
-      items: analyticsItems(),
-    })
-    trackMeta('AddPaymentInfo', {
-      value: total / 1000,
-      contents: metaContents(),
-    })
-  }
-
-  const handleProofChange = async (file: File | null) => {
-    setProofError(null)
-    setProofKey(null)
-    if (proofPreview) URL.revokeObjectURL(proofPreview)
-    setProofPreview(null)
-    if (!file) return
-    if (!PAYMENT_PROOF_ALLOWED_MIME.has(file.type)) {
-      setProofError(isAr ? 'صيغة غير مدعومة — استخدموا صورة JPG أو PNG أو WEBP.' : 'Format non supporté — utilisez une image JPG, PNG ou WEBP.')
-      return
-    }
-    if (file.size > PAYMENT_PROOF_MAX_SIZE_BYTES) {
-      setProofError(isAr ? 'الصورة ثقيلة جدًا (8 ميغا كحد أقصى).' : 'Image trop lourde (8 Mo maximum).')
-      return
-    }
-    setProofPreview(URL.createObjectURL(file))
-    setProofUploading(true)
-    try {
-      const body = new FormData()
-      body.append('file', file)
-      const res = await fetch('/api/uploads/payment-proof', {
-        method: 'POST',
-        body,
-      })
-      const data = await res.json().catch(() => ({}))
-      const uploadFailedMsg = isAr ? "فشل إرسال الصورة" : "Échec de l'envoi de la capture"
-      if (!res.ok) throw new Error(data.error || uploadFailedMsg)
-      setProofKey(data.key)
-    } catch (e) {
-      setProofError(e instanceof Error ? e.message : isAr ? 'فشل إرسال الصورة' : "Échec de l'envoi de la capture")
-    } finally {
-      setProofUploading(false)
-    }
-  }
-
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if ((createOrder.isPending && !submitStalled) || proofUploading) return
+    if (createOrder.isPending && !submitStalled) return
     const miss = firstMissing()
     if (miss) {
       goToMissing(miss)
@@ -862,7 +805,6 @@ export default function OrderPage() {
                 },
         ),
         paymentMethod,
-        paymentProofKey: paymentMethod === 'd17' ? (proofKey ?? undefined) : undefined,
         idempotencyKey,
         // Origine de la visite, captée à l'arrivée sur le site. Rien n'est
         // demandé au client et rien n'est affiché ici.
@@ -903,14 +845,10 @@ export default function OrderPage() {
           const text = isAr
             ? `مرحبًا Chez Laziz! الطلب رقم ${order?.id ?? ''} — ${name.trim()} :\n${snapshot
                 .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
-                .join('\n')}\nالتوصيل: ${addressLine}\nالمجموع (التوصيل مشمول): ${formatPriceDT(total, lang)}\nالدفع: ${
-                paymentMethod === 'd17' ? 'D17 (تم إرسال الصورة)' : 'عند التسليم'
-              }`
+                .join('\n')}\nالتوصيل: ${addressLine}\nالمجموع (التوصيل مشمول): ${formatPriceDT(total, lang)}\nالدفع: عند التسليم`
             : `Bonjour Chez Laziz ! Commande n°${order?.id ?? ''} — ${name.trim()} :\n${snapshot
                 .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
-                .join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatPriceDT(total, lang)}\nPaiement : ${
-                paymentMethod === 'd17' ? 'D17 (capture envoyée)' : 'À la livraison'
-              }`
+                .join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatPriceDT(total, lang)}\nPaiement : à la livraison`
           track('purchase', {
             transaction_id: String(order?.id ?? ''),
             value: total / 1000,
@@ -918,7 +856,7 @@ export default function OrderPage() {
             items: analyticsItems(),
           })
           // Pas de "Purchase" Meta ici : une commande qui vient d'être créée
-          // n'est ni confirmée (COD) ni payée (D17 en attente de vérification).
+          // n'est pas encore confirmée : personne n'a encore appelé le client.
           // L'événement est envoyé côté serveur uniquement une fois la
           // commande réellement confirmée — voir api/lib/metaConversionsApi.ts
           // et maybeReportMetaPurchase dans api/ordersRouter.ts.
@@ -999,12 +937,8 @@ export default function OrderPage() {
           </h1>
           <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
             {isAr
-              ? placed.paymentMethod === 'd17'
-                ? 'صورة الدفع عبر D17 وصلتنا — هي الآن قيد التحقق من فريقنا (الدفع لم يُؤكَّد بعد). سنتصل بكم في أقرب وقت لتأكيد طلبكم.'
-                : 'سنتصل بكم في أقرب وقت لتأكيد طلبكم. الدفع نقدًا عند التسليم.'
-              : placed.paymentMethod === 'd17'
-                ? "Votre capture d'écran D17 a bien été reçue — elle est en attente de vérification par notre équipe (le paiement n'est pas encore confirmé). Nous vous appelons très vite pour confirmer votre commande."
-                : 'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'}
+              ? 'سنتصل بكم في أقرب وقت لتأكيد طلبكم. الدفع نقدًا عند التسليم.'
+              : 'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'}
           </p>
 
           <div className={`mt-10 w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm ${isAr ? 'text-right' : 'text-left'}`}>
@@ -1122,13 +1056,13 @@ export default function OrderPage() {
                     ['100%', 'صناعة يدوية'],
                     [formatDinars(DELIVERY_FEE_MILLIMES), 'د.ت توصيل'],
                     [DELIVERY_TIME_LABEL === '24h' ? '24 س' : DELIVERY_TIME_LABEL, 'كل تونس'],
-                    ['نقدًا / D17', 'الدفع'],
+                    ['نقدًا عند التسليم', 'الدفع'],
                   ]
                 : [
                     ['100%', 'Fait main'],
                     [formatDinars(DELIVERY_FEE_MILLIMES), 'DT livraison'],
                     [DELIVERY_TIME_LABEL, 'Toute la Tunisie'],
-                    ['COD / D17', 'Paiement'],
+                    ['À la livraison', 'Paiement'],
                   ]
             ).map(([n, label], i) => (
               <li key={label} className="flex items-center gap-1.5">
@@ -1792,99 +1726,6 @@ export default function OrderPage() {
                     />
                   </div>
 
-                  <fieldset className="mt-6 border-t border-[#faf6f3]/15 pt-6">
-                    <legend className="sr-only">{isAr ? 'طريقة الدفع' : 'Moyen de paiement'}</legend>
-                    <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-[#faf6f3]/50">{isAr ? 'الدفع' : 'Paiement'}</p>
-                    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label={isAr ? 'طريقة الدفع' : 'Moyen de paiement'}>
-                      {(
-                        isAr
-                          ? ([
-                              ['cod', 'عند التسليم'],
-                              ['d17', 'D17'],
-                            ] as const)
-                          : ([
-                              ['cod', 'À la livraison'],
-                              ['d17', 'D17'],
-                            ] as const)
-                      ).map(([method, label]) => (
-                        <button
-                          key={method}
-                          type="button"
-                          role="radio"
-                          aria-checked={paymentMethod === method}
-                          onClick={() => choosePayment(method)}
-                          className={`min-h-11 rounded-lg border px-4 py-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 ${
-                            paymentMethod === method
-                              ? 'border-[#b8912e] bg-[#b8912e]/15 text-[#b8912e]'
-                              : 'border-[#faf6f3]/20 text-[#faf6f3]/70 hover:border-[#faf6f3]/40'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {paymentMethod === 'd17' && (
-                      <div className="mt-4 rounded-lg border border-[#b8912e]/40 bg-[#b8912e]/10 p-4">
-                        <p className="text-sm font-light text-[#faf6f3]/85">
-                          {isAr ? (
-                            <>أرسلوا <strong className="font-semibold text-[#b8912e]">{formatPriceDT(total, lang)}</strong> إلى رقم D17&nbsp;:</>
-                          ) : (
-                            <>Envoyez <strong className="font-semibold text-[#b8912e]">{formatPriceDT(total, lang)}</strong> au numéro D17&nbsp;:</>
-                          )}
-                        </p>
-                        <p className="mt-1 select-all font-display text-2xl tracking-wide text-[#b8912e]" dir="ltr">{D17_NUMBER_DISPLAY}</p>
-                        <p className="mt-2 text-xs font-light text-[#faf6f3]/60">
-                          {isAr
-                            ? 'ثم أرفقوا أدناه صورة الدفع (إلزامي).'
-                            : "Puis joignez ci-dessous la capture d'écran du paiement (obligatoire)."}
-                        </p>
-                        <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#faf6f3]/30 bg-[#faf6f3]/5 px-4 py-4 text-sm text-[#faf6f3]/70 transition-colors hover:border-[#b8912e] focus-within:border-[#b8912e] focus-within:ring-2 focus-within:ring-[#b8912e]/40">
-                          {/* L'identifiant compte : firstMissing() envoie le
-                              client sur « f-proof », et il n'existait sur
-                              AUCUN élément. getElementById rendait null,
-                              goToMissing sortait sans rien faire, et le
-                              client D17 sans capture appuyait sur un bouton
-                              parfaitement muet. */}
-                          <input
-                            id="f-proof"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            className="sr-only"
-                            aria-describedby="proof-help"
-                            onChange={(e) => handleProofChange(e.target.files?.[0] ?? null)}
-                          />
-                          {proofUploading
-                            ? isAr
-                              ? 'إرسال الصورة…'
-                              : 'Envoi de la capture…'
-                            : proofKey
-                              ? isAr
-                                ? '✓ الصورة أُرسلت — انقروا لاستبدالها'
-                                : '✓ Capture envoyée — cliquez pour la remplacer'
-                              : isAr
-                                ? 'أرفقوا صورة الدفع'
-                                : 'Joindre la capture d’écran du paiement'}
-                        </label>
-                        <p id="proof-help" className="sr-only">
-                          {isAr ? 'صورة JPG أو PNG أو WEBP، 8 ميغا كحد أقصى.' : 'Image JPG, PNG ou WEBP, 8 Mo maximum.'}
-                        </p>
-                        {proofPreview && (
-                          <img
-                            src={proofPreview}
-                            alt={isAr ? 'معاينة صورة الدفع D17' : "Aperçu de votre capture d'écran D17"}
-                            className="mt-3 max-h-40 rounded-lg border border-[#faf6f3]/20 object-contain"
-                          />
-                        )}
-                        {proofError ? (
-                          <p className="mt-2 text-xs text-red-300" role="alert">{proofError}</p>
-                        ) : (
-                          hintFor('f-proof')
-                        )}
-                      </div>
-                    )}
-                  </fieldset>
-
                   <div className="mt-6 flex items-baseline border-t border-[#faf6f3]/15 pt-5">
                     <span className="text-sm uppercase tracking-[0.2em]">{isAr ? 'المجموع' : 'Total'}</span>
                     <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
@@ -1894,7 +1735,7 @@ export default function OrderPage() {
                   <div id="cl-submit" ref={attachSubmit} className="mt-5">
                     <button
                       type="submit"
-                      disabled={(createOrder.isPending && !submitStalled) || proofUploading}
+                      disabled={createOrder.isPending && !submitStalled}
                       className="gold-cta h-13 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {createOrder.isPending && !submitStalled
@@ -1925,8 +1766,13 @@ export default function OrderPage() {
                       où il se pose. Un visiteur venu d'une publicité ne
                       connaît pas la maison : en Tunisie, le paiement à la
                       livraison EST la garantie — encore faut-il la lire au
-                      moment de confirmer, pas trois écrans plus haut. */}
-                  {paymentMethod === 'cod' && (
+                      moment de confirmer, pas trois écrans plus haut.
+                      C'est aussi, depuis le retrait de D17, la SEULE mention
+                      du paiement dans le formulaire : il n'y a plus de choix
+                      à faire, donc plus de section à lui consacrer. La dire
+                      deux fois ne rassurerait pas davantage, et rallongerait
+                      un tunnel qu'on a raccourci au pixel près. */}
+                  {(
                     <p className="mt-3 flex items-center justify-center gap-2 text-center text-[13px] font-medium text-[#faf6f3]/85">
                       <svg
                         width="15"
@@ -1971,15 +1817,9 @@ export default function OrderPage() {
                   </div>
                   {!canSubmit && !createOrder.isPending && (
                     <p className="mt-3 text-center text-xs font-light text-[#faf6f3]/50">
-                      {!addressValid
-                        ? isAr
-                          ? 'أكملوا معلوماتكم وعنوان التوصيل.'
-                          : 'Complétez vos coordonnées et votre adresse de livraison.'
-                        : paymentMethod === 'd17' && !proofKey
-                          ? isAr
-                            ? 'أرفقوا صورة دفع D17 للمتابعة.'
-                            : "Joignez votre capture d'écran de paiement D17 pour continuer."
-                          : ''}
+                      {isAr
+                        ? 'أكملوا معلوماتكم وعنوان التوصيل.'
+                        : 'Complétez vos coordonnées et votre adresse de livraison.'}
                     </p>
                   )}
                   {createOrder.isError && (
@@ -2129,7 +1969,7 @@ export default function OrderPage() {
                     firstMissing). Le client n'a jamais à chercher où valider. */}
                 <button
                   type="button"
-                  disabled={(createOrder.isPending && !submitStalled) || proofUploading}
+                  disabled={createOrder.isPending && !submitStalled}
                   onClick={() => {
                     // requestSubmit manque encore sur quelques navigateurs
                     // mobiles anciens : sans repli, le bouton lèverait une

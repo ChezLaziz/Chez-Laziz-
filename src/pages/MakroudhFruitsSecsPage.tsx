@@ -102,7 +102,7 @@ export default function MakroudhFruitsSecsPage() {
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="mt-1 text-accent">✓</span>
-                    توصيل لكل تونس، الدفع عند التسليم أو D17
+                    توصيل لكل تونس، الدفع نقدًا عند التسليم
                   </li>
                 </ul>
 
@@ -186,7 +186,7 @@ export default function MakroudhFruitsSecsPage() {
             <div data-reveal className="mt-14 rounded-2xl bg-ink-deep p-8 text-center text-[#faf6f3] md:p-12">
               <p className="font-display text-2xl md:text-3xl">أهدو مقروض لعزيز الحقيقي بالفواكه الجافة</p>
               <p className="mx-auto mt-3 max-w-md text-sm font-light text-[#faf6f3]/70">
-                توصيل لكل تونس · الدفع عند التسليم أو D17
+                توصيل لكل تونس · الدفع نقدًا عند التسليم
               </p>
               <Link
                 to={orderHref}
@@ -242,7 +242,7 @@ export default function MakroudhFruitsSecsPage() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="mt-1 text-accent">✓</span>
-                  Livraison partout en Tunisie, paiement à la livraison ou D17
+                  Livraison partout en Tunisie, paiement en espèces à la livraison
                 </li>
               </ul>
 
@@ -341,7 +341,7 @@ export default function MakroudhFruitsSecsPage() {
           <div data-reveal className="mt-14 rounded-2xl bg-ink-deep p-8 text-center text-[#faf6f3] md:p-12">
             <p className="font-display text-2xl md:text-3xl">Offrez le vrai Makroudh Laziz aux Fruits Secs</p>
             <p className="mx-auto mt-3 max-w-md text-sm font-light text-[#faf6f3]/70">
-              Livraison partout en Tunisie · Paiement à la livraison ou D17
+              Livraison partout en Tunisie · Paiement en espèces à la livraison
             </p>
             <Link
               to={orderHref}

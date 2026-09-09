@@ -3,7 +3,7 @@ import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import { useSEO } from '../hooks/useSEO'
 import { useLang } from '@/lib/i18n'
-import { formatTND, PHONE_DISPLAY, PHONE_TEL, D17_NUMBER_DISPLAY, ALLOWED_WEIGHTS_KG, DELIVERY_FEE_MILLIMES, formatWeight } from '@/lib/shop'
+import { formatTND, PHONE_DISPLAY, PHONE_TEL, ALLOWED_WEIGHTS_KG, DELIVERY_FEE_MILLIMES, formatWeight } from '@/lib/shop'
 
 export default function LivraisonPage() {
   const lang = useLang()
@@ -12,14 +12,14 @@ export default function LivraisonPage() {
     isAr
       ? {
           title: 'التوصيل — عند لعزيز | لكل تونس خلال 24 ساعة',
-          description: 'توصيل مقروض عند لعزيز لكل أنحاء تونس، للمنزل، خلال 24 ساعة — 8 د.ت. الدفع عند التسليم أو عبر D17.',
+          description: 'توصيل مقروض عند لعزيز لكل أنحاء تونس، للمنزل، خلال 24 ساعة — 8 د.ت. الدفع نقدًا عند التسليم.',
           path: '/ar/livraison',
           breadcrumb: 'التوصيل',
         }
       : {
           title: 'Livraison — Chez Laziz | Toute la Tunisie sous 24h',
           description:
-            'Livraison de makroudh Chez Laziz partout en Tunisie, à domicile, sous 24h — 8 DT. Paiement à la livraison ou par D17.',
+            'Livraison de makroudh Chez Laziz partout en Tunisie, à domicile, sous 24h — 8 DT. Paiement en espèces à la livraison.',
           path: '/livraison',
           breadcrumb: 'Livraison',
         },
@@ -81,14 +81,14 @@ export default function LivraisonPage() {
             <section>
               <h2 className="mb-2 font-display text-xl text-ink">الدفع</h2>
               <p>
-                طريقتين للدفع: نقدًا عند التسليم، أو تحويل عبر D17 لـ{D17_NUMBER_DISPLAY} (صورة الدفع لازم ترفق وقت
-                الطلب، ويتحقق منها فريقنا).
+                الدفع نقدًا عند التسليم. ما تخلّصو شي قبل ما يوصلكم الطلب — تشوفوه، وتخلّصو الشوفور
+                في يدو.
               </p>
             </section>
 
             <section>
               <h2 className="mb-2 font-display text-xl text-ink">تأكيد الطلبية</h2>
-              <p>بعد إرسال استمارة الطلب، فريقنا يتصل بيكم لتأكيد المنتجات، العنوان، وطريقة الدفع قبل التحضير والإرسال.</p>
+              <p>بعد إرسال استمارة الطلب، فريقنا يتصل بيكم لتأكيد المنتجات، والعنوان قبل التحضير والإرسال.</p>
             </section>
 
             <section>
@@ -137,9 +137,8 @@ export default function LivraisonPage() {
             <section>
               <h2 className="mb-2 font-display text-xl text-ink">Paiement</h2>
               <p>
-                Deux moyens de paiement : en espèces à la livraison, ou par virement D17
-                au {D17_NUMBER_DISPLAY} (capture d'écran du paiement à joindre lors de la
-                commande, vérifiée par notre équipe).
+                Paiement en espèces à la livraison. Vous ne réglez rien à l'avance :
+                vous voyez votre commande, puis vous payez le livreur, en main propre.
               </p>
             </section>
 

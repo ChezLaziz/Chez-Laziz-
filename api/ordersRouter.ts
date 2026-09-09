@@ -15,12 +15,10 @@ import { CARRIER_KEYS } from "@contracts/carriers";
 import { assertAdmin } from "./queries/admin";
 import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
-import { paymentProofExists } from "./lib/r2";
 import { notifyAdminNewOrder } from "./lib/email";
 import {
   sendMetaPurchaseEvent,
   shouldReportMetaPurchase,
-  type ReportableOrder,
 } from "./lib/metaConversionsApi";
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
@@ -28,6 +26,7 @@ import { metaUserSignals } from "@contracts/metaSignals";
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
+  DEFAULT_PAYMENT_METHOD,
   PAYMENT_METHODS,
   TUNISIA_GOVERNORATES,
   isValidWeight,
@@ -64,7 +63,6 @@ async function maybeReportMetaPurchase(order: {
   totalMillimes: number;
   items: string;
   paymentMethod: "cod" | "d17";
-  paymentStatus: ReportableOrder["paymentStatus"];
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
   metaPurchaseReportedAt: Date | null;
   metaFbc?: string | null;
@@ -165,11 +163,12 @@ export const ordersRouter = createRouter({
         delegationExternalId: z.string().min(1).max(40).optional(),
         note: z.string().max(1000).optional(),
         items: z.array(orderItemInput).min(1),
-        paymentMethod: z.enum(PAYMENT_METHODS),
-        // Clé retournée par POST /api/uploads/payment-proof — obligatoire si
-        // paymentMethod === "d17", vérifiée ci-dessous (existence réelle dans
-        // le stockage, pas seulement présence de la valeur).
-        paymentProofKey: z.string().max(255).optional(),
+        // Le paiement à la livraison est le seul moyen. Le champ reste
+        // accepté — un onglet resté ouvert sur l'ancienne version peut encore
+        // l'envoyer — mais il n'est plus qu'une formalité : z.enum ne connaît
+        // plus que "cod", donc une commande qui demanderait D17 est REFUSÉE
+        // au lieu d'être enregistrée en silence dans un état sans issue.
+        paymentMethod: z.enum(PAYMENT_METHODS).default(DEFAULT_PAYMENT_METHOD),
         // Générée par le client pour chaque tentative — protège contre les
         // commandes en double (double clic, nouvelle tentative réseau).
         idempotencyKey: z.string().min(8).max(64).optional(),
@@ -258,17 +257,6 @@ export const ordersRouter = createRouter({
       const deliveryFeeMillimes = DELIVERY_FEE_MILLIMES;
       const totalMillimes = subtotalMillimes + deliveryFeeMillimes;
 
-      if (input.paymentMethod === "d17") {
-        const valid =
-          !!input.paymentProofKey && (await paymentProofExists(input.paymentProofKey));
-        if (!valid) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: ORDER_ERROR.preuveD17Requise,
-          });
-        }
-      }
-
       // L'identifiant vient d'un formulaire public : on ne l'écrit sur la
       // commande que s'il existe chez le transporteur ET appartient au
       // gouvernorat déclaré. La ville stockée est alors LEUR nom, pas ce que
@@ -304,8 +292,9 @@ export const ordersRouter = createRouter({
         deliveryFeeMillimes,
         totalMillimes,
         paymentMethod: input.paymentMethod,
-        paymentStatus: input.paymentMethod === "d17" ? "pending_verification" : "pending",
-        paymentProofKey: input.paymentMethod === "d17" ? input.paymentProofKey : undefined,
+        // « pending » veut dire ici : reste à encaisser à la livraison. Il
+        // passe à « paid » quand l'argent est rentré, depuis l'administration.
+        paymentStatus: "pending",
         idempotencyKey: input.idempotencyKey,
         // Captés MAINTENANT : l'événement Purchase ne part que plus tard,
         // quand un humain confirme la commande, et la requête du client
@@ -344,16 +333,19 @@ export const ordersRouter = createRouter({
       return order;
     }),
 
-  /** D17 : approuver/rejeter la capture de paiement.
-   * Espèces à la livraison : marquer la commande encaissée ou non.
-   * Chaque moyen de paiement filtre les valeurs qui le concernent
-   * (voir updatePaymentStatus). */
+  /** Marquer une commande encaissée, ou revenir en arrière.
+   *
+   * Deux valeurs, et c'est tout ce qui reste depuis le retrait de D17 :
+   * « paid » quand l'argent est rentré, « pending » quand il reste à
+   * encaisser. « approved » et « rejected » servaient à approuver une capture
+   * de virement ; elles restent dans l'énumération de la base, où elles
+   * décrivent d'anciennes commandes, mais plus personne ne peut les poser. */
   setPaymentStatus: publicQuery
     .input(
       z.object({
         token: z.string(),
         id: z.number().int(),
-        paymentStatus: z.enum(["approved", "rejected", "paid", "pending"]),
+        paymentStatus: z.enum(["paid", "pending"]),
       }),
     )
     .mutation(async ({ input }) => {

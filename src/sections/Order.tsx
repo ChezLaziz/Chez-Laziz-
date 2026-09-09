@@ -50,8 +50,8 @@ export default function Order() {
               </h2>
               <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-[#faf6f3]/80">
                 {isAr
-                  ? "اختاروا المقروض ووزنه، أدخلوا عنوانكم — التوصيل لكل الجمهوريات التونسية خلال 24 ساعة (8 د.ت)، والدفع عند الاستلام أو عبر D17. تفضّلون التحدث مع أحد؟ اتصلوا بنا أو راسلونا عبر ماسنجر. نرحّب بالطلبات الخاصة للأعراس والحفلات والأعياد."
-                  : "Choisissez vos makroudh et leur poids, indiquez votre adresse — livraison partout en Tunisie sous 24h (8 DT), paiement à la livraison ou par D17. Vous préférez parler à quelqu'un ? Appelez-nous ou écrivez-nous sur Messenger. Commandes spéciales pour mariages, fêtes et Aïd bienvenues."}
+                  ? "اختاروا المقروض ووزنه، أدخلوا عنوانكم — التوصيل لكل الجمهوريات التونسية خلال 24 ساعة (8 د.ت)، والدفع نقدًا عند الاستلام. تفضّلون التحدث مع أحد؟ اتصلوا بنا أو راسلونا عبر ماسنجر. نرحّب بالطلبات الخاصة للأعراس والحفلات والأعياد."
+                  : "Choisissez vos makroudh et leur poids, indiquez votre adresse — livraison partout en Tunisie sous 24h (8 DT), paiement en espèces à la livraison. Vous préférez parler à quelqu'un ? Appelez-nous ou écrivez-nous sur Messenger. Commandes spéciales pour mariages, fêtes et Aïd bienvenues."}
               </p>
 
               {/* Quick price recap — prix pour 1 kg */}
