@@ -54,7 +54,7 @@ type Trend = { value: number; previous: number; changePercent: number | null };
  * Le résultat peut légitimement être vide. Une liste vide est une réponse
  * honnête ; inventer un signal pour remplir la carte ne l'est pas. */
 
-const MIN_ORDERS = 10
+export const MIN_ORDERS_FOR_SIGNALS = 10
 const MIN_CHANGE = 12 // %
 
 export type Signal = {
@@ -67,7 +67,7 @@ export function buildSignals(d: SignalInput): Signal[] {
   const signals: Signal[] = []
 
   // Sous ce volume, aucune variation n'est interprétable.
-  if (d.orders.value < MIN_ORDERS || d.orders.previous < MIN_ORDERS) return signals
+  if (d.orders.value < MIN_ORDERS_FOR_SIGNALS || d.orders.previous < MIN_ORDERS_FOR_SIGNALS) return signals
 
   const rev = d.revenueMillimes.changePercent
   if (rev !== null && Math.abs(rev) >= MIN_CHANGE) {

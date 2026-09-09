@@ -16,9 +16,20 @@ import {
   type OrderItem,
 } from "./metrics";
 import { dayKey, daysInPeriod, type Period, type PeriodPair } from "./period";
+import { buildCustomerHistories, computeCustomerMetrics } from "./customers";
+import {
+  attachGrowth,
+  computeGovernorateDelivery,
+  computePaymentBreakdown,
+  computeProductGovernorateMatrix,
+  governorateKey,
+  productKey,
+} from "./breakdowns";
 
 export * from "./metrics";
 export * from "./period";
+export * from "./customers";
+export * from "./breakdowns";
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -56,20 +67,28 @@ async function fetchOrdersInPeriod(period: Period): Promise<AnalyticsOrder[]> {
   return rows.map((r) => ({ ...r, items: parseItems(r.items) }));
 }
 
-/** Identités clients ayant commandé AVANT une date — base du « nouveau vs
- * revenant ». Ne ramène que le téléphone : une commande de 2024 n'a pas
- * besoin d'être hydratée en entier pour savoir que le client existait. */
-async function fetchPriorCustomerIds(before: Date): Promise<Set<string>> {
+/** Historique client complet, toutes périodes confondues.
+ *
+ * La fidélité ne se lit pas dans une fenêtre de 30 jours : savoir qu'un
+ * client revient suppose de regarder avant elle. On ne ramène que les
+ * colonnes nécessaires — ni adresse, ni note, ni articles. */
+async function fetchCustomerOrderHistory(): Promise<AnalyticsOrder[]> {
   const rows = await getDb()
-    .select({ phone: orders.phone })
+    .select({
+      id: orders.id,
+      phone: orders.phone,
+      customerName: orders.customerName,
+      governorate: orders.governorate,
+      status: orders.status,
+      paymentMethod: orders.paymentMethod,
+      paymentStatus: orders.paymentStatus,
+      subtotalMillimes: orders.subtotalMillimes,
+      deliveryFeeMillimes: orders.deliveryFeeMillimes,
+      createdAt: orders.createdAt,
+    })
     .from(orders)
-    .where(and(lt(orders.createdAt, before), sql`${orders.status} <> 'annulee'`));
-  const ids = new Set<string>();
-  for (const r of rows) {
-    const id = normalizePhone(r.phone);
-    if (id) ids.add(id);
-  }
-  return ids;
+    .where(sql`${orders.status} <> 'annulee' AND ${orders.paymentStatus} <> 'rejected'`);
+  return rows.map((r) => ({ ...r, items: [] }));
 }
 
 async function countPageViews(period: Period): Promise<number> {
@@ -161,6 +180,14 @@ export type OverviewData = {
    * honnêtement dans l'interface. */
   pageViews: MetricWithTrend;
   dataQuality: DataQuality;
+  products: ReturnType<typeof attachGrowth<ReturnType<typeof computeProductStats>[number]>>;
+  governorates: ReturnType<
+    typeof attachGrowth<ReturnType<typeof computeGovernorateStats>[number]>
+  >;
+  productByGovernorate: ReturnType<typeof computeProductGovernorateMatrix>;
+  governorateDelivery: ReturnType<typeof computeGovernorateDelivery>;
+  payments: ReturnType<typeof computePaymentBreakdown>;
+  customerMetrics: ReturnType<typeof computeCustomerMetrics>;
 };
 
 /** Toutes les données de la Vue d'ensemble en UNE passe.
@@ -169,16 +196,26 @@ export type OverviewData = {
  * top produits) qui chargeaient la table entière en mémoire, chacun de son
  * côté, toutes les 30 secondes. */
 export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
-  const [currentAll, previousAll, priorIds, viewsNow, viewsBefore] = await Promise.all([
+  const [currentAll, previousAll, history, viewsNow, viewsBefore] = await Promise.all([
     fetchOrdersInPeriod(periods.current),
     fetchOrdersInPeriod(periods.previous),
-    fetchPriorCustomerIds(periods.current.start),
+    fetchCustomerOrderHistory(),
     countPageViews(periods.current),
     countPageViews(periods.previous),
   ]);
 
   const current = currentAll.filter(isValidOrder);
   const previous = previousAll.filter(isValidOrder);
+
+  const histories = buildCustomerHistories(history);
+  // Identités connues AVANT la période : base du « nouveau vs revenant ».
+  const priorIds = new Set<string>();
+  for (const h of histories.values()) {
+    if (h.firstOrderAt < periods.current.start) priorIds.add(h.id);
+  }
+
+  const productsNow = computeProductStats(current);
+  const governoratesNow = computeGovernorateStats(current);
 
   const totals: CoreTotals = computeCoreTotals(current);
   const prevTotals: CoreTotals = computeCoreTotals(previous);
@@ -201,12 +238,27 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     customers: withTrend(totals.customers, prevTotals.customers),
     unitsSold: withTrend(totals.unitsSold, prevTotals.unitsSold),
     revenueTrend: revenueByDay(current, periods.current),
-    topProducts: computeProductStats(current).slice(0, 8),
-    topGovernorates: computeGovernorateStats(current).slice(0, 8),
+    topProducts: productsNow.slice(0, 8),
+    topGovernorates: governoratesNow.slice(0, 8),
     customerSplit: computeCustomerSplit(current, priorIds),
     delivery: computeDeliveryImpact(currentAll),
     statusCounts,
     pageViews: withTrend(viewsNow, viewsBefore),
     dataQuality: computeDataQuality(currentAll),
+
+    // Détail consommé par les pages Ventes / Clients / Produits / Géographie.
+    // Servi dans la même réponse pour qu'aucune page ne recalcule un chiffre
+    // d'affaires de son côté : elles ne peuvent pas diverger si elles lisent
+    // toutes le même objet.
+    products: attachGrowth(productsNow, computeProductStats(previous), productKey),
+    governorates: attachGrowth(
+      governoratesNow,
+      computeGovernorateStats(previous),
+      governorateKey,
+    ),
+    productByGovernorate: computeProductGovernorateMatrix(current),
+    governorateDelivery: computeGovernorateDelivery(currentAll),
+    payments: computePaymentBreakdown(current),
+    customerMetrics: computeCustomerMetrics(current, histories, periods.current.start),
   };
 }

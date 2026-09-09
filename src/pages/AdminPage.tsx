@@ -12,6 +12,11 @@ import TopBar from './admin/shell/TopBar'
 import DateRange from './admin/shell/DateRange'
 import { ANALYTICS_PAGES, NAV_GROUPS, type NavId } from './admin/shell/nav'
 import OverviewPage from './admin/pages/OverviewPage'
+import SalesPage from './admin/pages/SalesPage'
+import CustomersPage from './admin/pages/CustomersPage'
+import ProductsPage from './admin/pages/ProductsPage'
+import GeographyPage from './admin/pages/GeographyPage'
+import IntelligencePage from './admin/pages/IntelligencePage'
 import { useOverview } from './admin/useOverview'
 
 const TOKEN_KEY = 'laziz_admin_token'
@@ -2157,6 +2162,11 @@ export default function AdminPage() {
           }}
         />
       )}
+      {tab === 'ventes' && <SalesPage token={token} period={period} />}
+      {tab === 'clients' && <CustomersPage token={token} period={period} />}
+      {tab === 'produits' && <ProductsPage token={token} period={period} />}
+      {tab === 'geographie' && <GeographyPage token={token} period={period} />}
+      {tab === 'intelligence' && <IntelligencePage token={token} period={period} />}
       {tab === 'commandes' && (
         <OrdersTab token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
       )}
@@ -2165,25 +2175,7 @@ export default function AdminPage() {
       {tab === 'reseaux' && <MarketingTab token={token} />}
       {tab === 'contenu' && <ContenuTab token={token} />}
       {tab === 'parametres' && <SettingsTab token={token} />}
-      {PLACEHOLDER_PAGES.has(tab) && <ComingSoon tab={tab} />}
     </AdminShell>
-  )
-}
-
-/** Pages analytiques encore à construire : la donnée existe, l'écran non.
- * Un message net vaut mieux qu'un onglet qui ne réagit pas au clic. */
-const PLACEHOLDER_PAGES = new Set<NavId>(['ventes', 'clients', 'produits', 'geographie', 'intelligence'])
-
-function ComingSoon({ tab }: { tab: NavId }) {
-  const label = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === tab)?.label ?? ''
-  return (
-    <div className="rounded-xl border border-dashed border-sand bg-white px-6 py-10 text-center">
-      <p className="font-display text-lg text-ink">{label}</p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink/55">
-        Cette page est en cours de construction. Les données existent déjà — les chiffres affichés
-        ici viendront des mêmes calculs que la Vue d'ensemble, sans recalcul séparé.
-      </p>
-    </div>
   )
 }
 
