@@ -2,31 +2,12 @@ import { Bar, BarChart, Cell as RCell, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatTND } from '@/lib/shop'
 import { Card } from '../ui/Card'
 import { Cell, Row, Table } from '../ui/Table'
-import { EmptyState, ErrorState, InsufficientData, NotCollected, Skeleton } from '../ui/State'
+import { EmptyState, ErrorState, InsufficientData, Skeleton } from '../ui/State'
 import { useOverview } from '../useOverview'
+import AdSpendSection from './AdSpendSection'
+import { SOURCE_COLOR, SOURCE_LABEL } from '../sources'
 import { NETWORKS, type NetworkKey } from '@contracts/social'
 import type { PresetRange } from '@contracts/analytics'
-
-const SOURCE_LABEL: Record<string, string> = {
-  instagram: 'Instagram',
-  facebook: 'Facebook',
-  tiktok: 'TikTok',
-  google: 'Google',
-  direct: 'Direct',
-  autre: 'Autre',
-}
-
-/** Couleurs de série validées (voir contracts/social.ts). Direct et Autre
- * sont volontairement neutres : ce ne sont pas des plateformes, et leur
- * donner une couleur vive les ferait lire comme un canal à travailler. */
-const SOURCE_COLOR: Record<string, string> = {
-  instagram: NETWORKS.instagram.color,
-  facebook: NETWORKS.facebook.color,
-  tiktok: NETWORKS.tiktok.color,
-  google: NETWORKS.google.color,
-  direct: '#9c9490',
-  autre: '#c4bdb6',
-}
 
 const DEVICE_LABEL: Record<string, string> = {
   mobile: 'Mobile',
@@ -190,14 +171,10 @@ export default function MarketingPage({ token, period }: { token: string; period
 
       <TaggedLinks />
 
-      {/* Sans dépense publicitaire enregistrée, ni CPA ni ROAS n'existent.
-          Les afficher à partir d'un budget deviné serait la pire erreur
-          possible sur cette page : on déciderait de couper ou de doubler un
-          budget sur un chiffre inventé. */}
-      <NotCollected
-        what="Dépenses publicitaires, CPA et ROAS"
-        needs="Aucun montant dépensé en publicité n'est enregistré, donc ni le coût par commande ni le retour sur dépense ne peuvent être calculés. Il faudrait pouvoir saisir ce que vous dépensez par source et par campagne — c'est la prochaine étape si vous la voulez."
-      />
+      {/* Coût par commande et retour sur dépense — calculés UNIQUEMENT à
+          partir des montants réellement saisis. Aucun budget n'est deviné :
+          un mois non renseigné reste vide plutôt que d'être estimé. */}
+      <AdSpendSection token={token} />
     </div>
   )
 }
