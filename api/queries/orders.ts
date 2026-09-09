@@ -42,6 +42,12 @@ export async function createOrder(data: {
   acquisitionCampaign?: string;
   acquisitionContent?: string;
   deviceType?: string;
+  /** Signaux de reconnaissance Meta — voir contracts/metaSignals.ts.
+   * Absents dès que le visiteur a refusé les cookies. */
+  metaFbc?: string;
+  metaFbp?: string;
+  metaClientIp?: string;
+  metaClientUserAgent?: string;
 }) {
   // Double clic / nouvelle tentative réseau : même clé → même commande.
   if (data.idempotencyKey) {
@@ -72,6 +78,10 @@ export async function createOrder(data: {
         acquisitionCampaign: data.acquisitionCampaign,
         acquisitionContent: data.acquisitionContent,
         deviceType: data.deviceType,
+        metaFbc: data.metaFbc,
+        metaFbp: data.metaFbp,
+        metaClientIp: data.metaClientIp,
+        metaClientUserAgent: data.metaClientUserAgent,
       } satisfies Omit<InsertOrder, "id" | "createdAt" | "updatedAt" | "status">)
       .returning({ id: orders.id });
   } catch (err) {

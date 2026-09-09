@@ -12,6 +12,24 @@ export type RememberedCustomer = {
 
 export const CUSTOMER_MEMORY_KEY = 'cl.customer.v1'
 
+/** Le brouillon en cours de saisie, rangé au fil de la frappe.
+ *
+ * DEUX SITUATIONS RÉELLES, PAS THÉORIQUES.
+ *
+ * 1. Le paiement D17 se fait dans UNE AUTRE application. Le client quitte
+ *    le site, paie, revient — et Android a très bien pu recycler l'onglet
+ *    entre-temps. Il retrouvait un formulaire vide APRÈS avoir payé. C'est
+ *    la pire chose qui puisse arriver dans cette boutique.
+ * 2. Sur un téléphone d'entrée de gamme, le système ferme l'onglet en
+ *    arrière-plan pour récupérer de la mémoire. Vérifié en pilotant un
+ *    navigateur : au rechargement, le panier survivait mais tout ce qui
+ *    était tapé disparaissait.
+ *
+ * Même forme que les coordonnées mémorisées, donc même relecture tolérante.
+ * Ce sont les données du client, sur son propre appareil, et elles ne
+ * quittent jamais le navigateur. */
+export const CUSTOMER_DRAFT_KEY = 'cl.draft.v1'
+
 const EMPTY: RememberedCustomer = {
   name: '',
   phone: '',

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TRPCError } from "@trpc/server";
+import { ORDER_ERROR } from "@contracts/orderErrors";
 
 const listAvailableProducts = vi.fn();
 const createOrder = vi.fn();
@@ -123,7 +124,7 @@ describe("orders.create — D17 payment proof is mandatory", () => {
   it("rejects a D17 order with no proof key at all", async () => {
     await expect(
       caller.create({ ...baseInput, paymentMethod: "d17" }),
-    ).rejects.toMatchObject({ message: expect.stringContaining("obligatoire") });
+    ).rejects.toMatchObject({ message: ORDER_ERROR.preuveD17Requise });
     expect(createOrder).not.toHaveBeenCalled();
   });
 
@@ -135,7 +136,7 @@ describe("orders.create — D17 payment proof is mandatory", () => {
         paymentMethod: "d17",
         paymentProofKey: "payment-proof/fake-key-a-client-made-up.jpg",
       }),
-    ).rejects.toMatchObject({ message: expect.stringContaining("obligatoire") });
+    ).rejects.toMatchObject({ message: ORDER_ERROR.preuveD17Requise });
     expect(createOrder).not.toHaveBeenCalled();
   });
 
@@ -331,7 +332,7 @@ describe("orders.create — Custom Pack (calcul dynamique)", () => {
   it("refuse un produit en double (4 produits DIFFÉRENTS)", async () => {
     await expect(
       caller.create({ ...baseInput, items: [{ kind: "custom", productIds: [1, 1, 2, 5], qty: 1 }] }),
-    ).rejects.toThrow(/différents/);
+    ).rejects.toThrow(ORDER_ERROR.customPackTaille);
     expect(createOrder).not.toHaveBeenCalled();
   });
 

@@ -23,6 +23,8 @@ import {
   type ReportableOrder,
 } from "./lib/metaConversionsApi";
 import { TRPCError } from "@trpc/server";
+import { ORDER_ERROR } from "@contracts/orderErrors";
+import { metaUserSignals } from "@contracts/metaSignals";
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
@@ -65,6 +67,10 @@ async function maybeReportMetaPurchase(order: {
   paymentStatus: ReportableOrder["paymentStatus"];
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
   metaPurchaseReportedAt: Date | null;
+  metaFbc?: string | null;
+  metaFbp?: string | null;
+  metaClientIp?: string | null;
+  metaClientUserAgent?: string | null;
 }): Promise<void> {
   if (!shouldReportMetaPurchase(order)) return;
   await markMetaPurchaseReported(order.id);
@@ -75,6 +81,12 @@ async function maybeReportMetaPurchase(order: {
     // ignore — contentIds vides plutôt que de bloquer l'envoi
   }
   void sendMetaPurchaseEvent({
+    signals: {
+      fbc: order.metaFbc,
+      fbp: order.metaFbp,
+      clientIp: order.metaClientIp,
+      clientUserAgent: order.metaClientUserAgent,
+    },
     orderId: order.id,
     phone: order.phone,
     totalMillimes: order.totalMillimes,
@@ -173,12 +185,19 @@ export const ordersRouter = createRouter({
         deviceType: z.enum(["mobile", "tablet", "desktop"]).optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const h = ctx.req.headers;
+      const signals = metaUserSignals({
+        cookie: h.get("cookie"),
+        xForwardedFor: h.get("x-forwarded-for"),
+        xRealIp: h.get("x-real-ip"),
+        userAgent: h.get("user-agent"),
+      });
       const catalog = await listAvailableProducts();
       const findProduct = (id: number) => {
         const product = catalog.find((p) => p.id === id);
         if (!product) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Produit indisponible" });
+          throw new TRPCError({ code: "BAD_REQUEST", message: ORDER_ERROR.produitIndisponible });
         }
         return product;
       };
@@ -186,7 +205,8 @@ export const ordersRouter = createRouter({
         // Pack prêt : prix de vente FIXE (contracts/packs.ts), jamais celui du client.
         if (i.kind === "pack") {
           const pack = getFixedPack(i.packId);
-          if (!pack) throw new TRPCError({ code: "BAD_REQUEST", message: "Pack indisponible" });
+          if (!pack)
+            throw new TRPCError({ code: "BAD_REQUEST", message: ORDER_ERROR.packIndisponible });
           return {
             kind: "pack",
             packId: pack.id,
@@ -203,7 +223,7 @@ export const ordersRouter = createRouter({
           if (!isValidCustomSelection(i.productIds)) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: `Le Custom Pack doit contenir exactement ${CUSTOM_PACK_SIZE} produits différents.`,
+              message: ORDER_ERROR.customPackTaille,
             });
           }
           const products = i.productIds.map(findProduct);
@@ -244,8 +264,7 @@ export const ordersRouter = createRouter({
         if (!valid) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message:
-              "La preuve de paiement D17 (capture d'écran du virement) est obligatoire.",
+            message: ORDER_ERROR.preuveD17Requise,
           });
         }
       }
@@ -261,7 +280,7 @@ export const ordersRouter = createRouter({
         if (!found || governorateKey(found.governorate) !== governorateKey(input.governorate)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "La délégation choisie ne correspond pas au gouvernorat.",
+            message: ORDER_ERROR.delegationHorsGouvernorat,
           });
         }
         delegationExternalId = found.externalId;
@@ -288,6 +307,11 @@ export const ordersRouter = createRouter({
         paymentStatus: input.paymentMethod === "d17" ? "pending_verification" : "pending",
         paymentProofKey: input.paymentMethod === "d17" ? input.paymentProofKey : undefined,
         idempotencyKey: input.idempotencyKey,
+        // Captés MAINTENANT : l'événement Purchase ne part que plus tard,
+        // quand un humain confirme la commande, et la requête du client
+        // n'existe plus à ce moment-là. Rien n'est retenu si le Pixel ne
+        // s'est pas chargé — c'est-à-dire si le client a refusé les cookies.
+        ...(signals ?? {}),
       });
       // Notification e-mail : sans attendre, et sans jamais faire échouer la
       // commande si l'envoi échoue (voir api/lib/email.ts). Le Meta

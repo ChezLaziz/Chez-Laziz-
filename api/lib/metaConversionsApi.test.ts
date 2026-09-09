@@ -161,6 +161,56 @@ describe("sendMetaPurchaseEvent", () => {
     expect(JSON.stringify(body)).not.toContain("23691039");
   });
 
+  it("joint fbc, fbp, IP et navigateur — c'est ce qui rattache la vente à la publicité", async () => {
+    process.env.META_PIXEL_ID = "999";
+    process.env.META_CONVERSIONS_API_TOKEN = "secret-token";
+    const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(
+      async () => new Response("{}", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendMetaPurchaseEvent({
+      orderId: 42,
+      phone: "23691039",
+      totalMillimes: 69900,
+      contentIds: ["pack:vip"],
+      signals: {
+        fbc: "fb.1.1719500000000.IwAR0abcdef",
+        fbp: "fb.1.1719500000000.123456789",
+        clientIp: "41.226.1.5",
+        clientUserAgent: "Mozilla/5.0 (Linux; Android 13)",
+      },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.data[0].user_data).toMatchObject({
+      fbc: "fb.1.1719500000000.IwAR0abcdef",
+      fbp: "fb.1.1719500000000.123456789",
+      client_ip_address: "41.226.1.5",
+      client_user_agent: "Mozilla/5.0 (Linux; Android 13)",
+    });
+  });
+
+  it("sans signaux — client qui a refusé les cookies — n'envoie QUE le téléphone haché", async () => {
+    process.env.META_PIXEL_ID = "999";
+    process.env.META_CONVERSIONS_API_TOKEN = "secret-token";
+    const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(
+      async () => new Response("{}", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendMetaPurchaseEvent({
+      orderId: 43,
+      phone: "23691039",
+      totalMillimes: 1000,
+      contentIds: [],
+      signals: { fbc: null, fbp: null, clientIp: null, clientUserAgent: null },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(Object.keys(body.data[0].user_data)).toEqual(["ph"]);
+  });
+
   it("n'échoue jamais si l'appel réseau échoue (journalise seulement)", async () => {
     process.env.META_PIXEL_ID = "999";
     process.env.META_CONVERSIONS_API_TOKEN = "secret-token";

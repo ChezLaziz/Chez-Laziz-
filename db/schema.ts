@@ -115,6 +115,19 @@ export const orders = pgTable("orders", {
   acquisitionContent: varchar("acquisition_content", { length: 120 }),
   // mobile | tablet | desktop, déduit de l'agent utilisateur.
   deviceType: varchar("device_type", { length: 20 }),
+  // ---- Reconnaissance de l'acheteur par Meta (voir contracts/metaSignals.ts)
+  //
+  // Captés À LA CRÉATION de la commande, parce que l'événement Purchase ne
+  // part que plus tard — quand un humain confirme — et que la requête du
+  // client n'existe plus à ce moment-là.
+  //
+  // Tous NULL quand le visiteur a refusé les cookies : sans Pixel chargé,
+  // pas de _fbc ni de _fbp, et on ne conserve alors ni son adresse ni son
+  // navigateur. Le refus se lit donc dans la donnée elle-même.
+  metaFbc: varchar("meta_fbc", { length: 255 }),
+  metaFbp: varchar("meta_fbp", { length: 100 }),
+  metaClientIp: varchar("meta_client_ip", { length: 45 }),
+  metaClientUserAgent: varchar("meta_client_user_agent", { length: 400 }),
   // ---- Remise au transporteur ----
   //
   // La livraison est SOUS-TRAITÉE : ces colonnes ne pilotent aucun livreur et

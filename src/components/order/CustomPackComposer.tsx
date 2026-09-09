@@ -49,7 +49,7 @@ function ProductPickCard({
       aria-label={`${displayName}, ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}, ${formatPriceDT(packItemPrice(product.priceMillimes), lang)}${
         selected ? (isAr ? '، مُختار' : ', sélectionné') : ''
       }`}
-      className={`group flex min-w-0 flex-col overflow-hidden whitespace-normal rounded-2xl border bg-white text-left shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 ${
+      className={`group flex min-w-0 flex-col overflow-hidden whitespace-normal rounded-2xl border bg-white text-start shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 ${
         selected
           ? 'border-[#b8912e] ring-2 ring-[#b8912e]/40'
           : 'border-sand/80 hover:border-[#b8912e]/60 hover:shadow-md'

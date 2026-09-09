@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { parseRememberedCustomer, serializeRememberedCustomer } from './customerMemory'
+import {
+  CUSTOMER_DRAFT_KEY,
+  CUSTOMER_MEMORY_KEY,
+  parseRememberedCustomer,
+  serializeRememberedCustomer,
+} from './customerMemory'
 
 describe('parseRememberedCustomer', () => {
   it('rend null sur du vide, du JSON cassé ou un tableau', () => {
@@ -52,5 +57,16 @@ describe('parseRememberedCustomer', () => {
       delegationId: '',
       address: '',
     })
+  })
+})
+
+describe('les deux emplacements', () => {
+  it('le brouillon et les coordonnées mémorisées ne se marchent pas dessus', () => {
+    expect(CUSTOMER_DRAFT_KEY).not.toBe(CUSTOMER_MEMORY_KEY)
+  })
+
+  it('un brouillon se relit avec la même tolérance', () => {
+    const raw = serializeRememberedCustomer({ name: 'Ali', phone: '20000000', address: '3 rue X' })
+    expect(parseRememberedCustomer(raw)?.address).toBe('3 rue X')
   })
 })

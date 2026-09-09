@@ -64,6 +64,13 @@
       "when": 1788975956405,
       "tag": "0008_giant_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788987637472,
+      "tag": "0009_lazy_onslaught",
+      "breakpoints": true
     }
   ]
 }
