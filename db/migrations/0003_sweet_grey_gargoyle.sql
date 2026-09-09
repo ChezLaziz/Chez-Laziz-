@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "meta_purchase_reported_at" timestamp;

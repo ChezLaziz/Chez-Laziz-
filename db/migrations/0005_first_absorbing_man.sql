@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "is_exclusive_creation" boolean DEFAULT false NOT NULL;

@@ -1077,6 +1077,49 @@ function ExportCard({ token }: { token: string }) {
   )
 }
 
+/** La liste des délégations du transporteur — celle que le client voit
+ * dans le formulaire de commande.
+ *
+ * Un seul bouton, rarement utile : Team Parcel Express ajoute ou renomme
+ * une délégation quelques fois par an. Sans lui, la liste ne pourrait être
+ * rafraîchie que par un développeur. */
+function DelegationsCard({ token }: { token: string }) {
+  const utils = trpc.useUtils()
+  const catalogue = trpc.carriers.catalogue.useQuery({ token })
+  const sync = trpc.carriers.syncDelegations.useMutation({
+    onSuccess: () => utils.carriers.catalogue.invalidate(),
+  })
+  const count = catalogue.data?.length ?? 0
+
+  return (
+    <div className="w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm md:p-8">
+      <p className="font-display text-xl">Délégations Team Parcel Express</p>
+      <p className="mt-2 text-sm font-light text-ink/60">
+        La liste dans laquelle vos clients choisissent leur délégation à la commande.{' '}
+        {catalogue.isLoading ? '…' : <strong className="font-medium text-ink">{count} enregistrées.</strong>}{' '}
+        À mettre à jour seulement si le transporteur vous signale un ajout ou un changement.
+      </p>
+      {sync.error && <p className="mt-3 text-sm text-red-600">{sync.error.message}</p>}
+      {sync.data && (
+        <p className={`mt-3 text-sm ${sync.data.ok ? 'text-green-700' : 'text-red-600'}`}>
+          {sync.data.ok
+            ? `${sync.data.found} délégations lues, ${sync.data.saved} enregistrées.`
+            : `Le transporteur n'a pas répondu (${sync.data.error ?? sync.data.status ?? 'erreur'}). Rien n'a été modifié.`}
+        </p>
+      )}
+      <div className="mt-4">
+        <button
+          onClick={() => sync.mutate({ token })}
+          disabled={sync.isPending}
+          className="min-h-11 rounded-full border border-ink/25 px-6 text-xs font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent disabled:opacity-50"
+        >
+          {sync.isPending ? 'Mise à jour…' : 'Mettre à jour la liste'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function SettingsTab({ token }: { token: string }) {
   return (
     <div className="flex flex-wrap gap-6">
@@ -1084,6 +1127,7 @@ function SettingsTab({ token }: { token: string }) {
       <ChangePasswordCard token={token} />
       <UsersCard token={token} />
       <ExportCard token={token} />
+      <DelegationsCard token={token} />
     </div>
   )
 }

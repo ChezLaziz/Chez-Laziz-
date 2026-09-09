@@ -1,6 +1,7 @@
 import { getDb } from "./connection";
 import { orders, contactMessages, type InsertOrder } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, notInArray, or } from "drizzle-orm";
+import { SEND_STATUS } from "@contracts/tpeShipment";
 import type { PaymentMethod, WeightKg } from "@contracts/shop";
 
 export type OrderItemContent = { name: string; weightKg: WeightKg; productId?: number };
@@ -195,6 +196,60 @@ export async function setOrderCarrier(
     })
     .where(eq(orders.id, id));
   return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
+}
+
+/* ------------------------- Envoi au transporteur ------------------------- */
+
+/** RÉSERVE la commande pour un envoi, atomiquement.
+ *
+ * C'est la garde contre le double colis. Vérifier « pas encore de numéro »
+ * puis appeler le transporteur laisse une fenêtre où deux clics simultanés
+ * passent tous les deux la vérification. Ici la vérification ET la
+ * réservation sont une seule instruction SQL : la base ne laisse passer
+ * qu'un seul des deux. Renvoie faux si quelqu'un d'autre l'a réservée, si
+ * elle est déjà partie, ou si un envoi précédent est resté incertain. */
+export async function claimOrderForSending(id: number): Promise<boolean> {
+  const rows = await getDb()
+    .update(orders)
+    .set({ carrierStatus: SEND_STATUS.inFlight, carrierSyncedAt: new Date() })
+    .where(
+      and(
+        eq(orders.id, id),
+        isNull(orders.trackingNumber),
+        or(
+          isNull(orders.carrierStatus),
+          notInArray(orders.carrierStatus, [SEND_STATUS.inFlight, SEND_STATUS.uncertain]),
+        ),
+      ),
+    )
+    .returning({ id: orders.id });
+  return rows.length === 1;
+}
+
+/** Conclut une réservation, quel qu'en soit le sort.
+ *
+ * `created` pose le numéro ; `rejected` rend la commande envoyable à
+ * nouveau (rien n'a été créé chez eux) ; `unknown` la BLOQUE jusqu'à ce
+ * qu'un humain aille voir — retirer le transporteur ou saisir le numéro
+ * trouvé chez eux lève le blocage (voir setOrderCarrier). */
+export async function settleSendClaim(
+  id: number,
+  outcome: { kind: "created"; trackingNumber: string } | { kind: "rejected" } | { kind: "unknown" },
+) {
+  const now = new Date();
+  const set =
+    outcome.kind === "created"
+      ? {
+          carrier: "tpe",
+          trackingNumber: outcome.trackingNumber,
+          carrierStatus: SEND_STATUS.created,
+          carrierSyncedAt: now,
+          updatedAt: now,
+        }
+      : outcome.kind === "rejected"
+        ? { carrierStatus: null, carrierSyncedAt: now }
+        : { carrier: "tpe", carrierStatus: SEND_STATUS.uncertain, carrierSyncedAt: now };
+  await getDb().update(orders).set(set).where(eq(orders.id, id));
 }
 
 /** Marque la commande comme déjà signalée à Meta (Purchase) — empêche un
