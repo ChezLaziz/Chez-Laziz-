@@ -135,6 +135,8 @@ export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<void
     );
     if (!res.ok) {
       console.error(`[meta-capi] échec (${res.status}) pour la commande #${ev.orderId}: ${await res.text()}`);
+    } else {
+      console.log(`[meta-capi] Purchase envoyé pour la commande #${ev.orderId} (event_id=${eventId})`);
     }
   } catch (err) {
     console.error(`[meta-capi] erreur réseau pour la commande #${ev.orderId}:`, err);
