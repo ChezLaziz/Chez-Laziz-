@@ -11,6 +11,7 @@ import { findProductByKeyword, useProductJsonLd } from '@/lib/landingProduct'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import Ornament from '../components/Ornament'
+import ProductImage from '../components/ProductImage'
 
 const CONTENT_ID = 'makroudh-laziz-fruits-secs'
 
@@ -130,13 +131,11 @@ export default function MakroudhFruitsSecsPage() {
               </div>
 
               <div data-reveal className="order-1 md:order-2">
-                <div className="overflow-hidden rounded-2xl border border-sand/70 shadow-sm">
-                  <img
-                    src="/api/uploads/products/1788568180259-c582ad55d766.jpg"
+                <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl border border-sand/70 shadow-sm">
+                  <ProductImage
+                    src={product?.imageUrl}
                     alt="مقروض لعزيز بالفواكه الجافة، محشو باللوز والجوز والبندق"
-                    className="aspect-[4/3] w-full object-cover"
-                    loading="eager"
-                    fetchPriority="high"
+                    eager
                   />
                 </div>
               </div>
@@ -270,13 +269,11 @@ export default function MakroudhFruitsSecsPage() {
             </div>
 
             <div data-reveal className="order-1 md:order-2">
-              <div className="overflow-hidden rounded-2xl border border-sand/70 shadow-sm">
-                <img
-                  src="/api/uploads/products/1788568180259-c582ad55d766.jpg"
+              <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl border border-sand/70 shadow-sm">
+                <ProductImage
+                  src={product?.imageUrl}
                   alt="Makroudh Laziz aux fruits secs, garni d'amandes, de noix et de noisettes"
-                  className="aspect-[4/3] w-full object-cover"
-                  loading="eager"
-                  fetchPriority="high"
+                  eager
                 />
               </div>
             </div>

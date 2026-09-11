@@ -39,12 +39,16 @@ export default function ProductImage({
   alt,
   className = '',
   compact = false,
+  eager = false,
 }: {
   src: string | null | undefined
   alt: string
   className?: string
   /** Version miniature (liste de commande) : logo seul, sans légende. */
   compact?: boolean
+  /** Image principale visible d'emblée (haut d'une page de renvoi
+   * publicitaire) : la différer coûte le plus gros rendu de la page. */
+  eager?: boolean
 }) {
   const [failed, setFailed] = useState(false)
   // Un changement de produit (nouvelle src) mérite un nouvel essai — l'échec
@@ -61,7 +65,8 @@ export default function ProductImage({
       <img
         src={src}
         alt={alt}
-        loading="lazy"
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : undefined}
         decoding="async"
         onError={() => setFailed(true)}
         className={`h-full w-full object-cover ${className}`}
