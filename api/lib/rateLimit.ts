@@ -39,6 +39,16 @@ export function rateLimit(opts: {
     const now = Date.now();
     const entry = buckets.get(key);
     if (!entry || now - entry.windowStart > opts.windowMs) {
+      // Une entrée par adresse, jamais retirée, c'est une fuite lente : un
+      // jour de publicité amène des milliers d'adresses mobiles distinctes et
+      // la mémoire ne redescend qu'au redémarrage. Les fenêtres expirées sont
+      // donc balayées quand la table devient grande — jamais à chaque
+      // requête, qui n'a pas à payer le ménage.
+      if (buckets.size > 5_000) {
+        for (const [k, v] of buckets) {
+          if (now - v.windowStart > opts.windowMs) buckets.delete(k);
+        }
+      }
       buckets.set(key, { count: 1, windowStart: now });
       return next();
     }

@@ -18,6 +18,8 @@ export type ArabicForms = {
 
 export function pluralAr(n: number, forms: ArabicForms): string {
   const abs = Math.abs(Math.trunc(n));
+  // Zéro se compte comme un petit nombre : « 0 عناصر », jamais « 0 عنصرًا ».
+  if (abs === 0) return forms.peu;
   if (abs === 1) return forms.un;
   if (abs === 2) return forms.deux;
   if (abs >= 3 && abs <= 10) return forms.peu;

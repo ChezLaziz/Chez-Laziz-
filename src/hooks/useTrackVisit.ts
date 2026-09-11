@@ -32,9 +32,23 @@ export function useTrackVisit() {
       trackPageView(path)
       trackMetaPageView()
     }
-    const key = `laziz_view:${path}`
-    if (sessionStorage.getItem(key)) return
-    sessionStorage.setItem(key, '1')
+    // Dédoublonnage au mieux. Un navigateur qui bloque le stockage — Safari
+    // iOS, réglage « Bloquer tous les cookies » — fait LEVER l'accès à
+    // sessionStorage lui-même, pas seulement échouer l'écriture. Sans garde,
+    // l'exception remontait depuis cet effet jusqu'à l'ErrorBoundary racine :
+    // le visiteur venu d'une annonce voyait une page d'erreur au lieu de la
+    // boutique, et rien n'atteignait le serveur pour le signaler.
+    // Sans stockage, on compte la vue : perdre le visiteur fausse davantage
+    // les chiffres qu'un éventuel doublon.
+    let dejaComptee = false
+    try {
+      const key = `laziz_view:${path}`
+      dejaComptee = sessionStorage.getItem(key) !== null
+      if (!dejaComptee) sessionStorage.setItem(key, '1')
+    } catch {
+      // stockage indisponible — pas de dédoublonnage possible
+    }
+    if (dejaComptee) return
     mutate({ path })
     // `mutate` de React Query est stable entre les rendus.
     // eslint-disable-next-line react-hooks/exhaustive-deps

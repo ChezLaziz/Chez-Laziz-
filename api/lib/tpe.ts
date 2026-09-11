@@ -277,6 +277,11 @@ export async function tpeCreateShipment(payload: unknown): Promise<CreateOutcome
     return { kind: "created", ...created };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    // L'état le plus coûteux du système : « unknown » veut dire que le colis
+    // existe PEUT-ÊTRE chez le transporteur, et il bloque la commande tant
+    // qu'un humain ne tranche pas. Sans cette trace, l'administration
+    // affichait « incertain » sans que rien, côté serveur, ne dise pourquoi.
+    console.error(`[tpe] envoi indéterminé : ${message.slice(0, 200)}`);
     return { kind: "unknown", message: message.slice(0, 200) };
   } finally {
     clearTimeout(timer);

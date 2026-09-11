@@ -11,8 +11,9 @@ describe('pluralAr', () => {
     for (const n of [11, 12, 25, 100, 1000]) expect(pluralAr(n, F)).toBe('beaucoup')
   })
 
-  it('traite zéro comme « beaucoup », la forme neutre', () => {
-    expect(pluralAr(0, F)).toBe('beaucoup')
+  it('compte zéro comme un petit nombre — « 0 عناصر », pas « 0 عنصرًا »', () => {
+    expect(pluralAr(0, F)).toBe('peu')
+    expect(itemsLabelAr(0)).toBe('0 عناصر')
   })
 
   it('ignore le signe et les décimales', () => {

@@ -11,6 +11,7 @@ import { unresolvableLines } from '@contracts/cartPruning'
 import { orderIdempotencyKey } from '@contracts/orderKey'
 import { itemsLabelAr } from '@contracts/arabicPlural'
 import { isValidTunisianPhone } from '@contracts/phone'
+import { metaContentId } from '@contracts/metaContentId'
 import {
   CUSTOMER_DRAFT_KEY,
   CUSTOMER_MEMORY_KEY,
@@ -594,11 +595,17 @@ export default function OrderPage() {
     if (chosen.length !== CUSTOM_PACK_SIZE) return
     const price = customPackTotal(chosen.map((p) => p.priceMillimes))
     addCustom(selected)
+    // La référence DOIT passer par metaContentId : elle trie les
+    // identifiants. Construite ici à la main, elle suivait l'ordre des CLICS,
+    // alors que l'achat (serveur) et InitiateCheckout la trient. Le même pack
+    // composé dans un autre ordre devenait donc deux produits différents pour
+    // Meta — panier et achat jamais rapprochés, reciblage cassé.
+    const customId = metaContentId({ kind: 'custom', productIds: selected })
     track('add_to_cart', {
       value: price / 1000,
       items: [
         {
-          item_id: `custom:${selected.join('-')}`,
+          item_id: customId,
           item_name: 'Custom Pack',
           price: price / 1000,
           quantity: 1,
@@ -609,7 +616,7 @@ export default function OrderPage() {
       value: price / 1000,
       contents: [
         {
-          id: `custom:${selected.join('-')}`,
+          id: customId,
           quantity: 1,
           item_price: price / 1000,
         },
@@ -882,7 +889,11 @@ export default function OrderPage() {
                 .join('\n')}\nLivraison : ${addressLine}\nTotal (livraison incluse) : ${formatPriceDT(totalReel, lang)}\nPaiement : à la livraison`
           track('purchase', {
             transaction_id: String(order?.id ?? ''),
-            value: total / 1000,
+            // Même source que l'écran et le message WhatsApp : le montant
+            // enregistré par le serveur. Le total calculé ici en diffère dès
+            // qu'un prix change pendant la saisie, et le chiffre d'affaires
+            // rapporté à GA4 se met alors à dériver du réel.
+            value: totalReel / 1000,
             shipping: DELIVERY_FEE_MILLIMES / 1000,
             items: analyticsItems(),
           })

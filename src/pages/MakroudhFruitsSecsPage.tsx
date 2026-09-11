@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
 import { useReveal } from '../hooks/useReveal'
 import { useSEO } from '../hooks/useSEO'
@@ -36,21 +36,6 @@ export default function MakroudhFruitsSecsPage() {
         },
   )
 
-  // Suivi de l'arrivée sur cette page — utile pour mesurer une campagne
-  // publicitaire (Meta Ads / Google) qui pointe spécifiquement ici, sans
-  // dépendre d'un identifiant produit précis de la base (page marketing
-  // statique, non liée à une fiche du catalogue en base). Identique quelle
-  // que soit la langue affichée, pour garder des données de campagne
-  // comparables.
-  useEffect(() => {
-    track('view_item_list', {
-      item_list_id: 'landing_fruits_secs',
-      item_list_name: 'Landing — Makroudh Fruits Secs',
-      items: [{ item_id: CONTENT_ID, item_name: 'Makroudh Laziz – Fruits Secs' }],
-    })
-    trackMeta('ViewContent', { value: 0, contents: [{ id: CONTENT_ID }] })
-  }, [])
-
   const orderHref = isAr ? '/ar/commande?produit=fruits-secs' : '/commande?produit=fruits-secs'
   const collectionHref = isAr ? '/ar/collection' : '/collection'
 
@@ -72,6 +57,45 @@ export default function MakroudhFruitsSecsPage() {
       ? `ابتداءً من ${formatTND(product.priceMillimes)} د.ت / كغ`
       : `À partir de ${formatTND(product.priceMillimes)} DT / kg`
     : null
+
+  // CE QUE LE PIXEL DOIT VOIR : le produit RÉEL du catalogue.
+  //
+  // Cette page envoyait une référence à elle seule (CONTENT_ID) et une valeur
+  // de zéro. Or aucun ajout au panier ni aucun achat n'émet cette référence —
+  // ils émettent l'identifiant du produit. Meta ne pouvait donc rattacher
+  // AUCUNE vente aux événements de la page où atterrit la publicité, et une
+  // valeur nulle lui apprenait que ces événements ne valent rien : l'argent
+  // de la campagne part sans que l'algorithme sache ce qu'il achète.
+  //
+  // CONTENT_ID ne sert plus que de repli tant que le catalogue charge.
+  const metaContent = {
+    value: product ? product.priceMillimes / 1000 : 0,
+    contents: [{ id: product ? String(product.id) : CONTENT_ID }],
+  }
+
+  // Arrivée sur la page — l'événement qui mesure la campagne qui pointe ici.
+  // Il ATTEND la réponse du catalogue : déclenché au montage, il partait
+  // toujours avant elle, donc toujours avec le repli et une valeur nulle,
+  // c'est-à-dire précisément ce que cette page corrige. Le garde-fou le
+  // laisse partir une seule fois par visite.
+  const vueEnvoyee = useRef(false)
+  useEffect(() => {
+    if (vueEnvoyee.current || !products) return
+    vueEnvoyee.current = true
+    track('view_item_list', {
+      item_list_id: 'landing_fruits_secs',
+      item_list_name: 'Landing — Makroudh Fruits Secs',
+      items: [
+        {
+          item_id: product ? String(product.id) : CONTENT_ID,
+          item_name: 'Makroudh Laziz – Fruits Secs',
+        },
+      ],
+    })
+    trackMeta('ViewContent', metaContent)
+    // metaContent et product dérivent de products, seule vraie dépendance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products])
 
   if (isAr) {
     return (
@@ -111,7 +135,7 @@ export default function MakroudhFruitsSecsPage() {
                   <Link
                     to={orderHref}
                     onClick={() =>
-                      trackMeta('InitiateCheckout', { value: 0, contents: [{ id: CONTENT_ID }] })
+                      trackMeta('InitiateCheckout', metaContent)
                     }
                     className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
                   >
@@ -189,7 +213,7 @@ export default function MakroudhFruitsSecsPage() {
               </p>
               <Link
                 to={orderHref}
-                onClick={() => trackMeta('InitiateCheckout', { value: 0, contents: [{ id: CONTENT_ID }] })}
+                onClick={() => trackMeta('InitiateCheckout', metaContent)}
                 className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
               >
                 اطلب توّا
@@ -249,7 +273,7 @@ export default function MakroudhFruitsSecsPage() {
                 <Link
                   to={orderHref}
                   onClick={() =>
-                    trackMeta('InitiateCheckout', { value: 0, contents: [{ id: CONTENT_ID }] })
+                    trackMeta('InitiateCheckout', metaContent)
                   }
                   className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
                 >
@@ -342,7 +366,7 @@ export default function MakroudhFruitsSecsPage() {
             </p>
             <Link
               to={orderHref}
-              onClick={() => trackMeta('InitiateCheckout', { value: 0, contents: [{ id: CONTENT_ID }] })}
+              onClick={() => trackMeta('InitiateCheckout', metaContent)}
               className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
             >
               Commander maintenant
