@@ -1,4 +1,9 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
 import { randomBytes } from "node:crypto";
 import sharp from "sharp";
 
@@ -18,6 +23,43 @@ function getClient(): { client: S3Client; bucket: string } {
     credentials: { accessKeyId, secretAccessKey },
   });
   return { client, bucket };
+}
+
+/** Diagnostic lancé UNE SEULE FOIS par processus, au premier échec de
+ * lecture. « Access Denied » est ambigu chez R2 comme chez S3 : il signifie
+ * soit des droits insuffisants, soit un objet (ou un seau) qui n'existe pas
+ * quand le jeton n'a pas le droit de lister. Un listage tranche entre les
+ * deux, et sans cette réponse toute correction serait une devinette.
+ *
+ * Rien de secret n'est écrit : le nom du seau et l'identifiant de compte
+ * apparaissent déjà dans chaque URL R2, et la clé d'accès n'est donnée que
+ * par son préfixe, assez pour reconnaître un jeton remplacé. La clé SECRÈTE
+ * n'est jamais touchée. */
+let diagnosticDone = false;
+async function diagnoseOnce(): Promise<void> {
+  if (diagnosticDone) return;
+  diagnosticDone = true;
+  const bucket = process.env.R2_BUCKET ?? "(absent)";
+  const accountId = process.env.R2_ACCOUNT_ID ?? "(absent)";
+  const keyId = process.env.R2_ACCESS_KEY_ID ?? "";
+  console.error(
+    `[r2-diag] seau="${bucket}" compte="${accountId}" ` +
+      `cléAccès="${keyId.slice(0, 6)}…" (${keyId.length} caractères)`,
+  );
+  try {
+    const { client } = getClient();
+    const res = await client.send(
+      new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 5 }),
+    );
+    const keys = (res.Contents ?? []).map((o) => o.Key).filter(Boolean);
+    console.error(
+      `[r2-diag] listage OK — ${res.KeyCount ?? 0} objet(s) : ${keys.join(", ") || "(seau vide)"}`,
+    );
+  } catch (err) {
+    console.error(
+      `[r2-diag] listage refusé : ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 }
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -87,6 +129,7 @@ export async function getUploadedImage(
     // indiscernable d'une image jamais envoyée. Une ligne dans les
     // journaux, sans secret, rend la cause visible au prochain incident.
     console.error(`[r2] lecture échouée pour ${key}:`, err instanceof Error ? err.message : err);
+    void diagnoseOnce();
     return null;
   }
 }
