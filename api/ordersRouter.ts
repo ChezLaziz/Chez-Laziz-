@@ -16,6 +16,7 @@ import { assertAdmin } from "./queries/admin";
 import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
 import { notifyAdminNewOrder } from "./lib/email";
+import { notifyAdminNewOrderTelegram } from "./lib/telegram";
 import {
   sendMetaPurchaseEvent,
   shouldReportMetaPurchase,
@@ -323,12 +324,17 @@ export const ordersRouter = createRouter({
         // s'est pas chargé — c'est-à-dire si le client a refusé les cookies.
         ...(signals ?? {}),
       });
-      // Notification e-mail : sans attendre, et sans jamais faire échouer la
-      // commande si l'envoi échoue (voir api/lib/email.ts). Le Meta
+      // Notifications : sans attendre, et sans jamais faire échouer la
+      // commande si un envoi échoue (voir api/lib/email.ts et
+      // api/lib/telegram.ts). Telegram sonne sur le téléphone dans la
+      // seconde ; l'e-mail reste la trace écrite. Le Meta
       // Conversions API n'est PAS déclenché ici : une commande qui vient
       // d'être créée n'est ni confirmée ni payée — voir maybeReportMetaPurchase,
       // appelée seulement depuis setStatus/setPaymentStatus.
-      if (order) void notifyAdminNewOrder(order);
+      if (order) {
+        void notifyAdminNewOrder(order);
+        void notifyAdminNewOrderTelegram(order);
+      }
       return order;
     }),
 
