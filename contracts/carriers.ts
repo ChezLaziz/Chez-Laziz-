@@ -59,7 +59,14 @@ export type ShippableOrder = {
   city: string;
   address: string;
   postalCode?: string | null;
-  items: { name: string; weightKg?: number; qty: number }[];
+  items: {
+    name: string;
+    weightKg?: number;
+    qty: number;
+    /** Produits inclus — packs prêts et Custom Pack seulement. Absent pour
+     * une ligne "produit" simple. */
+    contents?: { name: string; weightKg?: number }[];
+  }[];
   subtotalMillimes: number;
   deliveryFeeMillimes: number;
   totalMillimes: number;

@@ -860,11 +860,23 @@ function OrderRow({
               </a>
               <ul className="space-y-1 border-t border-sand/60 pt-2.5">
                 {items.map((it, i) => (
-                  <li key={`${it.name}-${i}`} className="flex justify-between gap-3 text-[13px]">
-                    <span className="text-ink/75">
-                      {it.qty} × {it.name}
-                      {it.weightKg ? <span className="text-ink/40"> ({it.weightKg} kg)</span> : null}
-                    </span>
+                  <li key={`${it.name}-${i}`} className="text-[13px]">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-ink/75">
+                        {it.qty} × {it.name}
+                        {it.weightKg ? <span className="text-ink/40"> ({it.weightKg} kg)</span> : null}
+                      </span>
+                    </div>
+                    {it.contents && it.contents.length > 0 && (
+                      <ul className="mt-0.5 space-y-0.5 pl-4 text-[12px] text-ink/55">
+                        {it.contents.map((c, j) => (
+                          <li key={`${c.name}-${j}`}>
+                            • {c.name}
+                            {c.weightKg ? ` — ${c.weightKg} kg` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
