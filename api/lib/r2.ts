@@ -82,7 +82,11 @@ export async function getUploadedImage(
       body: res.Body.transformToWebStream(),
       contentType: res.ContentType ?? "application/octet-stream",
     };
-  } catch {
+  } catch (err) {
+    // Un échec silencieux (bucket/permissions/objet manquant) est
+    // indiscernable d'une image jamais envoyée. Une ligne dans les
+    // journaux, sans secret, rend la cause visible au prochain incident.
+    console.error(`[r2] lecture échouée pour ${key}:`, err instanceof Error ? err.message : err);
     return null;
   }
 }
