@@ -160,11 +160,16 @@ describe("formatKitchenBoard", () => {
     { key: "p7", label: "لعزيز بالفانيلا", kg: 1.5 },
   ];
 
-  it("porte les poids, le total, et RIEN d'un client", () => {
+  it("porte le poids de CHAQUE type, et rien d'un client", () => {
     const texte = formatKitchenBoard(lignes);
-    expect(texte).toContain("3 كغ");
-    expect(texte).toContain("1,5 كغ");
-    expect(texte).toContain("المجموع : <b>4,5 كغ</b>");
+    expect(texte).toContain("لعزيز بالفرولة — <b>3 كغ</b>");
+    expect(texte).toContain("لعزيز بالفانيلا — <b>1,5 كغ</b>");
+  });
+
+  it("n'additionne JAMAIS des recettes différentes en un total général", () => {
+    const texte = formatKitchenBoard(lignes);
+    expect(texte).not.toContain("المجموع");
+    expect(texte).not.toContain("4,5");
   });
 
   it("le dit clairement quand il n'y a rien à préparer", () => {

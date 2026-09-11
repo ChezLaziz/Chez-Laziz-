@@ -81,12 +81,12 @@ describe("refreshKitchenBoard", () => {
     expect(editMessage).not.toHaveBeenCalled();
   });
 
-  it("porte les poids et le nom arabe du catalogue, jamais un client", async () => {
+  it("porte les poids par type et le nom arabe du catalogue, jamais un client", async () => {
     await refreshKitchenBoard(true);
     const texte = sendMessage.mock.calls[0][0] as string;
-    expect(texte).toContain("لعزيز بالفرولة");
-    expect(texte).toContain("3 كغ");
-    expect(texte).toContain("4,5 كغ");
+    expect(texte).toContain("لعزيز بالفرولة — <b>3 كغ</b>");
+    expect(texte).toContain("1,5 كغ");
+    expect(texte).not.toContain("4,5");
   });
 
   it("n'offre « رجوع » que lorsqu'il y a une erreur à défaire", async () => {

@@ -146,18 +146,22 @@ export function formatKgAr(kg: number): string {
 
 /** Le message tel que le cuisinier le lit. Aucune donnée client, par
  * construction : cette fonction ne reçoit que des poids et des noms de
- * produits. */
+ * produits.
+ *
+ * PAS DE TOTAL GÉNÉRAL, et c'est délibéré. « 50 kg » ne se cuit pas : on ne
+ * cuit pas des kilos, on cuit dix kilos de fraise, cinq de vanille, trois de
+ * figue. Un chiffre unique additionne des recettes différentes et ne dit rien
+ * de ce qu'il faut préparer — au mieux il ne sert à rien, au pire il fait
+ * croire à une fournée qui n'existe pas. Le total qui compte est celui de
+ * CHAQUE type, et il est sur sa ligne. */
 export function formatKitchenBoard(lines: KitchenLine[]): string {
   if (lines.length === 0) {
     return ["🍳 <b>المطبخ</b>", "", "✅ ما فماش شي يستنى — كل شي مكمّل."].join("\n");
   }
-  const total = auGramme(lines.reduce((s, l) => s + l.kg, 0));
   return [
     "🍳 <b>المطبخ — المطلوب توّا</b>",
     "",
     ...lines.map((l) => `🔸 ${escapeTelegramHtml(l.label)} — <b>${formatKgAr(l.kg)}</b>`),
-    "",
-    `📦 المجموع : <b>${formatKgAr(total)}</b>`,
   ].join("\n");
 }
 
