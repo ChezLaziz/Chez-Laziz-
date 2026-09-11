@@ -6,6 +6,7 @@ const listAvailableProducts = vi.fn();
 const createOrder = vi.fn();
 const assertAdmin = vi.fn();
 const updateOrderStatus = vi.fn();
+const getOrderById = vi.fn();
 const updatePaymentStatus = vi.fn();
 const markMetaPurchaseReported = vi.fn(async () => undefined);
 const sendMetaPurchaseEvent = vi.fn(async () => undefined);
@@ -17,6 +18,7 @@ vi.mock("./queries/orders", () => ({
   updatePaymentStatus,
   deleteOrder: vi.fn(),
   listOrders: vi.fn(),
+  getOrderById,
   markMetaPurchaseReported,
 }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
@@ -395,6 +397,9 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
   // configurées via mockRejectedValue) — on la rétablit ici explicitement.
   beforeEach(() => {
     assertAdmin.mockResolvedValue(undefined);
+    // setStatus relit la commande AVANT de la changer : c'est l'ancien statut
+    // qui dit si le poids à préparer bouge (voir transitionOrderStatus).
+    getOrderById.mockResolvedValue(makeOrder({ status: "nouvelle" }));
   });
 
   it("signale l'achat dès que l'admin confirme (statut qui avance après « nouvelle »)", async () => {

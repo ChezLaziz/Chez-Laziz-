@@ -4,11 +4,10 @@ import { allDelegations, findDelegation } from "./queries/delegations";
 import { createRouter, publicQuery } from "./middleware";
 import {
   listOrders,
-  updateOrderStatus,
+  getOrderById,
   updatePaymentStatus,
   createOrder,
   deleteOrder,
-  markMetaPurchaseReported,
   setOrderCarrier,
 } from "./queries/orders";
 import { CARRIER_KEYS } from "@contracts/carriers";
@@ -17,14 +16,11 @@ import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
 import { notifyAdminNewOrder } from "./lib/email";
 import { notifyAdminNewOrderTelegram } from "./lib/telegram";
-import {
-  sendMetaPurchaseEvent,
-  shouldReportMetaPurchase,
-} from "./lib/metaConversionsApi";
+import { maybeReportMetaPurchase, transitionOrderStatus } from "./lib/orderTransition";
+import { refreshKitchenBoard } from "./lib/telegramKitchen";
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
 import { metaUserSignals } from "@contracts/metaSignals";
-import { metaContentId } from "@contracts/metaContentId";
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
@@ -48,66 +44,6 @@ import {
   packContents,
   packWeightKg,
 } from "@contracts/packs";
-
-/** Les références Meta d'une commande, identiques à celles que le Pixel du
- * navigateur a envoyées à l'ajout au panier — voir contracts/metaContentId.ts
- * pour ce que coûtait leur divergence. */
-function metaContentIds(items: OrderItem[]): string[] {
-  return items.map((i) => {
-    // Les champs d'OrderItem sont optionnels : les toutes premières commandes
-    // n'avaient pas de `kind`. Une ligne qu'on ne sait pas nommer rend une
-    // chaîne vide plutôt qu'une référence inventée — Meta ignorera la ligne,
-    // ce qui vaut mieux que de lui apprendre un produit qui n'existe pas.
-    if (i.kind === "pack") return i.packId ? metaContentId({ kind: "pack", packId: i.packId }) : "";
-    if (i.kind === "custom") {
-      const ids = (i.contents ?? [])
-        .map((c) => c.productId)
-        .filter((id): id is number => typeof id === "number");
-      return ids.length > 0 ? metaContentId({ kind: "custom", productIds: ids }) : "";
-    }
-    return typeof i.productId === "number"
-      ? metaContentId({ kind: "product", productId: i.productId })
-      : "";
-  });
-}
-
-/** Signale l'achat à Meta si (et seulement si) cette commande vient de
- * franchir le seuil de confirmation réelle — voir shouldReportMetaPurchase.
- * Ne lève jamais ; appelée après une mise à jour de statut/paiement. */
-async function maybeReportMetaPurchase(order: {
-  id: number;
-  phone: string;
-  totalMillimes: number;
-  items: string;
-  paymentMethod: "cod" | "d17";
-  status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
-  metaPurchaseReportedAt: Date | null;
-  metaFbc?: string | null;
-  metaFbp?: string | null;
-  metaClientIp?: string | null;
-  metaClientUserAgent?: string | null;
-}): Promise<void> {
-  if (!shouldReportMetaPurchase(order)) return;
-  await markMetaPurchaseReported(order.id);
-  let items: OrderItem[] = [];
-  try {
-    items = JSON.parse(order.items);
-  } catch {
-    // ignore — contentIds vides plutôt que de bloquer l'envoi
-  }
-  void sendMetaPurchaseEvent({
-    signals: {
-      fbc: order.metaFbc,
-      fbp: order.metaFbp,
-      clientIp: order.metaClientIp,
-      clientUserAgent: order.metaClientUserAgent,
-    },
-    orderId: order.id,
-    phone: order.phone,
-    totalMillimes: order.totalMillimes,
-    contentIds: metaContentIds(items),
-  });
-}
 
 const orderStatusEnum = z.enum([
   "nouvelle",
@@ -355,9 +291,11 @@ export const ordersRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
-      const order = await updateOrderStatus(input.id, input.status);
-      if (order) await maybeReportMetaPurchase(order);
-      return order;
+      // Le statut d'AVANT décide si le poids à préparer change : la cuisine
+      // n'a rien à voir entre « en préparation » et « prête ».
+      const avant = await getOrderById(input.id);
+      if (!avant) return null;
+      return transitionOrderStatus(input.id, input.status, avant.status);
     }),
 
   /** Marquer une commande encaissée, ou revenir en arrière.
@@ -411,7 +349,13 @@ export const ordersRouter = createRouter({
     .input(z.object({ token: z.string(), id: z.number().int() }))
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
+      // Supprimer une commande CONFIRMÉE retire du poids au matbakh : sans ce
+      // rafraîchissement, le cuisinier préparerait une commande effacée.
+      const avant = await getOrderById(input.id);
       await deleteOrder(input.id);
+      if (avant && avant.status !== "nouvelle" && avant.status !== "annulee") {
+        void refreshKitchenBoard(false);
+      }
       return { ok: true };
     }),
 });

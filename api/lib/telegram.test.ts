@@ -49,7 +49,7 @@ describe("buildNewOrderTelegramMessage", () => {
   it("met le numéro et le montant sur la première ligne — c'est tout ce que l'aperçu affiche", () => {
     const premiere = buildNewOrderTelegramMessage(commande).split("\n")[0];
     expect(premiere).toContain("#42");
-    expect(premiere).toContain("156,8 DT");
+    expect(premiere).toContain("156,8 د.ت");
   });
 
   it("détaille le contenu d'un pack : « Custom Pack 2 kg » seul ne dit pas quoi préparer", () => {
@@ -81,7 +81,7 @@ describe("buildNewOrderTelegramMessage", () => {
   it("survit à des articles illisibles : la notification part quand même", () => {
     const msg = buildNewOrderTelegramMessage({ ...commande, items: "pas du JSON" });
     expect(msg).toContain("#42");
-    expect(msg).toContain("156,8 DT");
+    expect(msg).toContain("156,8 د.ت");
   });
 
   it("reste sous la limite de 4096 caractères de Telegram", () => {

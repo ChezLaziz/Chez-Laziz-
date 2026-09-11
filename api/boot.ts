@@ -13,6 +13,9 @@ import { getFullExport } from "./queries/backup";
 import { listOrders, type OrderItem } from "./queries/orders";
 import { toCsv, csvResponse } from "./lib/csv";
 import { formatDinars } from "@contracts/shop";
+import { registerTelegramWebhook, telegramWebhookSecret } from "./lib/telegram";
+import { handleTelegramUpdate } from "./lib/telegramWebhook";
+import { ensureKitchenBaseline } from "./lib/telegramKitchen";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -228,6 +231,26 @@ app.use(
   }),
 );
 
+// Les appuis sur les boutons du groupe Telegram (confirmer une commande,
+// déclarer une fournée cuite). Telegram appelle cette adresse en POST.
+//
+// Elle est publique — Telegram n'a pas de compte admin — donc c'est l'en-tête
+// secrète qui fait foi : une valeur dérivée du jeton du bot, que Telegram
+// nous renvoie et que personne d'autre ne peut produire (voir
+// telegramWebhookSecret). Sans elle, n'importe qui pourrait confirmer des
+// commandes à notre place.
+//
+// Toujours 200 après ce contrôle : une erreur ferait réessayer Telegram en
+// boucle, puis couper le webhook.
+app.post("/api/telegram/webhook", async (c) => {
+  if (c.req.header("x-telegram-bot-api-secret-token") !== telegramWebhookSecret()) {
+    return c.json({ error: "Non autorisé" }, 401);
+  }
+  const update: unknown = await c.req.json().catch(() => null);
+  await handleTelegramUpdate(update);
+  return c.json({ ok: true });
+});
+
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",
@@ -248,5 +271,10 @@ if (env.isProduction) {
   const port = parseInt(process.env.PORT || "3000");
   serve({ fetch: app.fetch, port }, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Déclaré à chaque démarrage, et idempotent côté Telegram : poser les
+    // deux variables d'environnement suffit, il n'y a rien à faire à la main.
+    void registerTelegramWebhook();
+    // Avant la première commande, jamais après : voir ensureKitchenBaseline.
+    void ensureKitchenBaseline();
   });
 }
