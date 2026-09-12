@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { backupStatus } from "./lib/backupSchedule";
 import { createRouter, publicQuery } from "./middleware";
 import {
   createContactMessage,
@@ -69,6 +70,18 @@ export const adminRouter = createRouter({
     .query(async ({ input }) => {
       await assertAdmin(input.token);
       return { ok: true };
+    }),
+
+  /** Où en est la dernière sauvegarde automatique de la base.
+   *
+   * Affiché dans Paramètres, et ce n'est pas décoratif : une sauvegarde qu'on
+   * ne peut pas VOIR revient à ne pas en avoir. C'est exactement comme ça que
+   * l'ancienne a pu s'arrêter sans que personne ne s'en aperçoive. */
+  backupStatus: publicQuery
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await assertAdmin(input.token);
+      return backupStatus();
     }),
 
   /** Infos du compte admin connecté (affichage dans Paramètres) */

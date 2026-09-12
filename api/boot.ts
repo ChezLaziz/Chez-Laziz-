@@ -19,6 +19,7 @@ import { setupTelegram } from "./lib/telegramSetup";
 import { handleTelegramUpdate } from "./lib/telegramWebhook";
 import { ensureKitchenBaseline } from "./lib/telegramKitchen";
 import { startReminderScheduler } from "./lib/telegramReminders";
+import { startBackupScheduler } from "./lib/backupSchedule";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -285,5 +286,8 @@ if (env.isProduction) {
     // Avant la première commande, jamais après : voir ensureKitchenBaseline.
     void ensureKitchenBaseline();
     startReminderScheduler();
+    // Indépendant de Telegram : une base non sauvegardée est un risque même
+    // sans notification (voir api/lib/backupSchedule.ts).
+    startBackupScheduler();
   });
 }

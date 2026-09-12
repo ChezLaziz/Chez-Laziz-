@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "node:crypto";
@@ -130,6 +131,35 @@ export async function getUploadedImage(
     // journaux, sans secret, rend la cause visible au prochain incident.
     console.error(`[r2] lecture échouée pour ${key}:`, err instanceof Error ? err.message : err);
     void diagnoseOnce();
+    return null;
+  }
+}
+
+/** Écrit un objet quelconque dans le seau — utilisé par la sauvegarde
+ * automatique de la base. Sépare volontairement des photos : pas de sharp,
+ * pas de redimensionnement, pas de limite de 20 Mo pensée pour un téléphone. */
+export async function putObject(
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  const { client, bucket } = getClient();
+  await client.send(
+    new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }),
+  );
+}
+
+/** La taille de l'objet tel qu'il est RÉELLEMENT stocké, ou null s'il n'y est
+ * pas. Une écriture qui ne lève pas n'est pas une écriture réussie : c'est
+ * précisément cette confusion qui a laissé les photos disparaître sans un
+ * seul message d'erreur. Une sauvegarde qu'on n'a pas relue n'est pas une
+ * sauvegarde. */
+export async function objectSize(key: string): Promise<number | null> {
+  const { client, bucket } = getClient();
+  try {
+    const res = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return res.ContentLength ?? null;
+  } catch {
     return null;
   }
 }

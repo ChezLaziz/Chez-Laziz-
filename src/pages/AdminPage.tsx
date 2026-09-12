@@ -1014,6 +1014,49 @@ function UsersCard({ token }: { token: string }) {
   )
 }
 
+/** Depuis quand la base n'a-t-elle pas été sauvegardée.
+ *
+ * Affiché, pas seulement journalisé : l'ancienne sauvegarde tournait dans un
+ * coin et se serait arrêtée sans que rien ne le dise. Au-delà de deux jours,
+ * l'écran le signale — c'est le seul moyen de s'en apercevoir AVANT d'en
+ * avoir besoin. */
+function BackupStatus({ token }: { token: string }) {
+  const { data } = trpc.admin.backupStatus.useQuery({ token })
+  if (!data) return null
+
+  if (!data.lastAt) {
+    return (
+      <p className="mt-4 rounded-xl bg-ink/[0.04] px-4 py-3 text-[13px] text-ink/60">
+        Sauvegarde automatique : <span className="font-medium text-ink">pas encore de première copie</span>{' '}
+        — la première part dans les minutes qui suivent un redémarrage du serveur.
+      </p>
+    )
+  }
+
+  // L'âge vient du SERVEUR : c'est son horloge qui a écrit la date, et c'est
+  // la seule dont on sache qu'elle est juste.
+  const jours = Math.floor((data.ageHours ?? 0) / 24)
+  const vieille = jours >= 2
+  const quand =
+    jours === 0 ? "aujourd'hui" : jours === 1 ? 'hier' : `il y a ${jours} jours`
+
+  return (
+    <p
+      className={`mt-4 rounded-xl px-4 py-3 text-[13px] ${
+        vieille ? 'bg-red-50 text-red-700' : 'bg-ink/[0.04] text-ink/60'
+      }`}
+    >
+      {vieille ? '⚠️ ' : '✅ '}
+      Sauvegarde automatique : <span className="font-medium">{quand}</span>
+      <span className="text-ink/40">
+        {' '}
+        ({new Date(data.lastAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })})
+      </span>
+      {vieille && ' — quelque chose bloque, vérifiez les journaux du serveur.'}
+    </p>
+  )
+}
+
 function ExportCard({ token }: { token: string }) {
   const [downloading, setDownloading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -1052,6 +1095,12 @@ function ExportCard({ token }: { token: string }) {
         à donner à votre comptable. La sauvegarde complète, elle, contient tout (produits,
         commandes, messages, galerie, statistiques) et sert à ne rien perdre.
       </p>
+      <p className="mt-3 text-sm font-light text-ink/60">
+        Une copie complète part <strong className="font-medium text-ink">chaque jour</strong>,
+        toute seule, vers le même stockage que vos photos. Les boutons ci-dessous
+        restent là pour emporter une copie sur votre ordinateur.
+      </p>
+      <BackupStatus token={token} />
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button
