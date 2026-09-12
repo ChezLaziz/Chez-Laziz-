@@ -25,6 +25,7 @@ import { buildDisplayLines, kgLabel, type CatalogProduct, type DisplayLine } fro
 import PackCard from '@/components/order/PackCard'
 import CustomPackComposer from '@/components/order/CustomPackComposer'
 import ProductOrderCard from '@/components/order/ProductOrderCard'
+import FlavourChips from '@/components/order/FlavourChips'
 import { useLang } from '@/lib/i18n'
 import { CATEGORY_LABELS_AR } from '@/lib/categories'
 import LanguageSwitch from '@/components/LanguageSwitch'
@@ -291,6 +292,11 @@ export default function OrderPage() {
   const { lines, add, setQty, packQty, addPack, addCustom, setLineQty, removeLine, dropUnresolvable, clear } =
     useCart()
 
+  /** La saveur choisie dans la barre de puces, ou null pour tout le
+   * catalogue. Volontairement PAS dans l'URL : c'est un geste de survol, pas
+   * une page — et une URL filtrée partagée sur Facebook cacherait quinze
+   * produits à celui qui l'ouvre. */
+  const [flavour, setFlavour] = useState<number | null>(null)
   const [tab, setTab] = useState<Tab>(() =>
     typeof window !== 'undefined' ? tabFromHash(window.location.hash) : 'produits',
   )
@@ -582,12 +588,16 @@ export default function OrderPage() {
   const categories = useMemo(() => {
     const classiques: CatalogProduct[] = []
     const signatures: CatalogProduct[] = []
-    for (const p of catalog) (p.category === 'Les classiques' ? classiques : signatures).push(p)
+    // Le filtre de saveur s'applique ICI plutôt que dans le rendu : une
+    // catégorie devenue vide disparaît alors avec son titre, au lieu de
+    // laisser « Les classiques » suivi de rien.
+    const visibles = flavour === null ? catalog : catalog.filter((p) => p.id === flavour)
+    for (const p of visibles) (p.category === 'Les classiques' ? classiques : signatures).push(p)
     return [
       ['Les classiques', classiques],
       ['Les signatures', signatures],
     ].filter(([, items]) => (items as CatalogProduct[]).length > 0) as [string, CatalogProduct[]][]
-  }, [catalog])
+  }, [catalog, flavour])
 
   const handleAddCustom = () => {
     if (selected.length !== CUSTOM_PACK_SIZE) return
@@ -724,6 +734,25 @@ export default function OrderPage() {
       ),
     [items, subtotal, total, lang],
   )
+
+  /** Le départ vers WhatsApp, mesuré.
+   *
+   * Ce bouton emmène le client HORS du site : la commande se conclut dans une
+   * conversation, donc rien n'atteint la base, ni Telegram, ni le tableau de
+   * bord. Sans cet événement, cette porte serait totalement AVEUGLE — on
+   * verrait le trafic entrer et disparaître, et la publicité n'apprendrait
+   * rien de ces acheteurs-là, qui sont pourtant de vrais acheteurs.
+   *
+   * « Contact », pas « Purchase » : personne n'a encore acheté. Envoyer un
+   * achat ici apprendrait à Meta que cliquer vaut vendre, et le budget
+   * partirait sur des gens qui cliquent sans jamais commander. */
+  const noterDepartWhatsApp = () => {
+    track('contact_whatsapp', { value: total / 1000, items: analyticsItems() })
+    trackMeta('Contact', {
+      value: total / 1000,
+      contents: metaContents(),
+    })
+  }
 
   /** Le message est affiché AU CHAMP, pas trois écrans plus bas.
    *
@@ -1225,11 +1254,14 @@ export default function OrderPage() {
             d'emploi du poids tient sur une ligne discrète — et le sélecteur
             de poids, lui, est dans chaque carte. ── */}
         <section id="panel-produits" role="tabpanel" aria-labelledby="tab-produits" hidden={tab !== 'produits'}>
-          <p className="mb-4 text-center text-xs font-light text-ink/50 md:mb-6 md:text-sm">
+          <p className="mb-4 text-center text-xs font-light text-ink/50 md:mb-5 md:text-sm">
             {isAr
               ? 'اختاروا الوزن والكمية. الأسعار لـ 1 كغ.'
               : 'Choisissez le poids et la quantité. Prix affichés pour 1 kg.'}
           </p>
+          {catalog.length > 0 && (
+            <FlavourChips products={catalog} selectedId={flavour} onSelect={setFlavour} lang={lang} />
+          )}
           {isLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -1861,6 +1893,7 @@ export default function OrderPage() {
                       href={whatsAppHref}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={noterDepartWhatsApp}
                       className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
                     >
                       <WhatsAppIcon />

@@ -67,7 +67,10 @@ export type MetaContentItem = { id: string; quantity?: number; item_price?: numb
  * être identique côté Conversions API (api/lib/metaConversionsApi.ts) pour
  * que Meta déduplique les deux envois d'un même événement. */
 export function trackMeta(
-  event: 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'AddPaymentInfo' | 'Purchase',
+  // « Contact » = le client part vers WhatsApp. PAS « Purchase » : personne
+  // n'a encore acheté, et apprendre à Meta que cliquer vaut vendre enverrait
+  // le budget sur des gens qui cliquent sans jamais commander.
+  event: 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'AddPaymentInfo' | 'Purchase' | 'Contact',
   params: { value: number; contents: MetaContentItem[] },
   eventId?: string,
 ) {

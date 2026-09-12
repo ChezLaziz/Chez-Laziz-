@@ -57,6 +57,10 @@ export function track(
     | 'view_item_list'
     | 'add_to_cart'
     | 'view_cart'
+    // Départ vers WhatsApp : la commande se conclura dans une conversation,
+    // hors du site. Sans cet événement, cette porte serait invisible dans la
+    // mesure alors qu'elle produit de vraies ventes.
+    | 'contact_whatsapp'
     | 'begin_checkout'
     | 'add_payment_info'
     | 'purchase',
