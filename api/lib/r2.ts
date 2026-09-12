@@ -163,3 +163,19 @@ export async function objectSize(key: string): Promise<number | null> {
     return null;
   }
 }
+
+/** Le jeton a-t-il encore le droit de parler au seau ?
+ *
+ * Volontairement séparé de la lecture d'un objet : « Access Denied » sur un
+ * GET est ambigu — droits insuffisants OU objet absent — et c'est cette
+ * ambiguïté qui a coûté une journée. Un listage, lui, ne dépend d'aucun
+ * objet : s'il passe, les identifiants sont vivants. */
+export async function canListBucket(): Promise<boolean> {
+  try {
+    const { client, bucket } = getClient();
+    await client.send(new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));
+    return true;
+  } catch {
+    return false;
+  }
+}
