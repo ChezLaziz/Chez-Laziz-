@@ -22,6 +22,7 @@ import { startReminderScheduler } from "./lib/telegramReminders";
 import { startBackupScheduler } from "./lib/backupSchedule";
 import { startR2HealthScheduler } from "./lib/r2Health";
 import { warmProductThumbnails } from "./lib/thumbnailWarmup";
+import { runSelfCheck } from "./lib/selfCheck";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -354,5 +355,8 @@ if (env.isProduction) {
     // Quelques secondes après le démarrage, une fois le trafic repris : les
     // photos du catalogue entrent en mémoire (voir thumbnailWarmup.ts).
     setTimeout(() => void warmProductThumbnails(), 5_000).unref();
+    // Le serveur se teste lui-même comme le ferait un navigateur (voir
+    // selfCheck.ts) : une lecture qui ne répond pas 200 alerte sur Telegram.
+    setTimeout(() => void runSelfCheck(port), 8_000).unref();
   });
 }
