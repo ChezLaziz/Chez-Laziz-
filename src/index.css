@@ -119,6 +119,15 @@
   transform: scale(1);
 }
 
+/* ---------- Arabe : jamais d'interlettrage ---------- */
+/* L'interlettrage (tracking-*) sépare les lettres — en arabe, il casse la
+   liaison des lettres et chaque glyphe s'affiche sous sa forme isolée. La
+   règle suit la LANGUE, pas la page : un mot-symbole latin marqué
+   lang="fr" dans une page arabe garde son interlettrage. */
+:lang(ar) {
+  letter-spacing: 0 !important;
+}
+
 /* ---------- Hero per-character stagger ---------- */
 .hero-char {
   display: inline-block;

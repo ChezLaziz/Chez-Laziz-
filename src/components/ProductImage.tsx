@@ -5,8 +5,10 @@ function Placeholder({ alt, className, compact }: { alt: string; className: stri
   const isAr = useLang() === 'ar'
   return (
     <div
-      role="img"
-      aria-label={isAr ? `${alt} — الصورة قريبًا` : `${alt} — photo à venir`}
+      // Sans alt, la vignette est décorative : rien à annoncer.
+      role={alt ? 'img' : undefined}
+      aria-hidden={alt ? undefined : true}
+      aria-label={alt ? (isAr ? `${alt} — الصورة قريبًا` : `${alt} — photo à venir`) : undefined}
       className={`flex h-full w-full flex-col items-center justify-center gap-2 bg-[#f5ece5] ${className}`}
     >
       <img

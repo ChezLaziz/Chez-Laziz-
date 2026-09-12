@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FIXED_PACKS } from '@contracts/packs'
 import { Link, useSearchParams } from 'react-router'
 import { trpc } from '@/providers/trpc'
@@ -1710,20 +1710,17 @@ export default function AdminPage() {
   const [period, setPeriod] = useState<PresetRange>('30d')
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // Vérifie le token stocké ; si invalide/expiré → retour au login
-  trpc.admin.check.useQuery(
-    { token: token ?? '' },
-    {
-      enabled: !!token,
-      retry: false,
-      onError: () => {
-        localStorage.removeItem(TOKEN_KEY)
-        setToken(null)
-      },
-    } as never,
-  )
+  // Vérifie le token stocké ; si invalide/expiré → retour au login.
+  // (React Query v5 n'a plus de onError sur useQuery : l'ancien rappel,
+  // masqué par un « as never », n'était jamais appelé — l'admin restait
+  // « connecté » devant des écrans qui ne chargeaient plus rien.)
+  const check = trpc.admin.check.useQuery({ token: token ?? '' }, { enabled: !!token, retry: false })
+  const sessionExpiree = !!token && check.isError
+  useEffect(() => {
+    if (sessionExpiree) localStorage.removeItem(TOKEN_KEY)
+  }, [sessionExpiree])
 
-  if (!token) {
+  if (!token || sessionExpiree) {
     return (
       <Login
         onLogin={(t) => {

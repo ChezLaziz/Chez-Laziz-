@@ -101,26 +101,35 @@ export function useSEO({
 }) {
   const resolvedAlternates = alternates ?? deriveAlternates(path)
   const resolvedImage = image ? `https://chezlaziz.com${image}` : 'https://chezlaziz.com/images/hero-og.jpg'
+  const isAr = path === '/ar' || path.startsWith('/ar/')
+  // Les effets dépendent de valeurs PRIMITIVES : un objet recréé à chaque
+  // rendu (alternates, article) les faisait rejouer à chaque frappe sur la
+  // page de commande — hreflang retirés puis reposés, JSON-LD réécrit.
+  const altFr = resolvedAlternates?.fr
+  const altAr = resolvedAlternates?.ar
+  const datePublished = article?.datePublished
+  const dateModified = article?.dateModified
   useEffect(() => {
     const articleId = 'seo-article-jsonld'
-    if (article) {
+    if (datePublished) {
       setJsonLd(articleId, {
         '@context': 'https://schema.org',
         '@type': 'Article',
-        headline: title.replace(/ — Journal Chez Laziz$/, ''),
+        // Le titre sans le suffixe du site, dans les deux langues.
+        headline: title.replace(/ — (Journal Chez Laziz|مدونة عند لعزيز)$/, ''),
         description,
-        inLanguage: 'fr',
+        inLanguage: isAr ? 'ar' : 'fr',
         mainEntityOfPage: `https://chezlaziz.com${path}`,
         image: resolvedImage,
-        datePublished: article.datePublished,
-        dateModified: article.dateModified ?? article.datePublished,
+        datePublished,
+        dateModified: dateModified ?? datePublished,
         author: { '@type': 'Organization', name: 'Chez Laziz', url: 'https://chezlaziz.com/' },
         publisher: { '@id': 'https://chezlaziz.com/#business' },
       })
     } else {
       document.getElementById(articleId)?.remove()
     }
-  }, [article, title, description, path, resolvedImage])
+  }, [datePublished, dateModified, title, description, path, resolvedImage, isAr])
 
   useEffect(() => {
     document.title = title
@@ -129,6 +138,9 @@ export function useSEO({
     setMeta('property', 'og:description', description)
     setMeta('property', 'og:url', `https://chezlaziz.com${path}`)
     setMeta('property', 'og:image', resolvedImage)
+    // Les valeurs d'index.html ne valent que pour l'accueil français.
+    setMeta('property', 'og:locale', isAr ? 'ar_TN' : 'fr_FR')
+    setMeta('property', 'og:type', datePublished ? 'article' : 'website')
     setMeta('name', 'twitter:title', title)
     setMeta('name', 'twitter:description', description)
     setMeta('name', 'twitter:image', resolvedImage)
@@ -148,11 +160,10 @@ export function useSEO({
     }
     canonical.setAttribute('href', `https://chezlaziz.com${path}`)
 
-    setHreflangLinks(resolvedAlternates)
+    setHreflangLinks(altFr && altAr ? { fr: altFr, ar: altAr } : undefined)
 
     const scriptId = 'seo-breadcrumb-jsonld'
     if (breadcrumb) {
-      const isAr = path === '/ar' || path.startsWith('/ar/')
       setJsonLd(scriptId, {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
@@ -169,5 +180,5 @@ export function useSEO({
     } else {
       document.getElementById(scriptId)?.remove()
     }
-  }, [title, description, path, breadcrumb, noindex, resolvedAlternates, resolvedImage])
+  }, [title, description, path, breadcrumb, noindex, altFr, altAr, resolvedImage, isAr, datePublished])
 }

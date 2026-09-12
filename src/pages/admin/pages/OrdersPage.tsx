@@ -361,7 +361,9 @@ export default function OrdersPage({
                   setPaymentStatus.mutate({ token, id: o.id, paymentStatus })
                 }
                 onTracking={(trackingNumber) =>
-                  setCarrier.mutate({ token, id: o.id, carrier: o.carrier as CarrierKey, trackingNumber })
+                  // Après un envoi interrompu, la commande n'a pas encore de
+                  // transporteur : le numéro retrouvé vient de Team Parcel Express.
+                  setCarrier.mutate({ token, id: o.id, carrier: (o.carrier as CarrierKey | null) ?? 'tpe', trackingNumber })
                 }
                 onClearCarrier={() => setCarrier.mutate({ token, id: o.id, carrier: null, clear: true })}
                 onDelete={() => removeOrder.mutate({ token, id: o.id })}

@@ -197,7 +197,7 @@ export default function MakroudhFruitsSecsPage() {
                       طلبيتكم أونلاين
                     </Link>{' '}
                     بالمقاس، أو اكتشفو{' '}
-                    <Link to={collectionHref} className="text-accent underline underline-offset-2">
+                    <Link to="/ar/commande" className="text-accent underline underline-offset-2">
                       حزمنا الجاهزة للإهداء
                     </Link>
                     ، اللي تتضمن مقروض لعزيز بالفواكه الجافة.
@@ -338,7 +338,7 @@ export default function MakroudhFruitsSecsPage() {
                     commande en ligne
                   </Link>{' '}
                   à la carte, ou découvrez nos{' '}
-                  <Link to="/collection" className="text-accent underline underline-offset-2">
+                  <Link to="/commande" className="text-accent underline underline-offset-2">
                     coffrets prêts à offrir
                   </Link>
                   , qui incluent le Makroudh Laziz aux Fruits Secs.

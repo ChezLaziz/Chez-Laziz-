@@ -57,7 +57,11 @@ export function useProductJsonLd({
       '@type': 'Product',
       name,
       description,
-      image: product.imageUrl ? `https://chezlaziz.com${product.imageUrl}` : 'https://chezlaziz.com/images/hero-og.jpg',
+      image: !product.imageUrl
+        ? 'https://chezlaziz.com/images/hero-og.jpg'
+        : /^https?:\/\//.test(product.imageUrl)
+          ? product.imageUrl
+          : `https://chezlaziz.com${product.imageUrl}`,
       url: `https://chezlaziz.com${url}`,
       brand: { '@type': 'Brand', name: 'Chez Laziz' },
       offers: {

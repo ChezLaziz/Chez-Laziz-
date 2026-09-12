@@ -35,7 +35,7 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
           <div data-reveal className="mask-reveal aspect-[16/9] lg:col-span-5">
             <img
               src={image}
-              alt="Chez Laziz — l'atelier et la boutique à Kairouan"
+              alt={isAr ? 'عند لعزيز — الورشة والمتجر في القيروان' : "Chez Laziz — l'atelier et la boutique à Kairouan"}
               className="h-full w-full object-cover"
               loading="lazy"
             />

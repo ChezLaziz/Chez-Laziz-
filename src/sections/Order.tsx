@@ -20,7 +20,7 @@ export default function Order() {
             <div className="mask-reveal h-full min-h-[320px]">
               <img
                 src="/images/makroudh.webp"
-                alt="Makroudh Chez Laziz, façonnés à la main"
+                alt={isAr ? 'مقروض عند لعزيز، مصنوع يدويًا' : 'Makroudh Chez Laziz, façonnés à la main'}
                 className="h-full w-full object-cover"
                 loading="lazy"
               />

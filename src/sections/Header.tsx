@@ -112,6 +112,7 @@ export default function Header() {
                 entière dès qu'il y a la place, et le logo seul avant. */}
             <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 shrink-0 md:h-12 md:w-12" />
             <span
+              lang="fr"
               className={`hidden font-display sm:inline sm:text-xl sm:tracking-[0.14em] md:text-2xl ${
                 scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
               }`}

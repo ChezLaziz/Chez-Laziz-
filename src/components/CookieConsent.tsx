@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { estCheminInterne } from '@contracts/internalPaths'
-import { Link, useLocation } from 'react-router'
+import { useLocation } from 'react-router'
 import { getConsent, setConsent } from '@/lib/cookieConsent'
 import { useLang } from '@/lib/i18n'
 
@@ -68,16 +68,16 @@ export default function CookieConsent() {
           {isAr ? (
             <>
               نستعمل ملفات تعريف الارتباط لقياس الزيارات.{' '}
-              <Link to="/politique-de-confidentialite" className="underline underline-offset-2">
+              <a href={isAr ? '/ar/politique-de-confidentialite' : '/politique-de-confidentialite'} target="_blank" rel="noreferrer" className="underline underline-offset-2">
                 المزيد
-              </Link>
+              </a>
             </>
           ) : (
             <>
               Cookies de mesure d'audience et publicitaires.{' '}
-              <Link to="/politique-de-confidentialite" className="underline underline-offset-2">
+              <a href={isAr ? '/ar/politique-de-confidentialite' : '/politique-de-confidentialite'} target="_blank" rel="noreferrer" className="underline underline-offset-2">
                 En savoir plus
-              </Link>
+              </a>
             </>
           )}
         </p>

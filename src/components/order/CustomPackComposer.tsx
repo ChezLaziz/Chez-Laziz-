@@ -297,7 +297,7 @@ export default function CustomPackComposer({
                     ? 'الحزمة مكتملة ✓ — أضيفوها إلى طلبكم.'
                     : 'Pack complet ✓ — ajoutez-le à votre commande.'
                   : isAr
-                    ? `اختاروا ${remaining} منتج${remaining > 1 ? 'ات' : ''} إضافي${remaining > 1 ? 'ة' : ''} لإكمال حزمتكم.`
+                    ? `اختاروا ${remaining === 1 ? 'منتجًا إضافيًا واحدًا' : remaining === 2 ? 'منتجين إضافيين' : `${remaining} منتجات إضافية`} لإكمال حزمتكم.`
                     : `Choisissez encore ${remaining} produit${remaining > 1 ? 's' : ''} pour compléter votre pack.`}
             </p>
           </div>

@@ -185,7 +185,8 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
           name: productName(p, lang),
           category: p.category,
           ...(productDescription(p, lang) ? { description: productDescription(p, lang) } : {}),
-          ...(p.imageUrl ? { image: `https://chezlaziz.com${p.imageUrl}` } : {}),
+          // Un lien externe collé dans l'admin est déjà absolu.
+          ...(p.imageUrl ? { image: /^https?:\/\//.test(p.imageUrl) ? p.imageUrl : `https://chezlaziz.com${p.imageUrl}` } : {}),
           offers: {
             '@type': 'Offer',
             price: (p.priceMillimes / 1000).toFixed(3),
@@ -213,7 +214,7 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
               ? pages?.collectionSubtitleAr || DEFAULT_SUBTITLE_AR
               : pages?.collectionSubtitle || DEFAULT_SUBTITLE}
           </p>
-          <a data-reveal href={PHONE_TEL} dir="ltr" className="arrow-link mt-8 inline-flex">
+          <a data-reveal href={PHONE_TEL} className="arrow-link mt-8 inline-flex">
             {isAr ? 'اطلب عبر الهاتف' : 'Commander par téléphone'}
             <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
               <path d="M0 5h16M12 1l4 4-4 4" stroke="currentColor" strokeWidth="1.4" />

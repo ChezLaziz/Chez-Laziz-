@@ -102,7 +102,7 @@ export default function MakroudhDattesPage() {
                   <Link to="/ar/commande" className="text-accent underline underline-offset-2">
                     طلبيتكم أونلاين
                   </Link>
-                  ، للاستلام من المحل.
+                  ، توصيل لكل تونس خلال 24 ساعة.
                 </p>
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function MakroudhDattesPage() {
                 <Link to="/commande" className="text-accent underline underline-offset-2">
                   commande en ligne
                 </Link>
-                , à retirer en boutique.
+                , livrée partout en Tunisie sous 24h.
               </p>
             </div>
           </div>

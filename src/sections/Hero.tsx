@@ -152,7 +152,7 @@ export default function Hero() {
         <img
           ref={imgRef}
           src="/images/hero.webp"
-          alt="Makroudh de Kairouan dorés au miel, dressés sur un plateau"
+          alt={isAr ? 'مقروض القيروان الذهبي بالعسل، مرصوص على طبق' : 'Makroudh de Kairouan dorés au miel, dressés sur un plateau'}
           className="absolute inset-0 h-full w-full object-cover object-bottom md:object-center"
           fetchPriority="high"
           decoding="async"
@@ -194,6 +194,7 @@ export default function Hero() {
 
         <p
           dir={ARABIC.test(support) ? 'rtl' : 'ltr'}
+          lang={ARABIC.test(support) ? undefined : 'fr'}
           className={`font-display text-[#e6cf8a] ${
             ARABIC.test(support) ? 'mt-3 text-2xl md:text-3xl' : 'mt-2 text-base tracking-[0.3em] md:text-lg'
           }`}

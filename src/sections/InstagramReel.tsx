@@ -71,7 +71,7 @@ export default function InstagramReel() {
               ) : (
                 <img
                   src="/images/reel-poster.webp"
-                  alt="Aperçu de notre dernière vidéo Instagram — Chez Laziz"
+                  alt={isAr ? 'لقطة من آخر فيديو لنا على إنستغرام — عند لعزيز' : 'Aperçu de notre dernière vidéo Instagram — Chez Laziz'}
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />

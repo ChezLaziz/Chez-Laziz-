@@ -59,7 +59,7 @@ export default function DelegationLinks({ token }: { token: string }) {
       <Card title="Villes et délégations">
         <p className="text-xs leading-relaxed text-ink/55">
           La liste des délégations de Team Parcel Express n'a pas encore été récupérée. Ouvrez
-          « Connexion Team Parcel Express » ci-dessous et appuyez sur « Récupérer les délégations ».
+          Paramètres → « Délégations Team Parcel Express » et appuyez sur « Mettre à jour la liste ».
         </p>
       </Card>
     )

@@ -84,7 +84,7 @@ function readRememberedCustomer() {
 
 /** `count` vient de la page, pas du panier brut : voir « le panier fantôme »
  * plus bas. Le badge doit dire ce que la commande contient vraiment. */
-function TopBar({ whatsAppHref, count }: { whatsAppHref: string; count: number }) {
+function TopBar({ whatsAppHref, count, onWhatsApp }: { whatsAppHref: string; count: number; onWhatsApp?: () => void }) {
   const lang = useLang()
   const isAr = lang === 'ar'
   return (
@@ -97,7 +97,7 @@ function TopBar({ whatsAppHref, count }: { whatsAppHref: string; count: number }
             reste entier. */}
         <Link to={isAr ? '/ar' : '/'} className="flex min-w-0 items-center gap-2 md:gap-2.5">
           <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 shrink-0 md:h-10 md:w-10" width="40" height="40" />
-          <span className="hidden truncate font-display tracking-[0.14em] text-ink sm:inline sm:text-xl md:text-2xl">
+          <span lang="fr" className="hidden truncate font-display tracking-[0.14em] text-ink sm:inline sm:text-xl md:text-2xl">
             CHEZ&nbsp;LAZIZ
           </span>
         </Link>
@@ -110,6 +110,7 @@ function TopBar({ whatsAppHref, count }: { whatsAppHref: string; count: number }
             href={whatsAppHref}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={onWhatsApp}
             aria-label={isAr ? 'اطلبوا عبر واتساب' : 'Commander par WhatsApp'}
             className="flex h-11 items-center gap-2 rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-3 text-xs font-semibold text-[#128C4A] transition-colors hover:bg-[#25D366]/20 md:px-4"
           >
@@ -370,6 +371,14 @@ export default function OrderPage() {
     { enabled: !!governorate, staleTime: 60 * 60 * 1000 },
   )
   const delegations = delegationsQuery.data ?? []
+  // Une délégation mémorisée qui n'est plus dans la liste laisserait le
+  // sélecteur vide alors que l'état le croit rempli : le client validerait
+  // tout le formulaire pour se faire refuser par le serveur. Dérivé, pas
+  // corrigé après coup : tant que la liste ne la connaît pas, elle ne
+  // compte pas.
+  const delegationConnue =
+    !delegationsQuery.data || !delegationId || delegations.some((d) => d.externalId === delegationId)
+  const delegationChoisie = delegationConnue ? delegationId : ''
   // La saisie libre ne revient que si, POUR LE GOUVERNORAT CHOISI, la liste
   // s'est révélée vide ou injoignable : mieux vaut une ville écrite à la
   // main qu'un client qui ne peut pas commander. Avant tout choix de
@@ -644,7 +653,10 @@ export default function OrderPage() {
    * repartir de zéro : ses 4 produits reviennent dans le composeur. */
   const editCustom = (line: CustomLine, key: string) => {
     setSelected([...line.productIds])
-    removeLine(key)
+    // Trois exemplaires du même pack : on n'en reprend qu'un, les deux
+    // autres restent dans la commande.
+    if (line.qty > 1) setLineQty(key, line.qty - 1)
+    else removeLine(key)
     setCustomJustAdded(false)
     switchTab('custom')
     setTimeout(() => scrollToId('composer'), 50)
@@ -683,7 +695,7 @@ export default function OrderPage() {
         id: 'f-gov',
         message: isAr ? 'اختاروا الولاية.' : 'Choisissez le gouvernorat.',
       }
-    if (useDelegationList ? !delegationId : city.trim().length === 0)
+    if (useDelegationList ? !delegationChoisie : city.trim().length === 0)
       return {
         id: 'f-city',
         message: isAr ? 'اختاروا المعتمدية.' : 'Choisissez la délégation.',
@@ -853,7 +865,7 @@ export default function OrderPage() {
         phone: phone.trim(),
         governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number],
         city: city.trim(),
-        delegationExternalId: delegationId || undefined,
+        delegationExternalId: delegationChoisie || undefined,
         address: address.trim(),
         note: note.trim() || undefined,
         items: items.map(({ line }) =>
@@ -1011,7 +1023,7 @@ export default function OrderPage() {
   if (placed) {
     return (
       <div className="min-h-screen bg-[#faf6f3]">
-        <TopBar whatsAppHref={whatsAppHref} count={itemCount} />
+        <TopBar whatsAppHref={whatsAppHref} count={itemCount} onWhatsApp={noterDepartWhatsApp} />
         <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-20 text-center md:py-28">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#b8912e]/15 text-accent">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1111,7 +1123,7 @@ export default function OrderPage() {
 
   return (
     <div className="min-h-screen bg-[#faf6f3]">
-      <TopBar whatsAppHref={whatsAppHref} count={itemCount} />
+      <TopBar whatsAppHref={whatsAppHref} count={itemCount} onWhatsApp={noterDepartWhatsApp} />
 
       {/* ── En-tête ──
           COURT PAR NÉCESSITÉ. Mesuré sur un téléphone de 844 px : l'ancienne
@@ -1406,7 +1418,7 @@ export default function OrderPage() {
             >
               <p>
                 {isAr
-                  ? `${orphanCount > 1 ? `${orphanCount} عناصر لم تعد متوفّرة` : 'عنصر لم يعد متوفّرًا'} ولا يمكن طلبها. اتصلوا بنا على ⁦${PHONE_DISPLAY}⁩ إذا كنتم تريدونها.`
+                  ? `${orphanCount > 1 ? `${itemsLabelAr(orphanCount)} لم تعد متوفّرة` : 'عنصر لم يعد متوفّرًا'} ولا يمكن طلبها. اتصلوا بنا على ⁦${PHONE_DISPLAY}⁩ إذا كنتم تريدونها.`
                   : `${orphanCount > 1 ? `${orphanCount} articles ne sont plus disponibles` : "Un article n'est plus disponible"} et ne peut plus être commandé. Appelez-nous au ${PHONE_DISPLAY} si vous y tenez.`}
               </p>
               <button
@@ -1747,7 +1759,7 @@ export default function OrderPage() {
                         <select
                           id="f-city"
                           required
-                          value={delegationId}
+                          value={delegationChoisie}
                           disabled={!governorate || delegationsQuery.isLoading}
                           onChange={(e) => {
                             const chosen = delegations.find((d) => d.externalId === e.target.value)
@@ -1757,7 +1769,7 @@ export default function OrderPage() {
                           }}
                           aria-label={isAr ? 'المعتمدية' : 'Délégation'}
                           autoComplete="address-level2"
-                          className={`${inputCls} h-[50px] ${delegationId ? '' : 'text-ink/35'}`}
+                          className={`${inputCls} h-[50px] ${delegationChoisie ? '' : 'text-ink/35'}`}
                         >
                           <option value="" disabled>
                             {!governorate

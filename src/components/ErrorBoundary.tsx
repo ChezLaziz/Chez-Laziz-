@@ -14,7 +14,8 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, { 
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack)
-    trackException(error.message.slice(0, 150))
+    // Un `throw 'texte'` ou une valeur sans message ferait lever le garde-fou lui-même.
+    trackException(String((error as { message?: unknown } | null)?.message ?? error).slice(0, 150))
   }
 
   render() {
