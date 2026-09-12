@@ -5,7 +5,7 @@ import { formatTND } from '@/lib/shop'
 import { track } from '@/lib/analytics'
 import ProductImage from '@/components/ProductImage'
 import { useLang } from '@/lib/i18n'
-import { productName, productDescription } from '@contracts/productText'
+import { productBadge, productName, productDescription } from '@contracts/productText'
 
 type Product = {
   id: number
@@ -16,6 +16,7 @@ type Product = {
   priceMillimes: number
   category: string
   badge: string | null
+  badgeAr?: string | null
   imageUrl: string | null
   isExclusiveCreation: boolean
 }
@@ -91,9 +92,9 @@ export default function Signatures() {
                   alt={productName(p, lang)}
                   className="transition-transform duration-500 group-hover:scale-105"
                 />
-                {p.badge && (
-                  <span className="absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent shadow">
-                    {p.badge}
+                {productBadge(p, lang) && (
+                  <span className={`absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold text-accent shadow ${lang === 'ar' ? 'tracking-normal' : 'uppercase tracking-[0.14em]'}`}>
+                    {productBadge(p, lang)}
                   </span>
                 )}
               </div>

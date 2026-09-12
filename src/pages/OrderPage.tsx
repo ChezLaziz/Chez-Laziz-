@@ -1831,18 +1831,27 @@ export default function OrderPage() {
                   </div>
                   {/* Jamais grisé, sauf pendant l'envoi : voir firstMissing. */}
                   <div id="cl-submit" ref={attachSubmit} className="mt-5">
+                    {/* Le montant et le mode de paiement sont DANS le bouton :
+                        c'est la dernière chose que le client lit avant
+                        d'appuyer, et c'est là que la question « combien, et
+                        quand est-ce que je paie ? » doit être déjà réglée. */}
                     <button
                       type="submit"
                       disabled={createOrder.isPending && !submitStalled}
-                      className="gold-cta h-13 w-full rounded-full px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="gold-cta flex min-h-[3.5rem] w-full flex-col items-center justify-center rounded-full px-7 py-3 text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      {createOrder.isPending && !submitStalled
-                        ? isAr
-                          ? 'إرسال…'
-                          : 'Envoi…'
-                        : isAr
-                          ? 'اطلب الآن'
-                          : 'Commander'}
+                      {createOrder.isPending && !submitStalled ? (
+                        <span className="text-sm font-semibold uppercase tracking-[0.12em]">{isAr ? 'إرسال…' : 'Envoi…'}</span>
+                      ) : (
+                        <>
+                          <span className="text-sm font-semibold uppercase tracking-[0.12em]">
+                            {isAr ? 'اطلب الآن' : 'Commander'} — {formatPriceDT(total, lang)}
+                          </span>
+                          <span className="mt-0.5 text-[11px] font-light tracking-normal text-white/85">
+                            {isAr ? 'الدفع نقدًا عند التسليم' : 'Paiement en espèces à la livraison'}
+                          </span>
+                        </>
+                      )}
                     </button>
                   </div>
 

@@ -11,6 +11,8 @@ export type TranslatableProduct = {
   description?: string | null;
   nameAr?: string | null;
   descriptionAr?: string | null;
+  badge?: string | null;
+  badgeAr?: string | null;
 };
 
 export type TextLang = "fr" | "ar";
@@ -32,4 +34,13 @@ export function productDescription(
   if (lang !== "ar") return fr;
   const ar = product.descriptionAr?.trim();
   return ar ? ar : fr;
+}
+
+/** Le badge dans la langue de la page. Même repli que le nom : un badge
+ * français sur la page arabe vaut mieux qu'un badge qui disparaît — mais
+ * l'admin montre les deux champs ensemble pour que ça n'arrive plus. */
+export function productBadge(product: TranslatableProduct, lang: TextLang): string | null {
+  const fr = product.badge?.trim() || null;
+  if (lang !== "ar") return fr;
+  return product.badgeAr?.trim() || fr;
 }

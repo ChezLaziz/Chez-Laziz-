@@ -47,13 +47,23 @@ export default function FlavourChips({
   const tout = lang === 'ar' ? 'الكل' : 'Tous'
 
   return (
+    // Le conteneur relatif porte le fondu de bord : la barre de défilement
+    // est cachée, et sans ce signal le dernier bouton semblait simplement
+    // coupé — rien ne disait qu'il y en avait d'autres derrière.
+    <div className="relative -mx-5 mb-5 md:-mx-10">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 end-0 z-10 w-12 bg-gradient-to-r from-transparent to-[var(--bg)] rtl:bg-gradient-to-l"
+      />
     <div
       ref={barre}
       role="group"
       aria-label={lang === 'ar' ? 'اختاروا النكهة' : 'Choisir une saveur'}
       // `overflow-x-auto` seul laisse la barre flotter au milieu d'un geste ;
       // l'accrochage donne la même sensation qu'un carrousel natif.
-      className="-mx-5 mb-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 pb-2 md:-mx-10 md:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      // Un peu d'air à droite (pe-14) : le dernier bouton sort entièrement
+      // du fondu quand on arrive au bout.
+      className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-5 pb-2 pe-14 md:px-10 md:pe-20 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <button
         type="button"
@@ -107,6 +117,7 @@ export default function FlavourChips({
           </button>
         )
       })}
+    </div>
     </div>
   )
 }

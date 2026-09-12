@@ -8,7 +8,7 @@ import { setJsonLd } from '@/hooks/useSEO'
 import ProductImage from '@/components/ProductImage'
 import { useLang } from '@/lib/i18n'
 import { CATEGORY_LABELS_AR } from '@/lib/categories'
-import { productName, productDescription } from '@contracts/productText'
+import { productBadge, productName, productDescription } from '@contracts/productText'
 
 type DbProduct = {
   id: number
@@ -19,6 +19,7 @@ type DbProduct = {
   priceMillimes: number
   category: string
   badge: string | null
+  badgeAr?: string | null
   imageUrl: string | null
   isExclusiveCreation: boolean
 }
@@ -70,9 +71,9 @@ function ProductCard({
           alt={displayName}
           className="transition-transform duration-500 hover:scale-105"
         />
-        {product.badge && (
-          <span className="absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent shadow">
-            {product.badge}
+        {productBadge(product, lang) && (
+          <span className={`absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold text-accent shadow ${isAr ? 'tracking-normal' : 'uppercase tracking-[0.14em]'}`}>
+            {productBadge(product, lang)}
           </span>
         )}
       </div>

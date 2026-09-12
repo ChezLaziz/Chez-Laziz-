@@ -345,6 +345,7 @@ type ProductForm = {
   costTND: string
   category: string
   badge: string
+  badgeAr: string
   imageUrl: string
   available: boolean
   isExclusiveCreation: boolean
@@ -359,6 +360,7 @@ const EMPTY_FORM: ProductForm = {
   costTND: '',
   category: 'Les classiques',
   badge: '',
+  badgeAr: '',
   imageUrl: '',
   available: true,
   isExclusiveCreation: false,
@@ -454,6 +456,7 @@ function ProductsTab({ token }: { token: string }) {
       costTND: p.costPerKgMillimes === null ? '' : formatTND(p.costPerKgMillimes),
       category: p.category,
       badge: p.badge ?? '',
+      badgeAr: p.badgeAr ?? '',
       imageUrl: p.imageUrl ?? '',
       available: p.available,
       isExclusiveCreation: p.isExclusiveCreation,
@@ -475,6 +478,7 @@ function ProductsTab({ token }: { token: string }) {
       costPerKgMillimes: form.costTND.trim() === '' ? null : toMillimes(form.costTND),
       category: form.category.trim() || 'Les classiques',
       badge: form.badge.trim() || null,
+      badgeAr: form.badgeAr.trim() || null,
       imageUrl: form.imageUrl.trim() || null,
       available: form.available,
       isExclusiveCreation: form.isExclusiveCreation,
@@ -616,6 +620,9 @@ function ProductsTab({ token }: { token: string }) {
               <option>Les nouveautés</option>
             </select>
             <input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="Badge (ex : Nouveau)" className={inputCls} />
+            {/* Côte à côte avec le français : un badge posé sans sa version
+                arabe s'affichait en français sur la page arabe. */}
+            <input dir="rtl" value={form.badgeAr} onChange={(e) => setForm({ ...form, badgeAr: e.target.value })} placeholder="الشارة بالعربية (مثال : جديد)" className={inputCls} />
             <label className="flex items-center gap-3 text-sm text-ink/70">
               <input type="checkbox" checked={form.available} onChange={(e) => setForm({ ...form, available: e.target.checked })} className="h-4 w-4 accent-[#b8912e]" />
               Visible sur le site

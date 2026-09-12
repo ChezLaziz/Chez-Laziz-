@@ -64,6 +64,11 @@ export const products = pgTable("products", {
   costPerKgMillimes: integer("cost_per_kg_millimes"),
   category: varchar("category", { length: 100 }).notNull(),
   badge: varchar("badge", { length: 50 }),
+  // Version arabe du badge. Vide = repli sur le français, comme nameAr —
+  // mais un badge est du marketing, et « Le plus commandé » sur la page
+  // arabe se lisait comme un oubli. L'admin montre les deux champs côte à
+  // côte pour qu'on ne pose plus l'un sans l'autre.
+  badgeAr: varchar("badge_ar", { length: 50 }),
   imageUrl: varchar("image_url", { length: 255 }),
   available: boolean("available").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),

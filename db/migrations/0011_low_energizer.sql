@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "badge_ar" varchar(50);

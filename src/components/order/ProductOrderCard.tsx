@@ -4,7 +4,7 @@ import type { CatalogProduct } from '@/lib/orderLines'
 import { ALLOWED_WEIGHTS_KG, formatWeight, priceForWeight, type WeightKg } from '@contracts/shop'
 import { formatPriceDT } from '@contracts/packs'
 import { useLang } from '@/lib/i18n'
-import { productName, productDescription } from '@contracts/productText'
+import { productBadge, productName, productDescription } from '@contracts/productText'
 
 const stepperBtnCls =
   'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
@@ -28,6 +28,7 @@ export default function ProductOrderCard({
   const isAr = lang === 'ar'
   const displayName = productName(product, lang)
   const displayDescription = productDescription(product, lang)
+  const badge = productBadge(product, lang)
   const inCart = (Object.keys(qtyByWeight) as unknown as string[]).map(Number) as WeightKg[]
   const [weight, setWeight] = useState<WeightKg>(inCart[0] ?? 1)
   const qty = qtyByWeight[weight] ?? 0
@@ -43,9 +44,10 @@ export default function ProductOrderCard({
     >
       <div className="relative aspect-square w-full overflow-hidden bg-sand/30">
         <ProductImage src={product.imageUrl} alt={displayName} compact />
-        {product.badge && (
-          <span className="absolute left-3 top-3 rounded-full bg-[#faf6f3]/95 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-accent">
-            {product.badge}
+        {badge && (
+          // Pas d'interlettrage forcé en arabe : il casse les ligatures.
+          <span className={`absolute left-3 top-3 rounded-full bg-[#faf6f3]/95 px-2.5 py-1 text-[9px] font-semibold text-accent ${isAr ? 'tracking-normal' : 'uppercase tracking-[0.2em]'}`}>
+            {badge}
           </span>
         )}
         {inCart.length > 0 && (
@@ -106,17 +108,27 @@ export default function ProductOrderCard({
           </select>
         </label>
 
+        {/* Avant le premier ajout : UN bouton, sur toute la largeur, qui dit
+            exactement ce qu'il fait — « Ajouter 500 g — 4 DT ». Le prix
+            n'est plus à côté du bouton, il est DANS la décision : le client
+            n'a pas à relier deux éléments pour savoir ce qu'il va payer. Et
+            pleine largeur, c'est aussi une cible qu'un pouce ne rate pas. */}
+        {qty === 0 ? (
+          <button
+            type="button"
+            onClick={() => onAdd(weight)}
+            className="mt-3 flex min-h-11 w-full items-center justify-center gap-x-2 rounded-full border border-ink/20 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60"
+          >
+            <span className="whitespace-nowrap">
+              {isAr ? 'أضف' : 'Ajouter'} {formatWeight(weight, lang)}
+            </span>
+            <span aria-hidden="true" className="text-ink/30">—</span>
+            <span className="whitespace-nowrap font-display text-base text-accent">{formatPriceDT(price, lang)}</span>
+          </button>
+        ) : (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
           <span className="whitespace-nowrap font-display text-lg text-accent">{formatPriceDT(price, lang)}</span>
-          {qty === 0 ? (
-            <button
-              type="button"
-              onClick={() => onAdd(weight)}
-              className="min-h-10 shrink-0 rounded-full border border-ink/20 px-4 text-[11px] font-semibold uppercase tracking-wide text-ink transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60"
-            >
-              {isAr ? '+ أضف' : '+ Ajouter'}
-            </button>
-          ) : (
+          {(
             <div className="flex items-center gap-1.5" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${displayName} ${formatWeight(weight, lang)}`}>
               <button type="button" aria-label={isAr ? `إنقاص ${displayName}` : `Retirer un ${displayName}`} onClick={() => onSetQty(weight, qty - 1)} className={stepperBtnCls}>
                 −
@@ -130,6 +142,7 @@ export default function ProductOrderCard({
             </div>
           )}
         </div>
+        )}
 
         {otherLines.length > 0 && (
           <p className="mt-2 text-[11px] text-ink/55">
