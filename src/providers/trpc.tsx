@@ -1,9 +1,8 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import superjson from "superjson";
 import type { AppRouter } from "../../api/router";
-import type { ReactNode } from "react";
 import { ORDER_ERROR } from "@contracts/orderErrors";
 
 export const trpc = createTRPCReact<AppRouter>();
@@ -13,10 +12,10 @@ export const trpc = createTRPCReact<AppRouter>();
 // à chaque page. Une minute de fraîcheur suffit : les écrans d'admin qui
 // exigent du direct gardent leur propre refetchInterval, et chaque
 // écriture invalide explicitement ce qu'elle a changé.
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000 } },
 });
-const trpcClient = trpc.createClient({
+export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: "/api/trpc",
@@ -39,12 +38,3 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-export function TRPCProvider({ children }: { children: ReactNode }) {
-  return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    </trpc.Provider>
-  );
-}
