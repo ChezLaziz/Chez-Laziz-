@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FIXED_PACKS } from '@contracts/packs'
 import { Link, useSearchParams } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
@@ -1631,10 +1632,58 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
   )
 }
 
+/** Les photos des coffrets.
+ *
+ * Un pack ne se vend pas comme un produit au poids : ce n'est pas de la
+ * matière, c'est un OBJET qu'on offre. Sans photo du coffret, la carte
+ * montrait une mosaïque des quatre makroudh inclus — honnête, mais elle
+ * montrait le contenu en vrac, jamais la boîte qu'on tend à quelqu'un.
+ *
+ * Chaque photo s'enregistre à l'instant où elle est envoyée : pas de bouton
+ * « Enregistrer » à oublier au bas de la page. Retirer la photo remet la
+ * mosaïque — il existe toujours un chemin de retour. */
+function PackPhotosEditor({ token }: { token: string }) {
+  const utils = trpc.useUtils()
+  const images = trpc.content.packImages.useQuery(undefined)
+  const save = trpc.content.setPackImage.useMutation({
+    onSuccess: () => utils.content.packImages.invalidate(),
+  })
+
+  return (
+    <div className="mt-6 w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm md:p-8">
+      <p className="font-display text-xl">Photos des coffrets</p>
+      <p className="mt-2 text-sm font-light text-ink/60">
+        La photo de la boîte, telle que le client la recevra. Sans photo, la carte
+        affiche une mosaïque des makroudh inclus.
+      </p>
+      {save.isError && (
+        <p className="mt-3 text-sm text-red-600">
+          {save.error?.message ?? "Échec de l'enregistrement"}
+        </p>
+      )}
+      <div className="mt-5 space-y-7">
+        {FIXED_PACKS.map((pack) => (
+          <SiteImageField
+            key={pack.id}
+            token={token}
+            label={pack.name}
+            hint={`${formatTND(pack.priceMillimes)} DT · ${pack.contents.length} saveurs`}
+            value={images.data?.[pack.id] ?? ''}
+            dirty={false}
+            onChange={(url) => save.mutate({ token, packId: pack.id, imageUrl: url })}
+          />
+        ))}
+      </div>
+      {save.isPending && <p className="mt-4 text-xs text-ink/50">Enregistrement…</p>}
+    </div>
+  )
+}
+
 function ContenuTab({ token }: { token: string }) {
   return (
     <div>
       <GalleryManager token={token} />
+      <PackPhotosEditor token={token} />
       <FooterEditor token={token} />
       <PagesEditor token={token} />
     </div>

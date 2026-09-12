@@ -8,7 +8,7 @@ import { createContext } from "./context";
 import { env } from "./lib/env";
 import { rateLimit } from "./lib/rateLimit";
 import { assertAdmin } from "./queries/admin";
-import { getUploadedImage, uploadProductImage } from "./lib/r2";
+import { estLargeurServie, getResizedImage, getUploadedImage, uploadProductImage } from "./lib/r2";
 import { getFullExport } from "./queries/backup";
 import { listOrders, type OrderItem } from "./queries/orders";
 import { toCsv, csvResponse } from "./lib/csv";
@@ -108,7 +108,14 @@ app.get("/api/uploads/*", async (c) => {
   if (!/^(products|gallery|site)\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(key)) {
     return c.json({ error: "Not Found" }, 404);
   }
-  const result = await getUploadedImage(key);
+  // ?w=<largeur> : la même photo, à la taille où elle sera réellement
+  // affichée. Sans ce paramètre, l'originale — les anciens liens continuent
+  // de fonctionner exactement comme avant.
+  const demandee = Number(c.req.query("w"));
+  const result =
+    Number.isInteger(demandee) && estLargeurServie(demandee)
+      ? await getResizedImage(key, demandee)
+      : await getUploadedImage(key);
   if (!result) return c.json({ error: "Not Found" }, 404);
   return new Response(result.body, {
     headers: {

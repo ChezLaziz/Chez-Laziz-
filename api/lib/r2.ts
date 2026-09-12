@@ -179,3 +179,98 @@ export async function canListBucket(): Promise<boolean> {
     return false;
   }
 }
+
+// ---- Vignettes : la vraie dépense d'une page catalogue sur un téléphone ----
+//
+// Les photos sont stockées à 1600 px de large. La page de commande en affiche
+// SEIZE, dans une grille à deux colonnes : sur un écran de 390 px, chaque
+// carte fait environ 190 px. On envoie donc, seize fois, une image huit fois
+// plus large que la place où elle atterrit — quelques mégaoctets pour
+// afficher l'équivalent de quelques centaines de kilo-octets, sur la
+// connexion mobile d'un client qui décide en quelques secondes s'il reste.
+//
+// Chaque largeur est calculée UNE fois puis rangée dans le seau à côté de
+// l'originale. Le deuxième visiteur, et tous les suivants, la reçoivent
+// directement. L'originale n'est jamais modifiée : une vignette ratée se
+// répare en supprimant un objet, jamais en reperdant la photo.
+
+/** Largeurs servies. Une liste courte et fermée : chaque valeur crée un objet
+ * de plus dans le seau, et un paramètre libre laisserait n'importe qui en
+ * fabriquer des milliers. */
+export const LARGEURS_VIGNETTES = [200, 400, 800] as const;
+export type LargeurVignette = (typeof LARGEURS_VIGNETTES)[number];
+
+export function estLargeurServie(n: number): n is LargeurVignette {
+  return (LARGEURS_VIGNETTES as readonly number[]).includes(n);
+}
+
+function cleVignette(key: string, width: LargeurVignette): string {
+  return key.replace(/(\.[a-z]+)$/i, `@${width}$1`);
+}
+
+/** La photo à la largeur demandée, fabriquée puis rangée au premier appel.
+ *
+ * Retourne null si l'originale est introuvable. Si le redimensionnement ou
+ * l'écriture échoue, on rend l'ORIGINALE : une photo trop lourde vaut
+ * infiniment mieux qu'une image cassée. */
+export async function getResizedImage(
+  key: string,
+  width: LargeurVignette,
+): Promise<{ body: ReadableStream; contentType: string } | null> {
+  const { client, bucket } = getClient();
+  const variante = cleVignette(key, width);
+
+  try {
+    const deja = await client.send(new GetObjectCommand({ Bucket: bucket, Key: variante }));
+    if (deja.Body) {
+      return {
+        body: deja.Body.transformToWebStream(),
+        contentType: deja.ContentType ?? "image/jpeg",
+      };
+    }
+  } catch {
+    // Pas encore fabriquée — c'est le cas normal au premier appel.
+  }
+
+  const original = await client
+    .send(new GetObjectCommand({ Bucket: bucket, Key: key }))
+    .catch(() => null);
+  if (!original?.Body) {
+    console.error(`[r2] vignette impossible : original introuvable (${key})`);
+    void diagnoseOnce();
+    return null;
+  }
+  const octets = Buffer.from(await original.Body.transformToByteArray());
+
+  try {
+    const redimensionnee = await sharp(octets)
+      .resize({ width, withoutEnlargement: true })
+      .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+      .toBuffer();
+    // Rangée sans attendre : le visiteur qui a déclenché la fabrication n'a
+    // pas à patienter pendant l'écriture.
+    void client
+      .send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: variante,
+          Body: redimensionnee,
+          ContentType: "image/jpeg",
+        }),
+      )
+      .catch((err: unknown) => console.error(`[r2] vignette non rangée (${variante}) :`, err));
+    return { body: bufferEnFlux(redimensionnee), contentType: "image/jpeg" };
+  } catch (err) {
+    console.error(`[r2] redimensionnement échoué pour ${key} :`, err);
+    return { body: bufferEnFlux(octets), contentType: original.ContentType ?? "image/jpeg" };
+  }
+}
+
+function bufferEnFlux(buf: Buffer): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array(buf));
+      controller.close();
+    },
+  });
+}

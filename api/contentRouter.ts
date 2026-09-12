@@ -5,7 +5,10 @@ import {
   setFooterContent,
   getPagesContent,
   setPagesContent,
+  getPackImages,
+  setPackImage,
 } from "./queries/content";
+import { FIXED_PACK_IDS } from "@contracts/packs";
 import { assertAdmin } from "./queries/admin";
 
 // Seule une image passée par notre propre upload (dossier site/) est
@@ -47,6 +50,25 @@ const pagesInput = z.object({
 export const contentRouter = createRouter({
   /** Contenu du pied de page (public) */
   footer: publicQuery.query(() => getFooterContent()),
+
+  /** Photos des coffrets (public) — vide = la carte garde sa mosaïque. */
+  packImages: publicQuery.query(() => getPackImages()),
+
+  setPackImage: publicQuery
+    .input(
+      z.object({
+        token: z.string(),
+        // Un identifiant libre créerait des réglages orphelins à chaque
+        // faute de frappe : seuls les packs qui existent sont acceptés.
+        packId: z.enum(FIXED_PACK_IDS),
+        imageUrl: siteImageInput.default(""),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await assertAdmin(input.token);
+      await setPackImage(input.packId, input.imageUrl);
+      return { ok: true };
+    }),
 
   updateFooter: publicQuery
     .input(

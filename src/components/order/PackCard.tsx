@@ -27,6 +27,7 @@ function CrownIcon() {
  * arabe sans casser cette liaison. */
 export default function PackCard({
   pack,
+  photo,
   photos,
   contentsAr,
   qty,
@@ -35,6 +36,10 @@ export default function PackCard({
   onGoToOrder,
 }: {
   pack: FixedPack
+  /** La photo du COFFRET, quand elle existe (téléversée depuis l'admin).
+   * Absente, la carte retombe sur la mosaïque des produits — jamais sur du
+   * vide. */
+  photo?: string | null
   /** Photo de chaque produit inclus, dans l'ordre (null = pas encore de photo). */
   photos: { src: string | null; alt: string }[]
   /** Nom affiché de chaque produit inclus, dans l'ordre — déjà traduit. */
@@ -80,13 +85,21 @@ export default function PackCard({
           se retrouve alors zoomée/coupée). min-h-0/min-w-0 neutralise ce
           minimum automatique pour que les cases restent bien à leur taille
           prévue, quel que soit le cadrage d'origine des photos. */}
-      <div className="grid aspect-[5/4] min-h-0 grid-cols-2 grid-rows-2 gap-0.5 bg-sand/40">
-        {photos.map((ph, i) => (
-          <div key={i} className={`min-h-0 min-w-0 overflow-hidden ${n === 3 && i === 0 ? 'row-span-2' : ''}`}>
-            <ProductImage src={ph.src} alt={ph.alt} compact />
-          </div>
-        ))}
-      </div>
+      {photo ? (
+        // La photo du coffret l'emporte : c'est l'objet qu'on offre, et c'est
+        // lui qu'on achète. La mosaïque ne montrait que le contenu en vrac.
+        <div className="aspect-[5/4] min-h-0 overflow-hidden bg-sand/40">
+          <ProductImage src={photo} alt={packName} />
+        </div>
+      ) : (
+        <div className="grid aspect-[5/4] min-h-0 grid-cols-2 grid-rows-2 gap-0.5 bg-sand/40">
+          {photos.map((ph, i) => (
+            <div key={i} className={`min-h-0 min-w-0 overflow-hidden ${n === 3 && i === 0 ? 'row-span-2' : ''}`}>
+              <ProductImage src={ph.src} alt={ph.alt} compact />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col p-5 md:p-6">
         <h3 className="font-display text-2xl leading-tight">{packName}</h3>

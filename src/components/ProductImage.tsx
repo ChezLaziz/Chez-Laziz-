@@ -34,6 +34,14 @@ function Placeholder({ alt, className, compact }: { alt: string; className: stri
  * voyant une photo de makroudh aux dattes est induit en erreur. Un
  * emplacement sobre est plus honnête — et la vraie photo peut être ajoutée
  * (ou remplacée) à tout moment depuis l'admin. */
+/** Les largeurs que le serveur sait fabriquer (voir api/lib/r2.ts). Une photo
+ * qui ne vient pas de notre stockage n'en reçoit aucune : mieux vaut une
+ * image lourde qu'une image absente. */
+function largeursDisponibles(src: string): string | undefined {
+  if (!src.startsWith('/api/uploads/')) return undefined
+  return [200, 400, 800].map((w) => `${src}?w=${w} ${w}w`).join(', ')
+}
+
 export default function ProductImage({
   src,
   alt,
@@ -64,6 +72,15 @@ export default function ProductImage({
     return (
       <img
         src={src}
+        // Le navigateur choisit la largeur qui correspond à la place réelle
+        // de l'image ET à la densité de l'écran. Sur un téléphone, une carte
+        // de catalogue fait ~190 px : il prendra la version 400 plutôt que
+        // l'originale de 1600 px — et il y en a seize sur la page.
+        //
+        // Réservé aux photos servies par notre propre stockage : une URL
+        // externe ne connaît pas le paramètre ?w=.
+        srcSet={largeursDisponibles(src)}
+        sizes={compact ? '96px' : '(max-width: 640px) 45vw, 320px'}
         alt={alt}
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}

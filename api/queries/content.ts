@@ -141,3 +141,42 @@ export async function setPagesContent(data: PagesContent): Promise<void> {
       .onConflictDoUpdate({ target: settings.key, set: { value: data[field] } });
   }
 }
+
+// ---- Photos des packs ----
+//
+// Un pack se vend sur sa PHOTO : ce n'est pas un produit au poids, c'est un
+// coffret qu'on offre, et ce qu'on achète est l'objet qu'on tendra à
+// quelqu'un. À défaut, la carte montre une mosaïque des produits inclus —
+// honnête, mais elle ne montre pas le coffret.
+//
+// Stockées dans `settings` et non en dur dans contracts/packs.ts : une photo
+// figée dans le code ne se remplace qu'avec un déploiement, et c'est
+// exactement ce qui a laissé la page de renvoi publicitaire avec une image
+// cassée le jour où le stockage a lâché.
+
+const PACK_IMAGE_PREFIX = "pack_image_";
+
+/** Clé d'image par identifiant de pack. Les packs absents n'ont pas de photo
+ * et gardent leur mosaïque. */
+export type PackImages = Record<string, string>;
+
+export async function getPackImages(): Promise<PackImages> {
+  const rows = await getDb().query.settings.findMany();
+  const images: PackImages = {};
+  for (const r of rows) {
+    if (r.key.startsWith(PACK_IMAGE_PREFIX) && r.value) {
+      images[r.key.slice(PACK_IMAGE_PREFIX.length)] = r.value;
+    }
+  }
+  return images;
+}
+
+/** Écrit UNE photo. Une chaîne vide efface la photo et rend la mosaïque —
+ * il doit toujours exister un chemin de retour. */
+export async function setPackImage(packId: string, imageUrl: string): Promise<void> {
+  const key = `${PACK_IMAGE_PREFIX}${packId}`;
+  await getDb()
+    .insert(settings)
+    .values({ key, value: imageUrl })
+    .onConflictDoUpdate({ target: settings.key, set: { value: imageUrl } });
+}

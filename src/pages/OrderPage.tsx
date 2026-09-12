@@ -288,6 +288,10 @@ export default function OrderPage() {
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
   const catalog = useMemo(() => (products ?? []) as CatalogProduct[], [products])
+  /** Les photos des coffrets, téléversées depuis l'admin. Une requête à part
+   * du catalogue : une photo manquante ne doit jamais retarder l'affichage
+   * des produits, et la carte a déjà son repli (la mosaïque). */
+  const packImages = trpc.content.packImages.useQuery(undefined, { staleTime: 5 * 60 * 1000 } as never)
 
   const { lines, add, setQty, packQty, addPack, addCustom, setLineQty, removeLine, dropUnresolvable, clear } =
     useCart()
@@ -1355,6 +1359,7 @@ export default function OrderPage() {
               <PackCard
                 key={pack.id}
                 pack={pack}
+                photo={packImages.data?.[pack.id]}
                 photos={packItems(pack.contents)}
                 contentsAr={packItems(pack.contents).map((i) => i.label)}
                 qty={packQty(pack.id)}
