@@ -19,6 +19,9 @@ export const PUBLIC_ROUTES = [
   "/commande",
   "/ar/commande",
   "/admin",
+  // Servie comme les autres, mais jamais indexée (robots.txt) ni comptée
+  // comme une visite (contracts/internalPaths.ts) : c'est un écran de travail.
+  "/atelier",
   "/politique-de-confidentialite",
   "/ar/politique-de-confidentialite",
   "/conditions-generales",

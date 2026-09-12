@@ -12,10 +12,13 @@ import { readSetting, writeSetting } from "./settingsStore";
 import {
   EMPTY_ACK,
   accumulateKitchen,
+  baselineFromConfirmed,
   kitchenKey,
+  kitchenPending,
   type ConfirmedTotals,
   type KitchenAck,
   type KitchenItem,
+  type KitchenLine,
 } from "@contracts/kitchenBoard";
 
 /** Clés dans la table `settings` — volontairement pas de nouvelle table :
@@ -101,4 +104,31 @@ export async function readKitchenBoardMessageId(): Promise<number | null> {
 
 export async function writeKitchenBoardMessageId(id: number | null): Promise<void> {
   await writeSetting(CLE_MESSAGE, id === null ? "" : String(id));
+}
+
+/** L'acquittement du cuisinier, en posant son POINT DE DÉPART au premier
+ * appel : tout ce qui est déjà confirmé à cet instant est réputé cuit.
+ *
+ * Sans ça, le premier affichage montrerait chaque commande livrée depuis
+ * l'ouverture de la boutique — des dizaines de kilos vendus il y a des mois. */
+export async function loadKitchenAck(confirmed: ConfirmedTotals): Promise<KitchenAck> {
+  const stocke = await readKitchenAck();
+  if (stocke) return stocke;
+  const initial = baselineFromConfirmed(confirmed);
+  await writeKitchenAck(initial);
+  return initial;
+}
+
+/** Ce qui reste à préparer, prêt à afficher — dans Telegram comme sur l'écran
+ * de l'atelier. Une seule source, pour que les deux ne puissent pas diverger. */
+export async function currentKitchenLines(): Promise<{
+  lines: KitchenLine[];
+  canUndo: boolean;
+}> {
+  const [confirmed, labels] = await Promise.all([
+    getConfirmedKitchenTotals(),
+    getKitchenLabels(),
+  ]);
+  const ack = await loadKitchenAck(confirmed);
+  return { lines: kitchenPending(confirmed, ack, labels), canUndo: Boolean(ack.last) };
 }

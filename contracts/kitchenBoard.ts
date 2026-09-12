@@ -113,6 +113,19 @@ export function kitchenPending(
   return lignes.sort((a, b) => b.kg - a.kg || a.label.localeCompare(b.label, "ar"));
 }
 
+/** Le point de départ d'un tableau tout neuf : tout ce qui est déjà confirmé
+ * compte comme cuit.
+ *
+ * Sans lui, le premier affichage ressortirait chaque commande livrée depuis
+ * l'ouverture de la boutique — des kilos vendus il y a des mois — et le
+ * cuisinier devrait tout acquitter à la main avant de pouvoir s'en servir. */
+export function baselineFromConfirmed(confirmed: ConfirmedTotals): KitchenAck {
+  return {
+    kg: Object.fromEntries(Object.entries(confirmed).map(([k, v]) => [k, v.kg])),
+    prev: {},
+  };
+}
+
 /** « تم » sur un type : tout ce qui est confirmé à cet instant est cuit. On
  * enregistre le cumul, pas une soustraction — une commande qui arrive pendant
  * la fournée n'est donc pas effacée par le bouton. */

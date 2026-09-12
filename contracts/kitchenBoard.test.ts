@@ -3,6 +3,7 @@ import {
   EMPTY_ACK,
   accumulateKitchen,
   ackKitchen,
+  baselineFromConfirmed,
   formatKgAr,
   formatKitchenBoard,
   kitchenKey,
@@ -195,5 +196,31 @@ describe("kitchenKeyboard", () => {
   it("n'offre « رجوع » que quand il y a une erreur à défaire", () => {
     expect(kitchenKeyboard([], false).inline_keyboard).toHaveLength(0);
     expect(kitchenKeyboard([], true).inline_keyboard[0][0].callback_data).toBe("k:undo");
+  });
+});
+
+describe("baselineFromConfirmed", () => {
+  const confirmed = accumulateKitchen([
+    cmd({ productId: 5, name: "Fraise", weightKg: 1, qty: 3 }),
+    cmd({ productId: 7, name: "Vanille", weightKg: 0.5, qty: 1 }),
+  ]);
+
+  it("fait disparaître tout l'historique du tableau — sinon il serait inutilisable au premier affichage", () => {
+    expect(kitchenPending(confirmed, baselineFromConfirmed(confirmed))).toEqual([]);
+  });
+
+  it("ne fige pas l'avenir : ce qui arrive APRÈS reste à préparer", () => {
+    const depart = baselineFromConfirmed(confirmed);
+    const plusTard = accumulateKitchen([
+      cmd({ productId: 5, name: "Fraise", weightKg: 1, qty: 3 }),
+      cmd({ productId: 7, name: "Vanille", weightKg: 0.5, qty: 1 }),
+      cmd({ productId: 5, name: "Fraise", weightKg: 2, qty: 1 }),
+    ]);
+    expect(kitchenPending(plusTard, depart)).toEqual([{ key: "p5", label: "Fraise", kg: 2 }]);
+  });
+
+  it("ne laisse rien à défaire au départ", () => {
+    expect(baselineFromConfirmed(confirmed).last).toBeUndefined();
+    expect(undoKitchen(baselineFromConfirmed(confirmed))).toEqual(baselineFromConfirmed(confirmed));
   });
 });

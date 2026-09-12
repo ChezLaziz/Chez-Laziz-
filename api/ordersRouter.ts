@@ -18,6 +18,8 @@ import { notifyAdminNewOrder } from "./lib/email";
 import { notifyAdminNewOrderTelegram } from "./lib/telegram";
 import { maybeReportMetaPurchase, transitionOrderStatus } from "./lib/orderTransition";
 import { refreshKitchenBoard } from "./lib/telegramKitchen";
+import { currentKitchenLines } from "./queries/kitchen";
+import { getLastOrderId, listOrdersAwaitingCall } from "./queries/reminders";
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
 import { metaUserSignals } from "@contracts/metaSignals";
@@ -343,6 +345,29 @@ export const ordersRouter = createRouter({
         trackingNumber: input.trackingNumber,
         clear: input.clear,
       });
+    }),
+
+  /** Ce que l'écran de l'atelier interroge toutes les quinze secondes.
+   *
+   * Une requête à part, et pas `list` : `list` rend TOUTES les commandes de
+   * l'histoire de la boutique, avec adresses et téléphones. La faire tourner
+   * en boucle sur un écran laissé allumé toute la journée serait à la fois du
+   * gaspillage et une exposition inutile. Ici : de quoi appeler, de quoi
+   * cuire, rien d'autre.
+   *
+   * `lastOrderId` est le seul signal dont l'écran a besoin pour savoir qu'une
+   * commande VIENT d'arriver — et donc pour faire sonner la caisse. */
+  pulse: publicQuery
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await assertAdmin(input.token);
+      const [lastOrderId, attente, cuisine] = await Promise.all([
+        getLastOrderId(),
+        // Seuil à zéro : l'écran montre la file réelle, pas seulement le retard.
+        listOrdersAwaitingCall(new Date(), 0),
+        currentKitchenLines(),
+      ]);
+      return { lastOrderId, attente, cuisine: cuisine.lines };
     }),
 
   delete: publicQuery

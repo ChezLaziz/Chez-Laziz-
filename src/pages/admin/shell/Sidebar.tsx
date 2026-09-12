@@ -58,6 +58,21 @@ export default function Sidebar({
       </nav>
 
       <div className="border-t border-sand/60 px-3 py-3">
+        {/* L'écran de l'atelier s'ouvre sur UN AUTRE appareil — la tablette
+            posée près du four — d'où le nouvel onglet : on ne veut pas
+            remplacer le tableau de bord de celui qui clique. */}
+        <a
+          href="/atelier"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink/55 transition-colors hover:bg-ink/[0.04] hover:text-ink"
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <rect x="2" y="4" width="20" height="13" rx="2" />
+            <path d="M8 21h8M12 17v4" strokeLinecap="round" />
+          </svg>
+          Écran de l'atelier
+        </a>
         <Link
           to="/"
           className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink/55 transition-colors hover:bg-ink/[0.04] hover:text-ink"

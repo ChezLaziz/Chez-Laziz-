@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /atelier
 Disallow: /api/
 
 Sitemap: https://chezlaziz.com/sitemap.xml

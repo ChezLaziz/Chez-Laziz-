@@ -2,7 +2,7 @@
 
 import { getDb } from "./connection";
 import { orders } from "@db/schema";
-import { and, asc, eq, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt } from "drizzle-orm";
 import {
   RETARD_CONFIRMATION_H,
   RETARD_REMISE_H,
@@ -16,8 +16,15 @@ function heuresDepuis(date: Date, maintenant: number): number {
 
 /** Commandes que personne n'a encore appelées. `created_at` est le bon repère :
  * c'est le moment où le client a cliqué, pas un état interne. */
-export async function listOrdersAwaitingCall(now = new Date()): Promise<StalledOrder[]> {
-  const seuil = new Date(now.getTime() - RETARD_CONFIRMATION_H * 3_600_000);
+export async function listOrdersAwaitingCall(
+  now = new Date(),
+  apresHeures = RETARD_CONFIRMATION_H,
+): Promise<StalledOrder[]> {
+  // L'écran de l'atelier passe 0 : il montre la file d'attente réelle, y
+  // compris la commande arrivée il y a trois minutes. Le rappel Telegram
+  // garde le seuil de deux heures — sonner pour une commande toute fraîche
+  // reviendrait à sonner deux fois pour la même chose.
+  const seuil = new Date(now.getTime() - apresHeures * 3_600_000);
   const rows = await getDb()
     .select({
       id: orders.id,
@@ -66,4 +73,18 @@ export async function listOrdersAwaitingHandover(now = new Date()): Promise<Unsh
     customerName: r.customerName,
     ageHours: heuresDepuis(r.updatedAt, now.getTime()),
   }));
+}
+
+/** Le numéro de la dernière commande enregistrée, quel que soit son état.
+ *
+ * Volontairement PAS « la plus grande des commandes en attente » : une
+ * commande confirmée dans la minute quitterait la file, le maximum
+ * redescendrait, et l'écran de l'atelier n'aurait jamais sonné pour elle. */
+export async function getLastOrderId(): Promise<number> {
+  const [row] = await getDb()
+    .select({ id: orders.id })
+    .from(orders)
+    .orderBy(desc(orders.id))
+    .limit(1);
+  return row?.id ?? 0;
 }

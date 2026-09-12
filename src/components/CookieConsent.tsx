@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { estCheminInterne } from '@contracts/internalPaths'
 import { Link, useLocation } from 'react-router'
 import { getConsent, setConsent } from '@/lib/cookieConsent'
 import { useLang } from '@/lib/i18n'
@@ -29,7 +30,7 @@ export default function CookieConsent() {
   const lang = useLang()
   const isAr = lang === 'ar'
   const ref = useRef<HTMLDivElement>(null)
-  const hidden = !visible || pathname.startsWith('/admin')
+  const hidden = !visible || estCheminInterne(pathname)
 
   useEffect(() => {
     const el = ref.current

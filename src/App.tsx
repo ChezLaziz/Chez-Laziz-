@@ -10,6 +10,7 @@ import { langFromPathname } from './lib/i18n'
 // uniquement dans le tableau de bord admin).
 const OrderPage = lazy(() => import('./pages/OrderPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
+const AtelierPage = lazy(() => import('./pages/AtelierPage'))
 const MaisonPage = lazy(() => import('./pages/MaisonPage'))
 const CollectionPage = lazy(() => import('./pages/CollectionPage'))
 const GaleriePage = lazy(() => import('./pages/GaleriePage'))
@@ -88,6 +89,8 @@ export default function App() {
       <Route path="/commande" element={<Lazy Component={OrderPage} />} />
       <Route path="/ar/commande" element={<Lazy Component={OrderPage} />} />
       <Route path="/admin" element={<Lazy Component={AdminPage} />} />
+      {/* L'écran posé dans l'atelier : il sonne pour toute la pièce. */}
+      <Route path="/atelier" element={<Lazy Component={AtelierPage} />} />
       <Route path="/politique-de-confidentialite" element={<Lazy Component={PrivacyPage} />} />
       <Route path="/ar/politique-de-confidentialite" element={<Lazy Component={PrivacyPage} />} />
       <Route path="/conditions-generales" element={<Lazy Component={TermsPage} />} />

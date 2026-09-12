@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EMPTY_ACK } from "@contracts/kitchenBoard";
+import { EMPTY_ACK, kitchenPending } from "@contracts/kitchenBoard";
 
 const getConfirmedKitchenTotals = vi.fn();
-const getKitchenLabels = vi.fn(async () => ({}) as Record<string, string>);
+const currentKitchenLines = vi.fn();
+const loadKitchenAck = vi.fn();
 const readKitchenAck = vi.fn();
 const writeKitchenAck = vi.fn(async () => undefined);
 const readKitchenBoardMessageId = vi.fn();
@@ -14,7 +15,8 @@ const deleteMessage = vi.fn(async () => undefined);
 
 vi.mock("../queries/kitchen", () => ({
   getConfirmedKitchenTotals,
-  getKitchenLabels,
+  currentKitchenLines,
+  loadKitchenAck,
   readKitchenAck,
   writeKitchenAck,
   readKitchenBoardMessageId,
@@ -35,7 +37,14 @@ beforeEach(() => {
   process.env.TELEGRAM_BOT_TOKEN = "123:abc";
   process.env.TELEGRAM_CHAT_ID = "-100123";
   getConfirmedKitchenTotals.mockResolvedValue(CONFIRME);
-  getKitchenLabels.mockResolvedValue({ p5: "لعزيز بالفرولة" });
+  loadKitchenAck.mockImplementation(async () => (await readKitchenAck()) ?? EMPTY_ACK);
+  currentKitchenLines.mockImplementation(async () => {
+    const ack = (await readKitchenAck()) ?? EMPTY_ACK;
+    return {
+      lines: kitchenPending(CONFIRME, ack, { p5: "لعزيز بالفرولة" }),
+      canUndo: Boolean(ack.last),
+    };
+  });
   readKitchenAck.mockResolvedValue(EMPTY_ACK);
   readKitchenBoardMessageId.mockResolvedValue(null);
   sendMessage.mockResolvedValue({ message_id: 99 });
@@ -75,7 +84,7 @@ describe("refreshKitchenBoard", () => {
   });
 
   it("ne sonne pas pour annoncer qu'il n'y a rien à faire", async () => {
-    getConfirmedKitchenTotals.mockResolvedValue({});
+    currentKitchenLines.mockResolvedValue({ lines: [], canUndo: false });
     await refreshKitchenBoard(false);
     expect(sendMessage).not.toHaveBeenCalled();
     expect(editMessage).not.toHaveBeenCalled();
@@ -94,42 +103,34 @@ describe("refreshKitchenBoard", () => {
     const sans = JSON.stringify(sendMessage.mock.calls[0][1]);
     expect(sans).not.toContain("k:undo");
 
-    vi.clearAllMocks();
-    sendMessage.mockResolvedValue({ message_id: 99 });
+    sendMessage.mockClear();
     readKitchenAck.mockResolvedValue({ kg: {}, prev: {}, last: "p5" });
     await refreshKitchenBoard(true);
     expect(JSON.stringify(sendMessage.mock.calls[0][1])).toContain("k:undo");
   });
 
   it("PREMIER tableau : l'historique déjà livré ne réapparaît pas comme à cuire", async () => {
-    readKitchenAck.mockResolvedValue(null);
+    currentKitchenLines.mockResolvedValue({ lines: [], canUndo: false });
     await refreshKitchenBoard(true);
-    expect(writeKitchenAck).toHaveBeenCalledWith({ kg: { p5: 3, p7: 1.5 }, prev: {} });
     expect(sendMessage.mock.calls[0][0]).toContain("ما فماش شي يستنى");
   });
 
   it("une panne de base ne remonte jamais — la commande ne doit pas échouer pour un tableau", async () => {
-    getConfirmedKitchenTotals.mockRejectedValue(new Error("base injoignable"));
+    currentKitchenLines.mockRejectedValue(new Error("base injoignable"));
     await expect(refreshKitchenBoard(true)).resolves.toBeUndefined();
   });
 });
 
 describe("ensureKitchenBaseline", () => {
   it("pose le point de départ AVANT la première commande, sinon elle serait avalée", async () => {
-    readKitchenAck.mockResolvedValue(null);
     await ensureKitchenBaseline();
-    expect(writeKitchenAck).toHaveBeenCalledWith({ kg: { p5: 3, p7: 1.5 }, prev: {} });
+    expect(loadKitchenAck).toHaveBeenCalledWith(CONFIRME);
     // Le point de départ ne parle pas dans le groupe.
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
-  it("ne réécrit rien quand il est déjà posé", async () => {
-    await ensureKitchenBaseline();
-    expect(writeKitchenAck).not.toHaveBeenCalled();
-  });
-
   it("ne remonte pas une panne de base au démarrage du serveur", async () => {
-    readKitchenAck.mockRejectedValue(new Error("base injoignable"));
+    getConfirmedKitchenTotals.mockRejectedValue(new Error("base injoignable"));
     await expect(ensureKitchenBaseline()).resolves.toBeUndefined();
   });
 });

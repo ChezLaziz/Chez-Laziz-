@@ -13,17 +13,11 @@
 //
 // Le calcul lui-même est ailleurs, sans base ni réseau : contracts/kitchenBoard.ts.
 
-import type { ConfirmedTotals, KitchenAck } from "@contracts/kitchenBoard";
+import { ackKitchen, formatKitchenBoard, kitchenKeyboard, undoKitchen } from "@contracts/kitchenBoard";
 import {
-  ackKitchen,
-  formatKitchenBoard,
-  kitchenKeyboard,
-  kitchenPending,
-  undoKitchen,
-} from "@contracts/kitchenBoard";
-import {
+  currentKitchenLines,
   getConfirmedKitchenTotals,
-  getKitchenLabels,
+  loadKitchenAck,
   readKitchenAck,
   readKitchenBoardMessageId,
   writeKitchenAck,
@@ -40,10 +34,6 @@ import {
 /** Le point de départ du tableau : tout ce qui est DÉJÀ confirmé aujourd'hui
  * est réputé cuit.
  *
- * Sans ça, le tout premier tableau afficherait chaque commande livrée depuis
- * l'ouverture de la boutique — des dizaines de kilos vendus il y a des mois —
- * et le cuisinier devrait appuyer sur « تم » partout pour nettoyer.
- *
  * APPELÉ AU DÉMARRAGE DU SERVEUR, et c'est tout l'intérêt du moment choisi :
  * si on attendait la première confirmation pour poser ce point de départ,
  * cette commande-là ferait partie de l'historique et serait avalée. La
@@ -51,29 +41,10 @@ import {
 export async function ensureKitchenBaseline(): Promise<void> {
   if (!isTelegramConfigured()) return;
   try {
-    if (await readKitchenAck()) return;
-    const confirmed = await getConfirmedKitchenTotals();
-    await writeKitchenAck({
-      kg: Object.fromEntries(Object.entries(confirmed).map(([k, v]) => [k, v.kg])),
-      prev: {},
-    });
-    console.log("[kitchen] point de départ posé — l'historique livré compte comme cuit");
+    await loadKitchenAck(await getConfirmedKitchenTotals());
   } catch (err) {
     console.error("[kitchen] point de départ non posé :", err);
   }
-}
-
-/** L'acquittement du cuisinier. Le filet de sécurité si ensureKitchenBaseline
- * n'a pas pu s'exécuter au démarrage (base injoignable à ce moment-là). */
-async function chargerAck(confirmed: ConfirmedTotals): Promise<KitchenAck> {
-  const stocke = await readKitchenAck();
-  if (stocke) return stocke;
-  const initial: KitchenAck = {
-    kg: Object.fromEntries(Object.entries(confirmed).map(([k, v]) => [k, v.kg])),
-    prev: {},
-  };
-  await writeKitchenAck(initial);
-  return initial;
 }
 
 /** Réaffiche le tableau. `annonce` = il y a du poids en plus, il faut que ça
@@ -82,15 +53,12 @@ async function chargerAck(confirmed: ConfirmedTotals): Promise<KitchenAck> {
 export async function refreshKitchenBoard(annonce: boolean): Promise<void> {
   if (!isTelegramConfigured()) return;
   try {
-    const [confirmed, labels, ancien] = await Promise.all([
-      getConfirmedKitchenTotals(),
-      getKitchenLabels(),
+    const [{ lines: lignes, canUndo }, ancien] = await Promise.all([
+      currentKitchenLines(),
       readKitchenBoardMessageId(),
     ]);
-    const ack = await chargerAck(confirmed);
-    const lignes = kitchenPending(confirmed, ack, labels);
     const texte = formatKitchenBoard(lignes);
-    const clavier = kitchenKeyboard(lignes, Boolean(ack.last));
+    const clavier = kitchenKeyboard(lignes, canUndo);
 
     if (!annonce && ancien !== null) {
       if (await editMessage(ancien, texte, clavier)) return;
@@ -116,7 +84,7 @@ export async function refreshKitchenBoard(annonce: boolean): Promise<void> {
  * Retourne le texte court affiché sur le téléphone de qui a appuyé. */
 export async function applyKitchenAck(key: string): Promise<string> {
   const confirmed = await getConfirmedKitchenTotals();
-  const ack = await chargerAck(confirmed);
+  const ack = await loadKitchenAck(confirmed);
   await writeKitchenAck(ackKitchen(ack, confirmed, key));
   await refreshKitchenBoard(false);
   return "✅ تسجّل";
