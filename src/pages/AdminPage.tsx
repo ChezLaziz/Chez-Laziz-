@@ -1461,6 +1461,7 @@ type PagesForm = {
   homeEyebrow: string
   homeEyebrowAr: string
   homeTitle: string
+  homeTitleAr: string
   homeSubtitleAr: string
   homeSubtitleFr: string
   maisonEyebrow: string
@@ -1490,6 +1491,7 @@ const EMPTY_PAGES_FORM: PagesForm = {
   homeEyebrow: '',
   homeEyebrowAr: '',
   homeTitle: '',
+  homeTitleAr: '',
   homeSubtitleAr: '',
   homeSubtitleFr: '',
   maisonEyebrow: '',
@@ -1566,7 +1568,8 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
         <div className="space-y-4">
           <input {...field('homeEyebrow')} placeholder="Sur-titre (français)" className={inputCls} />
           <input {...field('homeEyebrowAr')} placeholder="Sur-titre (arabe)" dir="rtl" className={inputCls} />
-          <input {...field('homeTitle')} placeholder="Titre principal" className={inputCls} />
+          <input {...field('homeTitle')} placeholder="Titre principal (français)" className={inputCls} />
+          <input {...field('homeTitleAr')} placeholder="Titre principal (arabe)" dir="rtl" className={inputCls} />
           <input {...field('homeSubtitleAr')} placeholder="Sous-titre (arabe)" dir="rtl" className={inputCls} />
           <textarea {...field('homeSubtitleFr')} placeholder="Sous-titre (français)" rows={2} className={`${inputCls} resize-none`} />
         </div>

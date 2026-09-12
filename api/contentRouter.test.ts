@@ -68,6 +68,7 @@ const pagesBase = {
   homeEyebrow: "",
   homeEyebrowAr: "",
   homeTitle: "",
+  homeTitleAr: "",
   homeSubtitleAr: "",
   homeSubtitleFr: "",
   maisonEyebrow: "",

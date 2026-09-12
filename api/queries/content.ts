@@ -55,6 +55,7 @@ const PAGE_KEYS = {
   homeEyebrow: "page_home_eyebrow",
   homeEyebrowAr: "page_home_eyebrow_ar",
   homeTitle: "page_home_title",
+  homeTitleAr: "page_home_title_ar",
   homeSubtitleAr: "page_home_subtitle_ar",
   homeSubtitleFr: "page_home_subtitle_fr",
   maisonEyebrow: "page_maison_eyebrow",
@@ -86,6 +87,7 @@ export const PAGES_DEFAULTS = {
   homeEyebrow: "Pâtisserie artisanale — Kairouan",
   homeEyebrowAr: "حرفة صناعة الحلويات — القيروان",
   homeTitle: "CHEZ LAZIZ",
+  homeTitleAr: "عند لعزيز",
   homeSubtitleAr: "عند لعزيز — مقروض قيرواني أصيل",
   homeSubtitleFr:
     "L'art du makroudh kairouanais authentique — fait main chaque jour, au goût traditionnel qui ne change jamais.",

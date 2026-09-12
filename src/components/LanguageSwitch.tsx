@@ -35,10 +35,13 @@ export default function LanguageSwitch({ tone, size = 'sm' }: { tone: 'light' | 
     big ? 'min-h-11 px-4 text-sm' : 'min-h-10 px-3 text-[13px]'
   }`
   const flagCls = big ? 'h-4 w-6' : 'h-3.5 w-5'
-  const activeCls = tone === 'light' ? 'bg-ink text-[#faf6f3]' : 'bg-[#faf6f3] text-ink'
-  const idleCls = tone === 'light' ? 'text-ink/60' : 'text-[#faf6f3]/80'
+  // Sur la photo (tone « dark »), une pastille crème cerclée d'or : elle
+  // se détache de n'importe quel fond, et c'est la seule couleur de marque
+  // de la barre. Sur fond clair, la version sobre.
+  const activeCls = tone === 'light' ? 'bg-ink text-[#faf6f3]' : 'bg-white text-ink shadow-sm'
+  const idleCls = tone === 'light' ? 'text-ink/60' : 'text-ink/65'
   const frameCls =
-    tone === 'light' ? 'border-ink/25 bg-white/60' : 'border-[#faf6f3]/50 bg-[#2e2a27]/25 backdrop-blur-sm'
+    tone === 'light' ? 'border-ink/25 bg-white/60' : 'border-[#b8912e]/70 bg-[#faf6f3]/95'
 
   return (
     <div
