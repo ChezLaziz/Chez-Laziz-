@@ -81,29 +81,39 @@ export default function Hero() {
   return (
     <section id="accueil" className="relative h-svh min-h-[620px] overflow-hidden bg-ink-deep">
       {/* Photograph with load-settle + scroll parallax */}
-      <img
-        ref={imgRef}
-        src="/images/hero.webp"
-        srcSet="/images/hero-mobile.webp 960w, /images/hero.webp 2048w"
-        sizes="100vw"
-        alt="Makroudh de Kairouan dorés au miel, dressés sur un plateau de cuivre"
-        className="absolute inset-0 h-full w-full object-cover"
-        fetchPriority="high"
-        decoding="async"
-        style={{
-          transform: 'scale(1.12)',
-          opacity: on ? 1 : 0,
-          transition: 'opacity 1.2s ease',
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#2e2a27]/70 via-[#2e2a27]/25 to-[#2e2a27]/80" />
-      {/* Vignette centrée : assombrit surtout la zone du texte, sans écraser
-          la photo sur les bords — la lisibilité vient de là où on regarde. */}
+      {/* Deux PHOTOS, pas deux tailles de la même : un téléphone est
+          vertical, et le plateau vu de haut, une fois coupé en hauteur, ne
+          montrait qu'un tas indistinct sous un voile sombre. Le gros plan
+          des losanges est fait pour ce format — le motif de Kairouan se
+          reconnaît avant même de lire le nom. L'ordinateur garde le plateau,
+          recadré serré : les dattes, le thé et les fleurs des bords n'aidaient
+          personne à comprendre ce qu'on vend. */}
+      <picture>
+        <source media="(max-width: 767px)" srcSet="/images/hero-mobile.webp" />
+        <img
+          ref={imgRef}
+          src="/images/hero.webp"
+          alt="Makroudh de Kairouan dorés au miel, dressés sur un plateau de cuivre"
+          className="absolute inset-0 h-full w-full object-cover"
+          fetchPriority="high"
+          decoding="async"
+          style={{
+            transform: 'scale(1.12)',
+            opacity: on ? 1 : 0,
+            transition: 'opacity 1.2s ease',
+          }}
+        />
+      </picture>
+      {/* Le voile était trop lourd : 70 % en haut, 80 % en bas, plus une
+          vignette à 68 % — la photo devenait boueuse et le makroudh brun au
+          lieu de doré. On garde juste ce qu'il faut pour le texte, les ombres
+          portées font le reste. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#2e2a27]/45 via-[#2e2a27]/10 to-[#2e2a27]/70" />
       <div
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(20,17,14,0.68) 0%, rgba(20,17,14,0.22) 60%, transparent 100%)',
+            'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(20,17,14,0.42) 0%, rgba(20,17,14,0.12) 60%, transparent 100%)',
         }}
       />
 

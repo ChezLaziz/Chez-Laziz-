@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   isMetaConversionsApiConfigured,
+  normalizeMatchField,
   normalizeTunisianPhone,
+  splitName,
   sendMetaPurchaseEvent,
   sha256,
   shouldReportMetaPurchase,
@@ -181,7 +183,7 @@ describe("sendMetaPurchaseEvent", () => {
     });
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
-    expect(Object.keys(body.data[0].user_data)).toEqual(["ph"]);
+    expect(Object.keys(body.data[0].user_data)).toEqual(["ph", "external_id", "country"]);
   });
 
   it("n'échoue jamais si l'appel réseau échoue (journalise seulement)", async () => {
@@ -205,5 +207,72 @@ describe("sendMetaPurchaseEvent", () => {
     await expect(
       sendMetaPurchaseEvent({ orderId: 8, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("correspondance avancée — ce que Meta reconnaît, ou pas", () => {
+  it("normalise comme Meta l'exige avant hachage : minuscules, sans ponctuation, espaces réduits", () => {
+    expect(normalizeMatchField("  Mohamed-Habib   NAJJAR. ")).toBe("mohamedhabib najjar");
+    expect(normalizeMatchField("Cité el 3omel")).toBe("cité el 3omel");
+  });
+
+  it("prénom d'abord, nom en dernier — un seul mot est un prénom", () => {
+    expect(splitName("Mohamed habib najjar")).toEqual({ fn: "mohamed", ln: "najjar" });
+    expect(splitName("Nada")).toEqual({ fn: "nada", ln: "" });
+    expect(splitName("   ")).toEqual({ fn: "", ln: "" });
+  });
+
+  it("envoie fn, ln, ct, st, country et external_id — tous HACHÉS, jamais en clair", async () => {
+    process.env.META_PIXEL_ID = "123";
+    process.env.META_CONVERSIONS_API_TOKEN = "tok";
+    const fetchMock = vi.fn(async () => ({ ok: true, text: async () => "" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await sendMetaPurchaseEvent({
+      orderId: 42,
+      phone: "52865521",
+      totalMillimes: 50000,
+      contentIds: ["3", "5"],
+      quantities: [1, 2],
+      customerName: "Nada Merai",
+      city: "Jarzouna",
+      governorate: "Bizerte",
+    });
+    const corps = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    const ud = corps.data[0].user_data;
+    expect(ud.fn).toEqual([sha256("nada")]);
+    expect(ud.ln).toEqual([sha256("merai")]);
+    expect(ud.ct).toEqual([sha256("jarzouna")]);
+    expect(ud.st).toEqual([sha256("bizerte")]);
+    expect(ud.country).toEqual([sha256("tn")]);
+    expect(ud.external_id).toEqual([sha256("+21652865521")]);
+    const brut = JSON.stringify(corps);
+    for (const clair of ["Nada", "Merai", "Jarzouna", "Bizerte", "52865521"]) expect(brut).not.toContain(clair);
+    // contents + num_items pour le catalogue
+    expect(corps.data[0].custom_data.contents).toEqual([{ id: "3", quantity: 1 }, { id: "5", quantity: 2 }]);
+    expect(corps.data[0].custom_data.num_items).toBe(3);
+    expect(corps.test_event_code).toBeUndefined();
+  });
+
+  it("n'invente pas un nom quand il manque : fn/ln absents, country toujours là", async () => {
+    process.env.META_PIXEL_ID = "123";
+    process.env.META_CONVERSIONS_API_TOKEN = "tok";
+    const fetchMock = vi.fn(async () => ({ ok: true, text: async () => "" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await sendMetaPurchaseEvent({ orderId: 1, phone: "23691039", totalMillimes: 8000, contentIds: [] });
+    const ud = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body).data[0].user_data;
+    expect(ud.fn).toBeUndefined();
+    expect(ud.ln).toBeUndefined();
+    expect(ud.ct).toBeUndefined();
+    expect(ud.country).toEqual([sha256("tn")]);
+  });
+
+  it("joint test_event_code quand META_TEST_EVENT_CODE est posé — pour voir l'événement en direct", async () => {
+    process.env.META_PIXEL_ID = "123";
+    process.env.META_CONVERSIONS_API_TOKEN = "tok";
+    process.env.META_TEST_EVENT_CODE = " TEST123 ";
+    const fetchMock = vi.fn(async () => ({ ok: true, text: async () => "" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await sendMetaPurchaseEvent({ orderId: 1, phone: "23691039", totalMillimes: 8000, contentIds: ["1"] });
+    expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body).test_event_code).toBe("TEST123");
   });
 });

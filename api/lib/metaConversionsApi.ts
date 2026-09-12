@@ -67,11 +67,47 @@ export function normalizeTunisianPhone(phone: string): string {
   return `+${withCountryCode}`;
 }
 
+/** Les champs de correspondance que Meta accepte, normalisés comme il
+ * l'exige AVANT hachage : minuscules, sans espaces autour, sans
+ * ponctuation pour les noms, pays sur deux lettres. Une valeur mal
+ * normalisée est hachée différemment de ce que Meta a de son côté, et
+ * l'événement n'est alors rattaché à personne — comme si on n'avait rien
+ * envoyé. */
+export function normalizeMatchField(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .trim()
+    .replace(/[\p{P}\p{S}]/gu, "")
+    .replace(/\s+/g, " ");
+}
+
+/** « Mohamed habib najjar » → prénom « mohamed », nom « najjar » : Meta
+ * attend fn et ln séparés, et un client tunisien écrit presque toujours
+ * son prénom d'abord. Un seul mot va dans fn. */
+export function splitName(fullName: string): { fn: string; ln: string } {
+  const parts = normalizeMatchField(fullName).split(" ").filter(Boolean);
+  if (parts.length === 0) return { fn: "", ln: "" };
+  if (parts.length === 1) return { fn: parts[0], ln: "" };
+  return { fn: parts[0], ln: parts[parts.length - 1] };
+}
+
 export type MetaPurchaseEvent = {
   orderId: number;
   phone: string;
   totalMillimes: number;
   contentIds: string[];
+  /** Quantité par référence, dans le même ordre que contentIds. Absent =
+   * une unité chacune. */
+  quantities?: number[];
+  /** Identité et adresse telles que saisies à la commande. Tout est haché
+   * avant envoi ; rien ne part en clair. Chaque champ de plus fait monter
+   * la « qualité de correspondance » — donc la part des ventes que Meta
+   * reconnaît comme venant de la publicité, donc la qualité de ce qu'il
+   * apprend. */
+  customerName?: string;
+  city?: string;
+  governorate?: string;
   sourceUrl?: string;
   /** Signaux captés à la création de la commande — voir
    * contracts/metaSignals.ts. Tous absents si le client a refusé les
@@ -83,6 +119,22 @@ export type MetaPurchaseEvent = {
     clientUserAgent?: string | null;
   };
 };
+
+/** fn / ln / ct / st / country — chacun haché, chacun optionnel. Le pays est
+ * toujours « tn » : la boutique ne livre qu'en Tunisie. */
+function matchFields(ev: MetaPurchaseEvent): Record<string, string[]> {
+  const out: Record<string, string[]> = { country: [sha256("tn")] };
+  if (ev.customerName) {
+    const { fn, ln } = splitName(ev.customerName);
+    if (fn) out.fn = [sha256(fn)];
+    if (ln) out.ln = [sha256(ln)];
+  }
+  if (ev.city && normalizeMatchField(ev.city)) out.ct = [sha256(normalizeMatchField(ev.city).replace(/\s/g, ""))];
+  if (ev.governorate && normalizeMatchField(ev.governorate)) {
+    out.st = [sha256(normalizeMatchField(ev.governorate).replace(/\s/g, ""))];
+  }
+  return out;
+}
 
 /** Envoie l'événement "Purchase" ; ne lève jamais (journalise l'échec) —
  * appelée sans await après la création de la commande. */
@@ -108,6 +160,10 @@ export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<void
         // déterministe entre l'annonce et la commande.
         user_data: {
           ph: [sha256(normalizeTunisianPhone(ev.phone))],
+          // Le téléphone sert aussi d'identifiant client stable : deux
+          // commandes du même numéro sont le même acheteur pour Meta.
+          external_id: [sha256(normalizeTunisianPhone(ev.phone))],
+          ...matchFields(ev),
           ...(ev.signals?.fbc ? { fbc: ev.signals.fbc } : {}),
           ...(ev.signals?.fbp ? { fbp: ev.signals.fbp } : {}),
           ...(ev.signals?.clientIp ? { client_ip_address: ev.signals.clientIp } : {}),
@@ -120,9 +176,18 @@ export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<void
           value: ev.totalMillimes / 1000,
           content_type: "product",
           content_ids: ev.contentIds,
+          contents: ev.contentIds.map((id, i) => ({ id, quantity: ev.quantities?.[i] ?? 1 })),
+          num_items: (ev.quantities ?? ev.contentIds.map(() => 1)).reduce((n, q) => n + q, 0),
         },
       },
     ],
+    // Le code « Test Events » du Gestionnaire d'événements : quand il est
+    // posé, chaque envoi apparaît en direct dans l'onglet de test, avec ses
+    // paramètres et ses avertissements. À retirer une fois vérifié — un
+    // événement de test ne compte pas dans les rapports.
+    ...(process.env.META_TEST_EVENT_CODE?.trim()
+      ? { test_event_code: process.env.META_TEST_EVENT_CODE.trim() }
+      : {}),
   };
   try {
     const res = await fetch(

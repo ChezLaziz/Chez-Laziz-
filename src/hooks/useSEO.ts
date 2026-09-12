@@ -100,7 +100,7 @@ export function useSEO({
   image?: string
 }) {
   const resolvedAlternates = alternates ?? deriveAlternates(path)
-  const resolvedImage = image ? `https://chezlaziz.com${image}` : 'https://chezlaziz.com/images/hero.jpg'
+  const resolvedImage = image ? `https://chezlaziz.com${image}` : 'https://chezlaziz.com/images/hero-og.jpg'
   useEffect(() => {
     const articleId = 'seo-article-jsonld'
     if (article) {

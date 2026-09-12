@@ -45,6 +45,9 @@ export async function maybeReportMetaPurchase(order: {
   paymentMethod: "cod" | "d17";
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
   metaPurchaseReportedAt: Date | null;
+  customerName?: string;
+  city?: string;
+  governorate?: string;
   metaFbc?: string | null;
   metaFbp?: string | null;
   metaClientIp?: string | null;
@@ -68,7 +71,14 @@ export async function maybeReportMetaPurchase(order: {
     orderId: order.id,
     phone: order.phone,
     totalMillimes: order.totalMillimes,
-    contentIds: metaContentIds(items),
+    // Une ligne sans référence rendait une chaîne VIDE, qui partait telle
+    // quelle dans content_ids : Meta la signalait comme référence invalide
+    // sur chaque commande contenant une vieille ligne sans `kind`.
+    contentIds: metaContentIds(items).filter(Boolean),
+    quantities: items.filter((i) => metaContentIds([i])[0]).map((i) => i.qty),
+    customerName: order.customerName,
+    city: order.city,
+    governorate: order.governorate,
   });
 }
 
