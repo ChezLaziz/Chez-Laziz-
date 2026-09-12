@@ -67,17 +67,36 @@ export default function ProductOrderCard({
         {displayDescription && (
           <p className="mt-1 line-clamp-2 text-xs font-light leading-relaxed text-ink/55">{displayDescription}</p>
         )}
-        <p className="mt-1.5 text-[11px] uppercase tracking-[0.16em] text-ink/50">
+        {/* Huit produits sur seize sont des créations de la maison, et cela
+            ne se voyait qu'à un « ™ » minuscule collé au nom. C'est la
+            différence la plus forte avec n'importe quelle autre boutique de
+            makroudh du pays — elle mérite une ligne, pas un exposant. */}
+        {product.isExclusiveCreation && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-accent">
+            <span aria-hidden="true">✦</span>
+            {isAr ? 'إبداع دار لعزيز' : 'Création Chez Laziz'}
+          </p>
+        )}
+        {/* Le prix au kilo est une RÉFÉRENCE, pas le prix payé : il reste
+            discret pour ne pas concurrencer le prix du poids choisi, plus bas,
+            en doré. Mais il se lisait comme une mention légale — minuscule,
+            en capitales espacées. Sans casse forcée ni interlettrage, il
+            redevient un prix. */}
+        <p className="mt-1.5 text-xs text-ink/60">
           {formatPriceDT(product.priceMillimes, lang)} {isAr ? '/ كغ' : '/ kg'}
         </p>
 
+        {/* Pas d'étiquette « Poids » au-dessus : le menu affiche déjà
+            « 1 kg — 40 DT ». Un mot en moins est un mot de moins à lire, et
+            c'est le silence qui fait la tenue d'une page, pas l'abondance.
+            Le lecteur d'écran, lui, garde son intitulé complet. */}
         <label className="mt-3 block">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink/50">{isAr ? 'الوزن' : 'Poids'}</span>
+          <span className="sr-only">{isAr ? 'الوزن' : 'Poids'}</span>
           <select
             value={weight}
             onChange={(e) => setWeight(Number(e.target.value) as WeightKg)}
             aria-label={`${isAr ? 'الوزن' : 'Poids'} — ${displayName}`}
-            className="mt-1 h-11 w-full rounded-lg border border-sand bg-white px-3 text-sm text-ink outline-none focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25"
+            className="h-11 w-full rounded-lg border border-sand bg-white px-3 text-sm text-ink outline-none focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25"
           >
             {ALLOWED_WEIGHTS_KG.map((w) => (
               <option key={w} value={w}>

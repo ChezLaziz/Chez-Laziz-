@@ -48,7 +48,16 @@
   body {
     background-color: var(--bg);
     color: var(--ink);
-    font-family: 'Jost', -apple-system, 'Segoe UI', sans-serif;
+    /* Jost et Marcellus ne contiennent AUCUN caractère arabe. Sans police
+       arabe dans la pile, chaque lettre de /ar tombait sur la police par
+       défaut du téléphone — celle des SMS et des réglages. La version
+       française paraissait dessinée, l'arabe paraissait un document Word,
+       et c'est la moitié des clients qui lit l'arabe.
+       Le navigateur descend la pile caractère par caractère : le latin
+       trouve Jost, l'arabe tombe sur Tajawal. Et Google Fonts découpe ses
+       fichiers par plage Unicode — une page française ne télécharge donc
+       pas un octet d'arabe. */
+    font-family: 'Jost', 'Tajawal', -apple-system, 'Segoe UI', sans-serif;
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
@@ -62,7 +71,10 @@
 
 @layer utilities {
   .font-display {
-    font-family: 'Marcellus', 'Times New Roman', serif;
+    /* Amiri : un naskh classique, la typographie du livre arabe. Il porte
+       le même registre que Marcellus — l'héritage, pas la modernité — ce
+       qui est exactement ce que vend un makroudh de Kairouan. */
+    font-family: 'Marcellus', 'Amiri', 'Times New Roman', serif;
     font-weight: 400;
   }
   .text-ink { color: var(--ink); }
