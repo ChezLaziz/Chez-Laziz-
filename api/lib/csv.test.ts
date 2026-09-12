@@ -17,7 +17,10 @@ describe("csvCell", () => {
     // Une note client commençant par = serait exécutée comme formule par
     // Excel/LibreOffice à l'ouverture du fichier.
     expect(csvCell("=1+1")).toBe("'=1+1");
-    expect(csvCell("+33600000000")).toBe("'+33600000000");
+    // Un numéro de téléphone (+ et chiffres seulement) ne peut pas porter
+    // de formule : il reste lisible tel quel dans la colonne Téléphone.
+    expect(csvCell("+33600000000")).toBe("+33600000000");
+    expect(csvCell("+cmd|' /C calc'!A0")).toBe("'+cmd|' /C calc'!A0");
     expect(csvCell("-2")).toBe("'-2");
     expect(csvCell("@SUM(A1)")).toBe("'@SUM(A1)");
   });
@@ -47,5 +50,15 @@ describe("toCsv", () => {
     // séparateur, la colonne serait coupée en deux.
     const csv = toCsv(["Total"], [["69,9"]]);
     expect(csv.trim().split("\r\n")[1]).toBe("69,9");
+  });
+});
+
+describe("csvCell — téléphones", () => {
+  it("laisse un numéro international tel quel, mais neutralise toujours une formule", async () => {
+    const { csvCell } = await import("./csv");
+    expect(csvCell("+216 23 691 039")).toBe("+216 23 691 039");
+    expect(csvCell("+21623691039")).toBe("+21623691039");
+    expect(csvCell("+1+1")).toBe("'+1+1");
+    expect(csvCell("=SUM(A1)")).toBe("'=SUM(A1)");
   });
 });

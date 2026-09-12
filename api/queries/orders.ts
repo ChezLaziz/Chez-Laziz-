@@ -188,6 +188,11 @@ export async function setOrderCarrier(
   const order = await getDb().query.orders.findFirst({ where: eq(orders.id, id) });
   if (!order) return null;
 
+  // Pendant qu'un envoi est en cours chez le transporteur, retirer le
+  // transporteur effacerait la réservation qui empêche le double colis :
+  // un second « Envoyer » passerait. On attend la fin de l'envoi (≤ 12 s).
+  if (input.clear && order.carrierStatus === SEND_STATUS.inFlight) return order;
+
   if (input.clear) {
     await getDb()
       .update(orders)
@@ -209,11 +214,15 @@ export async function setOrderCarrier(
     return order;
   }
 
+  // Un numéro noté à la main (retrouvé chez le transporteur après un envoi
+  // resté incertain) lève le blocage : la commande a bien un colis.
+  const debloque = tracking !== null && order.carrierStatus !== null;
   await getDb()
     .update(orders)
     .set({
       carrier: input.carrier,
       trackingNumber: tracking ?? order.trackingNumber,
+      ...(debloque ? { carrierStatus: SEND_STATUS.created, carrierSyncedAt: new Date() } : {}),
       updatedAt: new Date(),
     })
     .where(eq(orders.id, id));

@@ -150,7 +150,12 @@ export async function tgCall<T = unknown>(
       if (typeof migre === "number" && !deja) {
         console.log(`[telegram] le groupe a migré vers ${migre} — enregistré`);
         chatIdCourant = String(migre);
-        void onMigration?.(String(migre));
+        // Une écriture en base qui échoue ici ne doit pas tuer le processus
+        // (une promesse rejetée sans .catch arrête Node) : une ligne de
+        // journal, et l'appel continue avec le nouvel identifiant.
+        Promise.resolve(onMigration?.(String(migre))).catch((err: unknown) =>
+          console.error("[telegram] nouvel identifiant non enregistré :", err),
+        );
         return tgCall<T>(method, { ...payload, chat_id: String(migre) }, true);
       }
       // La description porte la vraie cause (bot hors du groupe, jeton

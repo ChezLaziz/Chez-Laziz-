@@ -33,6 +33,10 @@ export async function updateProduct(
   return getDb().query.products.findFirst({ where: eq(products.id, id) });
 }
 
+export async function getProductById(id: number) {
+  return getDb().query.products.findFirst({ where: eq(products.id, id) });
+}
+
 export async function deleteProduct(id: number) {
   await getDb().delete(products).where(eq(products.id, id));
 }

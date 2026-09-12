@@ -656,6 +656,8 @@ function refusalText(r: SendResult): string {
       return 'téléphone inutilisable'
     case 'no_address':
       return 'adresse vide'
+    case 'not_confirmed':
+      return "commande pas encore confirmée : appelez le client et passez-la « en préparation » avant l'envoi"
     case 'incertain':
       return `envoi interrompu — VÉRIFIEZ chez Team Parcel Express avant de réessayer (${r.message ?? ''})`
     case 'introuvable':

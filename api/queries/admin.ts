@@ -62,8 +62,17 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const LOGIN_MAX_ATTEMPTS = 8;
 const loginAttempts = new Map<string, { count: number; windowStart: number }>();
 
+/** Une entrée par adresse, jamais retirée : sur un serveur qui tourne des
+ * semaines, la table grossit sans fin. On balaie les fenêtres expirées dès
+ * qu'elle dépasse quelques centaines d'adresses. */
+function balayer(table: Map<string, { count: number; windowStart: number }>, now: number) {
+  if (table.size < 500) return;
+  for (const [ip, e] of table) if (now - e.windowStart > LOGIN_WINDOW_MS) table.delete(ip);
+}
+
 function checkLoginRateLimit(ip: string) {
   const now = Date.now();
+  balayer(loginAttempts, now);
   const entry = loginAttempts.get(ip);
   if (!entry || now - entry.windowStart > LOGIN_WINDOW_MS) {
     loginAttempts.set(ip, { count: 1, windowStart: now });
@@ -199,6 +208,7 @@ const resetRequestAttempts = new Map<string, { count: number; windowStart: numbe
 
 function checkResetRequestRateLimit(ip: string) {
   const now = Date.now();
+  balayer(resetRequestAttempts, now);
   const entry = resetRequestAttempts.get(ip);
   if (!entry || now - entry.windowStart > LOGIN_WINDOW_MS) {
     resetRequestAttempts.set(ip, { count: 1, windowStart: now });

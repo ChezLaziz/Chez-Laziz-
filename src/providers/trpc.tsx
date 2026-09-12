@@ -20,6 +20,11 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      // Les requêtes de lecture passaient en GET, avec leurs paramètres dans
+      // l'URL — dont le jeton d'administration, qui finissait dans les
+      // journaux HTTP de l'hébergeur et l'historique du navigateur. En POST,
+      // il voyage dans le corps de la requête, que personne ne journalise.
+      methodOverride: "POST",
       async fetch(input, init) {
         const res = await globalThis.fetch(input, {
           ...(init ?? {}),

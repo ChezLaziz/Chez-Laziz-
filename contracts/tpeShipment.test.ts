@@ -212,3 +212,10 @@ describe("readTpeCreated — leur réponse", () => {
     expect(readTpeCreated({ id: "" })).toBeNull();
   });
 });
+
+describe("refusalToSend — commande pas encore confirmée", () => {
+  it("refuse une commande « nouvelle » : personne n'a appelé le client", () => {
+    expect(refusalToSend({ ...NAWEL, status: "nouvelle" }, GAFSA_SUD)).toBe("not_confirmed");
+    expect(refusalToSend({ ...NAWEL, status: "en_preparation" }, GAFSA_SUD)).toBeNull();
+  });
+});

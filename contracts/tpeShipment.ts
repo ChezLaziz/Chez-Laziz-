@@ -138,7 +138,10 @@ export type SendRefusal =
   /** Sans téléphone exploitable, le livreur ne peut pas joindre le client. */
   | "no_phone"
   /** Sans adresse, il ne peut pas livrer. */
-  | "no_address";
+  | "no_address"
+  /** Personne n'a encore appelé le client : on ne crée pas de colis pour
+   * une commande dont on ne sait pas si elle est vraie. */
+  | "not_confirmed";
 
 export function refusalToSend(
   order: ShippableOrder & {
@@ -152,6 +155,7 @@ export function refusalToSend(
   if (order.carrierStatus === SEND_STATUS.inFlight) return "in_flight";
   if (order.carrierStatus === SEND_STATUS.uncertain) return "uncertain";
   if (order.status === "annulee") return "cancelled";
+  if (order.status === "nouvelle") return "not_confirmed";
   if (!destination) return "no_delegation";
   if (carrierPhone(order.phone) === null) return "no_phone";
   if (order.address.trim() === "") return "no_address";

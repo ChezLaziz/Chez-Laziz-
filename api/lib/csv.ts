@@ -17,7 +17,9 @@ const BOM = "﻿";
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return "";
   let s = String(value);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  // Un numéro de téléphone international (+216 …) n'est pas une formule :
+  // Excel garderait l'apostrophe telle quelle dans la colonne Téléphone.
+  if (/^[=+\-@\t\r]/.test(s) && !/^\+\d[\d ]*$/.test(s)) s = `'${s}`;
   if (s.includes('"') || s.includes(CSV_SEPARATOR) || /[\n\r]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;
   }

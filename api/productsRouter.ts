@@ -5,8 +5,7 @@ import {
   deleteProduct,
   listAvailableProducts,
   listProducts,
-  updateProduct,
-} from "./queries/products";
+  updateProduct, getProductById } from "./queries/products";
 import { assertAdmin } from "./queries/admin";
 
 const productInput = z.object({
@@ -76,6 +75,9 @@ export const productsRouter = createRouter({
       for (const key of Object.keys(data) as (keyof typeof data)[]) {
         if (data[key] === undefined) delete data[key];
       }
+      // Rien à changer : Drizzle refuse un SET vide (« No values to set »)
+      // et répondrait 500 — on rend simplement le produit tel quel.
+      if (Object.keys(data).length === 0) return getProductById(input.id);
       return updateProduct(input.id, data);
     }),
 

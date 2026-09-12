@@ -137,6 +137,27 @@ app.get("/api/uploads/*", async (c) => {
 
 // Export complet des données (bouton "Exporter" dans Paramètres) — protégé
 // par le même token admin que le reste, servi en téléchargement direct.
+const FORMAT_DATE_TUNIS = new Intl.DateTimeFormat("fr-CA", {
+  timeZone: "Africa/Tunis",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const FORMAT_HEURE_TUNIS = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: "Africa/Tunis",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+/** « 2026-09-11 » à l'heure de Tunis (fr-CA donne l'ordre année-mois-jour). */
+export function dateTunis(d: Date): string {
+  return FORMAT_DATE_TUNIS.format(d);
+}
+/** « 23:30 » à l'heure de Tunis. */
+export function heureTunis(d: Date): string {
+  return FORMAT_HEURE_TUNIS.format(d).replace("24:", "00:");
+}
+
 app.get("/api/admin/export", async (c) => {
   const token = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
   try {
@@ -178,8 +199,9 @@ app.get("/api/admin/export/orders.csv", async (c) => {
       .join(" | ");
     return [
       o.id,
-      o.createdAt.toISOString().slice(0, 10),
-      o.createdAt.toISOString().slice(11, 16),
+      // Heure de Tunis, pas UTC : une commande de 23 h 30 n'est pas « hier ».
+      dateTunis(o.createdAt),
+      heureTunis(o.createdAt),
       o.customerName,
       o.phone,
       o.governorate,
@@ -245,7 +267,24 @@ app.use(bodyLimit({ maxSize: 1 * 1024 * 1024 }));
 // ÉCRITURES — serrées, car c'est là qu'est l'abus : commandes bidon,
 // messages de contact en masse, force brute sur admin.login. Trente par
 // minute laissent largement passer un client qui hésite et recommence.
-const TRPC_WRITE = /\b(create|send|login|update|delete|save|sync|approve|set)\b/i;
+// Le nom de la procédure suit le point : « orders.setStatus »,
+// « admin.addUser ». L'ancienne forme exigeait le mot ENTIER (\bset\b) et
+// laissait passer setStatus, updatePages, syncDelegations… dans le panier
+// des lectures. « stats.track » reste volontairement une lecture : une
+// page vue par visite, et les réseaux mobiles tunisiens partagent une
+// adresse entre des centaines de clients.
+const TRPC_WRITE =
+  /\.(create|send|login|update|delete|save|sync|approve|set|add|remove|change|link|unlink|mark|request|reset)/i;
+
+/** Un « % » mal formé dans l'URL ferait lever decodeURIComponent — et
+ * répondre 500 à une simple faute de frappe. Le chemin brut suffit alors. */
+function cheminDecode(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
 app.use("/api/trpc/*", rateLimit({ windowMs: 60 * 1000, max: 600, bucket: "trpc-read" }));
 app.use(
   "/api/trpc/*",
@@ -254,7 +293,7 @@ app.use(
     max: 30,
     bucket: "trpc-write",
     appliesTo: (c) =>
-      c.req.method === "POST" && TRPC_WRITE.test(decodeURIComponent(c.req.path)),
+      c.req.method === "POST" && TRPC_WRITE.test(cheminDecode(c.req.path)),
   }),
 );
 
