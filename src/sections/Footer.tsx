@@ -215,12 +215,15 @@ function FooterColumn({
   return (
     <div className={className}>
       <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">{title}</p>
-      <ul className="space-y-3 text-sm font-light text-[#faf6f3]/75">
+      {/* space-y-1 et non 3 : chaque lien porte déjà 44 px de zone tactile
+          (.tap) ; garder l'ancien espacement doublerait la hauteur du pied de
+          page sans rien rendre plus facile à toucher. */}
+      <ul className="space-y-1 text-sm font-light text-[#faf6f3]/75">
         {links.map(([to, labelFr, labelAr]) => (
           <li key={to}>
             <Link
               to={lang === 'ar' && bilingualPaths.includes(to) ? (to === '/' ? '/ar' : `/ar${to}`) : to}
-              className="transition-colors hover:text-[#b8912e]"
+              className="tap transition-colors hover:text-[#b8912e]"
             >
               {lang === 'ar' ? labelAr : labelFr}
             </Link>
@@ -342,12 +345,12 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                     {lang === 'ar' ? 'للتواصل' : 'Contact'}
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
-                    <a href={PHONE_TEL} className="transition-colors hover:text-[#b8912e]" dir="ltr">
+                    <a href={PHONE_TEL} className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
                       {PHONE_DISPLAY}
                     </a>
                   </p>
                   <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
-                    <a href={`mailto:${EMAIL}`} className="transition-colors hover:text-[#b8912e]" dir="ltr">
+                    <a href={`mailto:${EMAIL}`} className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
                       {EMAIL}
                     </a>
                   </p>
@@ -422,12 +425,12 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
             <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
               {lang === 'ar' ? 'اطلب معنا' : 'Commander'}
             </p>
-            <ul className="space-y-3 text-sm font-light text-[#faf6f3]/75">
+            <ul className="space-y-1 text-sm font-light text-[#faf6f3]/75">
               <li>
                 <a
                   href={PHONE_TEL}
                   dir="ltr"
-                  className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
+                  className="tap gap-2.5 transition-colors hover:text-[#b8912e]"
                 >
                   <Icon name="Phone" size={16} />
                   {PHONE_DISPLAY}
@@ -438,7 +441,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                   href={MESSENGER_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
+                  className="tap gap-2.5 transition-colors hover:text-[#b8912e]"
                 >
                   <Icon name="Messenger" size={16} />
                   Messenger
@@ -448,7 +451,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                 <a
                   href={`mailto:${EMAIL}`}
                   dir="ltr"
-                  className="inline-flex items-center gap-2.5 transition-colors hover:text-[#b8912e]"
+                  className="tap gap-2.5 transition-colors hover:text-[#b8912e]"
                 >
                   <Icon name="Mail" size={16} />
                   {EMAIL}
@@ -479,7 +482,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               <Link
                 key={to}
                 to={lang === 'ar' && (BILINGUAL_BASE_PATHS as readonly string[]).includes(to) ? `/ar${to}` : to}
-                className="transition-colors hover:text-[#b8912e]"
+                className="tap transition-colors hover:text-[#b8912e]"
               >
                 {lang === 'ar' ? labelAr : labelFr}
               </Link>

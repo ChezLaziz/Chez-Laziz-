@@ -80,11 +80,11 @@ export default function HowToOrder() {
               ? 'أو مرّوا بمتجرنا في القيروان، مفتوح طوال الأسبوع من 07:00 إلى منتصف الليل.'
               : 'Ou passez à la boutique de Kairouan, ouverte 7j/7 de 07h00 à minuit.'}
             {' '}
-            <Link to="/livraison" className="text-accent underline underline-offset-2">
+            <Link to="/livraison" className="tap text-accent underline underline-offset-2">
               {isAr ? 'تفاصيل التوصيل' : 'Détails livraison'}
             </Link>
             {' · '}
-            <Link to="/faq" className="text-accent underline underline-offset-2">
+            <Link to="/faq" className="tap text-accent underline underline-offset-2">
               {isAr ? 'الأسئلة الشائعة' : 'Questions fréquentes'}
             </Link>
           </p>

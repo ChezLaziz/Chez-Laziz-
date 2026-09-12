@@ -209,7 +209,7 @@ export default function Hero() {
             </svg>
             {isAr ? '5.0 على غوغل' : '5,0 sur Google'}
           </span>
-          <a href="tel:+21623691039" dir="ltr" className="hover:text-[#faf6f3]">+216 23 691 039</a>
+          <a href="tel:+21623691039" dir="ltr" className="tap hover:text-[#faf6f3]">+216 23 691 039</a>
         </div>
       </div>
     </section>

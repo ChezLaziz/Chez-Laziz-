@@ -82,12 +82,12 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
               {isAr ? 'للتواصل' : 'Contact'}
             </h3>
             <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
-              <a href="tel:+21623691039" className="transition-colors hover:text-[#b8912e]" dir="ltr">
+              <a href="tel:+21623691039" className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
                 +216 23 691 039
               </a>
             </p>
             <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
-              <a href="mailto:contact@chezlaziz.com" className="transition-colors hover:text-[#b8912e]" dir="ltr">
+              <a href="mailto:contact@chezlaziz.com" className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
                 contact@chezlaziz.com
               </a>
             </p>
@@ -96,7 +96,7 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
                 href="https://www.instagram.com/chezlaziz"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 text-[#faf6f3]/80 transition-colors hover:text-[#b8912e]"
+                className="tap inline-flex items-center gap-2 text-[#faf6f3]/80 transition-colors hover:text-[#b8912e]"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                   <rect x="2.5" y="2.5" width="19" height="19" rx="5" />

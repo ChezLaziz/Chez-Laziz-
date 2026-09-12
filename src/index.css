@@ -200,8 +200,19 @@
 }
 
 /* ---------- Link with arrow (reference-style button) ---------- */
+/* Une cible qu'un pouce ne rate pas : 44 px de haut, la hauteur d'un doigt
+   sur un écran, sans changer la taille du texte ni l'espacement visuel. Posé
+   sur les liens en texte courant (téléphone, e-mail, menus du pied de page)
+   qui, à 16 px de haut, se manquaient un coup sur trois sur un téléphone. */
+.tap {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
 .arrow-link {
   display: inline-flex;
+  min-height: 2.75rem;
   align-items: center;
   gap: 0.6rem;
   font-weight: 500;

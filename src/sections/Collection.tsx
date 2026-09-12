@@ -108,7 +108,10 @@ function ProductCard({
             <button
               type="button"
               onClick={onAdd}
-              className="w-full rounded-full border border-[#b8912e]/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#b8912e] hover:text-white"
+              // min-h-11 : 44 px, la hauteur qu'un pouce ne rate pas — la même
+              // que sur la page de commande. À 38 px, un client sur cinq
+              // touchait le bord de la carte au lieu du bouton.
+              className="min-h-11 w-full rounded-full border border-[#b8912e]/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#b8912e] hover:text-white"
             >
               {isAr ? '+ أضف' : '+ Ajouter'}
             </button>

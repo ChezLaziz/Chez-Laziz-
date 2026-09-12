@@ -103,11 +103,16 @@ export default function Header() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
           <Link
             to={lang === 'ar' ? '/ar' : '/'}
-            className="flex min-w-0 items-center gap-2 md:gap-2.5"
+            className="flex min-h-11 min-w-0 items-center gap-2 md:gap-2.5"
           >
+            {/* Le logo porte le nom : sur un téléphone, le sélecteur de
+                langue, le panier et le menu ne laissent au mot-symbole qu'une
+                place où il s'affichait « CHE… ». Une marque coupée en deux
+                lit comme un bug sur chaque page intérieure ; on la montre
+                entière dès qu'il y a la place, et le logo seul avant. */}
             <img src="/images/logo.webp" alt="Chez Laziz" className="h-9 w-9 shrink-0 md:h-12 md:w-12" />
             <span
-              className={`truncate font-display text-base tracking-[0.08em] sm:text-xl sm:tracking-[0.14em] md:text-2xl ${
+              className={`hidden font-display sm:inline sm:text-xl sm:tracking-[0.14em] md:text-2xl ${
                 scrolled || open ? 'text-ink' : 'text-[#faf6f3]'
               }`}
             >
@@ -232,7 +237,7 @@ export default function Header() {
         )}
         <a
           href="tel:+21623691039"
-          className="mt-4 rounded-full bg-[#b8912e] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"
+          className="tap mt-4 rounded-full bg-[#b8912e] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"
         >
           {lang === 'ar' ? 'اطلب عبر الهاتف' : 'Commander par téléphone'}
         </a>
