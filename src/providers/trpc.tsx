@@ -8,7 +8,14 @@ import { ORDER_ERROR } from "@contracts/orderErrors";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const queryClient = new QueryClient();
+// Sans staleTime, chaque navigation redemandait le catalogue, les textes et
+// le pied de page — sur un téléphone, une requête et un léger clignotement
+// à chaque page. Une minute de fraîcheur suffit : les écrans d'admin qui
+// exigent du direct gardent leur propre refetchInterval, et chaque
+// écriture invalide explicitement ce qu'elle a changé.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000 } },
+});
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({

@@ -26,7 +26,7 @@ const DEFAULT_TITLE = 'CHEZ LAZIZ'
 const DEFAULT_TITLE_AR = 'عند لعزيز'
 const DEFAULT_SUBTITLE_AR = 'عند لعزيز — مقروض قيرواني أصيل'
 const DEFAULT_SUBTITLE_FR =
-  'L’art du makroudh kairouanais authentique — fait main chaque jour, au goût traditionnel qui ne change jamais.'
+  "L'art du makroudh kairouanais authentique — fait main chaque jour, au goût traditionnel qui ne change jamais."
 // Pas encore de champ CMS dédié pour ce paragraphe en arabe (voir
 // homeSubtitleAr, qui reste la courte formule décorative) — traduction
 // fixe en attendant, cohérent avec le reste de la page d'accueil arabe.
