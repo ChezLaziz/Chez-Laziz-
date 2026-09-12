@@ -21,6 +21,7 @@ import { ensureKitchenBaseline } from "./lib/telegramKitchen";
 import { startReminderScheduler } from "./lib/telegramReminders";
 import { startBackupScheduler } from "./lib/backupSchedule";
 import { startR2HealthScheduler } from "./lib/r2Health";
+import { warmProductThumbnails } from "./lib/thumbnailWarmup";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -307,5 +308,8 @@ if (env.isProduction) {
     // sans notification (voir api/lib/backupSchedule.ts).
     startBackupScheduler();
     startR2HealthScheduler();
+    // Quelques secondes après le démarrage, une fois le trafic repris : les
+    // photos du catalogue entrent en mémoire (voir thumbnailWarmup.ts).
+    setTimeout(() => void warmProductThumbnails(), 5_000).unref();
   });
 }
