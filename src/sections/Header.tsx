@@ -103,7 +103,7 @@ export default function Header() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:h-20 md:px-10">
           <Link
             to={lang === 'ar' ? '/ar' : '/'}
-            className="flex min-h-11 min-w-0 items-center gap-2 md:gap-2.5"
+            className="flex min-h-11 min-w-0 items-center gap-2 pe-2 sm:pe-0 md:gap-2.5"
           >
             {/* Le logo porte le nom : sur un téléphone, le sélecteur de
                 langue, le panier et le menu ne laissent au mot-symbole qu'une

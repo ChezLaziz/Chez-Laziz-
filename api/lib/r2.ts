@@ -213,20 +213,59 @@ function cleVignette(key: string, width: LargeurVignette): string {
  * Retourne null si l'originale est introuvable. Si le redimensionnement ou
  * l'écriture échoue, on rend l'ORIGINALE : une photo trop lourde vaut
  * infiniment mieux qu'une image cassée. */
+// Les vignettes servies restent en mémoire : la page de commande en demande
+// seize d'un coup, et chacune coûtait un aller-retour vers le stockage
+// (quelques dizaines de millisecondes, à chaque visiteur dont le navigateur
+// ne l'a pas encore). Une vignette fait 10 à 80 Ko ; 40 Mo en gardent
+// plusieurs centaines. Les plus anciennes sortent en premier ; les
+// originales (jusqu'à 20 Mo) ne passent jamais par ici.
+const CACHE_VIGNETTES_MAX_OCTETS = 40 * 1024 * 1024;
+const VIGNETTE_MAX_OCTETS = 2 * 1024 * 1024;
+const cacheVignettes = new Map<string, { octets: Buffer; contentType: string }>();
+let cacheVignettesOctets = 0;
+
+function retenirVignette(cle: string, octets: Buffer, contentType: string): void {
+  if (octets.length > VIGNETTE_MAX_OCTETS) return;
+  while (cacheVignettesOctets + octets.length > CACHE_VIGNETTES_MAX_OCTETS && cacheVignettes.size > 0) {
+    const plusAncienne = cacheVignettes.keys().next().value as string;
+    cacheVignettesOctets -= cacheVignettes.get(plusAncienne)?.octets.length ?? 0;
+    cacheVignettes.delete(plusAncienne);
+  }
+  cacheVignettes.set(cle, { octets, contentType });
+  cacheVignettesOctets += octets.length;
+}
+
+function vignetteEnMemoire(cle: string): { octets: Buffer; contentType: string } | undefined {
+  const v = cacheVignettes.get(cle);
+  if (!v) return undefined;
+  // Réinsérée en fin : c'est ce qui rend l'éviction « la plus ancienne d'abord ».
+  cacheVignettes.delete(cle);
+  cacheVignettes.set(cle, v);
+  return v;
+}
+
+/** Nombre de vignettes actuellement en mémoire (pour les tests). */
+export function vignettesEnMemoire(): number {
+  return cacheVignettes.size;
+}
+
 export async function getResizedImage(
   key: string,
   width: LargeurVignette,
 ): Promise<{ body: ReadableStream; contentType: string } | null> {
-  const { client, bucket } = getClient();
   const variante = cleVignette(key, width);
+  const memoire = vignetteEnMemoire(variante);
+  if (memoire) return { body: bufferEnFlux(memoire.octets), contentType: memoire.contentType };
+
+  const { client, bucket } = getClient();
 
   try {
     const deja = await client.send(new GetObjectCommand({ Bucket: bucket, Key: variante }));
     if (deja.Body) {
-      return {
-        body: deja.Body.transformToWebStream(),
-        contentType: deja.ContentType ?? "image/jpeg",
-      };
+      const octets = Buffer.from(await deja.Body.transformToByteArray());
+      const contentType = deja.ContentType ?? "image/jpeg";
+      retenirVignette(variante, octets, contentType);
+      return { body: bufferEnFlux(octets), contentType };
     }
   } catch {
     // Pas encore fabriquée — c'est le cas normal au premier appel.
@@ -259,6 +298,7 @@ export async function getResizedImage(
         }),
       )
       .catch((err: unknown) => console.error(`[r2] vignette non rangée (${variante}) :`, err));
+    retenirVignette(variante, redimensionnee, "image/jpeg");
     return { body: bufferEnFlux(redimensionnee), contentType: "image/jpeg" };
   } catch (err) {
     console.error(`[r2] redimensionnement échoué pour ${key} :`, err);

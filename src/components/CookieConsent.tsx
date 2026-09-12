@@ -85,14 +85,14 @@ export default function CookieConsent() {
           <button
             type="button"
             onClick={() => choose('declined')}
-            className="min-h-9 rounded-full px-3 text-[11px] font-medium text-ink/50 transition hover:text-ink md:text-xs"
+            className="min-h-11 rounded-full px-3 text-[11px] font-medium text-ink/50 transition hover:text-ink md:text-xs"
           >
             {isAr ? 'رفض' : 'Refuser'}
           </button>
           <button
             type="button"
             onClick={() => choose('accepted')}
-            className="min-h-9 rounded-full bg-[#b8912e] px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#a37f27] md:text-xs"
+            className="min-h-11 rounded-full bg-[#b8912e] px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#a37f27] md:text-xs"
           >
             {isAr ? 'موافق' : 'Accepter'}
           </button>

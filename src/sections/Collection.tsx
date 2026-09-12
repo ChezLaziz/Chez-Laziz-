@@ -220,7 +220,11 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
             </svg>
           </a>
           <div data-reveal className="mt-4">
-            <Link to="/makroudh-aux-dattes" className="text-xs uppercase tracking-[0.18em] text-ink/45 underline underline-offset-4 hover:text-accent">
+            {/* L'interlettrage forcé saute en arabe : il casse les ligatures. */}
+            <Link
+              to={isAr ? '/ar/makroudh-aux-dattes' : '/makroudh-aux-dattes'}
+              className={`tap text-xs text-ink/45 underline underline-offset-4 hover:text-accent ${isAr ? '' : 'uppercase tracking-[0.18em]'}`}
+            >
               {isAr ? 'الوصفة التقليدية لمقروض التمر' : 'La recette traditionnelle du makroudh aux dattes'}
             </Link>
           </div>

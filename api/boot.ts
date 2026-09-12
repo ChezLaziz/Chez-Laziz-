@@ -112,10 +112,19 @@ app.get("/api/uploads/*", async (c) => {
   // affichée. Sans ce paramètre, l'originale — les anciens liens continuent
   // de fonctionner exactement comme avant.
   const demandee = Number(c.req.query("w"));
-  const result =
-    Number.isInteger(demandee) && estLargeurServie(demandee)
-      ? await getResizedImage(key, demandee)
-      : await getUploadedImage(key);
+  let result: Awaited<ReturnType<typeof getUploadedImage>>;
+  try {
+    result =
+      Number.isInteger(demandee) && estLargeurServie(demandee)
+        ? await getResizedImage(key, demandee)
+        : await getUploadedImage(key);
+  } catch (err) {
+    // Stockage injoignable ou mal configuré : une indisponibilité, pas une
+    // erreur de programme — et surtout rien qu'un cache doit retenir.
+    console.error(`[r2] photo indisponible (${key}) :`, err instanceof Error ? err.message : err);
+    c.header("Cache-Control", "no-store");
+    return c.json({ error: "Photo temporairement indisponible" }, 503);
+  }
   if (!result) return c.json({ error: "Not Found" }, 404);
   return new Response(result.body, {
     headers: {
