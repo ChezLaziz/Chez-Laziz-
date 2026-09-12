@@ -323,6 +323,10 @@ app.use("/api/trpc/*", async (c) => {
     req: c.req.raw,
     router: appRouter,
     createContext,
+    // Le client envoie ses lectures en POST (methodOverride, voir
+    // src/providers/trpc.tsx) pour ne pas mettre le jeton dans l'URL :
+    // sans cette option, le serveur refuse tout POST vers une lecture.
+    allowMethodOverride: true,
   });
 });
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
