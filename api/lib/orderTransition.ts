@@ -8,7 +8,8 @@ import type { OrderItem } from "../queries/orders";
 import { markMetaPurchaseReported, updateOrderStatus } from "../queries/orders";
 import { sendMetaPurchaseEvent, shouldReportMetaPurchase } from "./metaConversionsApi";
 import { metaContentId } from "@contracts/metaContentId";
-import { refreshKitchenBoard } from "./telegramKitchen";
+import { applyKitchenRelease, refreshKitchenBoard } from "./telegramKitchen";
+import { parseKitchenItems } from "../queries/kitchen";
 
 export type OrderStatus = "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
 
@@ -54,7 +55,7 @@ export async function maybeReportMetaPurchase(order: {
   metaClientUserAgent?: string | null;
 }): Promise<void> {
   if (!shouldReportMetaPurchase(order)) return;
-  await markMetaPurchaseReported(order.id);
+  if (!(await markMetaPurchaseReported(order.id))) return;
   let items: OrderItem[] = [];
   try {
     items = JSON.parse(order.items);
@@ -94,9 +95,14 @@ function compteEnCuisine(status: OrderStatus): boolean {
  * seulement si le poids à préparer a réellement changé. Passer de
  * « en préparation » à « prête » ne recuit rien et ne doit pas sonner. */
 export async function transitionOrderStatus(id: number, status: OrderStatus, avant: OrderStatus) {
-  const order = await updateOrderStatus(id, status);
+  // null = la commande n'est plus dans l'état `avant` (quelqu'un d'autre a
+  // tranché entre-temps) ou n'existe pas : rien n'a été écrit.
+  const order = await updateOrderStatus(id, status, avant);
   if (!order) return null;
   await maybeReportMetaPurchase(order);
+  if (compteEnCuisine(avant) && !compteEnCuisine(status)) {
+    await applyKitchenRelease(parseKitchenItems(order.items));
+  }
   if (compteEnCuisine(avant) !== compteEnCuisine(status)) void refreshKitchenBoard(true);
   return order;
 }

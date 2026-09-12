@@ -224,3 +224,34 @@ describe("baselineFromConfirmed", () => {
     expect(undoKitchen(baselineFromConfirmed(confirmed))).toEqual(baselineFromConfirmed(confirmed));
   });
 });
+
+describe("releaseKitchen — une commande confirmée qui sort de la cuisine", () => {
+  it("rend son poids à l'acquitté, pour que la suivante du même type apparaisse", async () => {
+    const { accumulateKitchen, kitchenPending, releaseKitchen } = await import("./kitchenBoard");
+    const fraise = { productId: 5, name: "Fraise", weightKg: 2, qty: 1 };
+    // 2 kg confirmés, cuits (acquittés), puis la commande est annulée.
+    const ack = releaseKitchen({ kg: { p5: 2 }, prev: { p5: 0 }, last: "p5" }, [fraise]);
+    expect(ack.kg.p5).toBe(0);
+    // La commande suivante de 1,5 kg doit se voir.
+    const confirmed = accumulateKitchen([{ items: [{ productId: 5, name: "Fraise", weightKg: 1.5, qty: 1 }] }]);
+    expect(kitchenPending(confirmed, ack)).toEqual([{ key: "p5", label: "Fraise", kg: 1.5 }]);
+  });
+
+  it("ne descend jamais sous zéro et laisse les autres types intacts", async () => {
+    const { releaseKitchen } = await import("./kitchenBoard");
+    const ack = releaseKitchen(
+      { kg: { p5: 1, p8: 3 }, prev: { p5: 0.5 } },
+      [{ productId: 5, name: "Fraise", weightKg: 2, qty: 1 }],
+    );
+    expect(ack).toEqual({ kg: { p5: 0, p8: 3 }, prev: { p5: 0 } });
+  });
+
+  it("compte le contenu d'un pack, pas la ligne du pack", async () => {
+    const { releaseKitchen } = await import("./kitchenBoard");
+    const ack = releaseKitchen(
+      { kg: { p1: 1, p2: 1 }, prev: {} },
+      [{ name: "Pack", weightKg: 1, qty: 2, contents: [{ productId: 1, name: "A", weightKg: 0.5 }, { productId: 2, name: "B", weightKg: 0.5 }] }],
+    );
+    expect(ack.kg).toEqual({ p1: 0, p2: 0 });
+  });
+});

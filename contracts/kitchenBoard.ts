@@ -142,6 +142,26 @@ export function ackKitchen(
   };
 }
 
+/** Une commande confirmée qui SORT de la cuisine (annulée après coup,
+ * supprimée) rend son poids à l'acquitté.
+ *
+ * Sans ça, l'acquitté garde des kilos que plus personne n'attend, et comme
+ * « pendant = confirmé − acquitté » ne descend jamais sous zéro, la commande
+ * SUIVANTE du même type est avalée en silence : 2 kg de fraise acquittés
+ * puis annulés, et la prochaine commande de 1,5 kg de fraise n'apparaît
+ * jamais. Retirer le poids sorti peut faire réapparaître une fournée déjà
+ * cuite — un « تم » de plus ; cacher une commande, personne ne le voit. */
+export function releaseKitchen(ack: KitchenAck, items: KitchenItem[]): KitchenAck {
+  const sorti = accumulateKitchen([{ items }]);
+  const kg = { ...ack.kg };
+  const prev = { ...ack.prev };
+  for (const [key, { kg: poids }] of Object.entries(sorti)) {
+    if (key in kg) kg[key] = Math.max(0, auGramme(kg[key] - poids));
+    if (key in prev) prev[key] = Math.max(0, auGramme(prev[key] - poids));
+  }
+  return { ...ack, kg, prev };
+}
+
 /** Défaire le dernier « تم ». Appuyer deux fois ne creuse pas plus loin :
  * un seul pas en arrière, celui de l'erreur qu'on vient de faire. */
 export function undoKitchen(ack: KitchenAck): KitchenAck {

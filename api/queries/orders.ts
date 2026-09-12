@@ -125,15 +125,26 @@ export async function setCancelReason(id: number, reason: string): Promise<void>
   await getDb().update(orders).set({ cancelReason: reason }).where(eq(orders.id, id));
 }
 
+/** Change le statut SEULEMENT si la commande est encore dans l'état
+ * `avant` — vérification et écriture en une seule instruction SQL.
+ *
+ * Deux personnes qui appuient sur ✅ à la même seconde, ou un ✅ dans
+ * Telegram pendant qu'on annule depuis le tableau de bord, lisaient tous
+ * deux « nouvelle » puis écrivaient chacun leur verdict : la dernière
+ * écriture gagnait, et une raison d'annulation pouvait rester posée sur
+ * une commande en préparation. Ici la base n'en laisse passer qu'un ;
+ * l'autre reçoit null et affiche l'état réel. */
 export async function updateOrderStatus(
   id: number,
   status: (typeof orders.$inferSelect)["status"],
+  avant: (typeof orders.$inferSelect)["status"],
 ) {
-  await getDb()
+  const rows = await getDb()
     .update(orders)
     .set({ status, updatedAt: new Date() })
-    .where(eq(orders.id, id));
-  return getDb().query.orders.findFirst({ where: eq(orders.id, id) });
+    .where(and(eq(orders.id, id), eq(orders.status, avant)))
+    .returning();
+  return rows[0] ?? null;
 }
 
 /** Met à jour l'état de paiement d'une commande.
@@ -265,11 +276,16 @@ export async function settleSendClaim(
 
 /** Marque la commande comme déjà signalée à Meta (Purchase) — empêche un
  * second envoi si son statut ou son paiement change encore ensuite. */
-export async function markMetaPurchaseReported(id: number) {
-  await getDb()
+/** Réserve le signalement de l'achat à Meta : vrai pour le premier appel,
+ * faux pour tous les suivants — deux confirmations simultanées ne peuvent
+ * plus envoyer deux fois le même achat. */
+export async function markMetaPurchaseReported(id: number): Promise<boolean> {
+  const rows = await getDb()
     .update(orders)
     .set({ metaPurchaseReportedAt: new Date() })
-    .where(eq(orders.id, id));
+    .where(and(eq(orders.id, id), isNull(orders.metaPurchaseReportedAt)))
+    .returning({ id: orders.id });
+  return rows.length === 1;
 }
 
 export async function createContactMessage(data: {

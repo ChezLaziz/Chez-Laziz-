@@ -62,13 +62,22 @@ async function afficherDejaTranchee(
   return "تعمّلت قبل";
 }
 
+/** Quelqu'un d'autre a tranché entre la lecture et l'écriture (deux ✅ à
+ * la même seconde, ou le tableau de bord) : on montre l'état réel plutôt
+ * qu'un échec. */
+async function trancheeEntreTemps(q: CallbackQuery, orderId: number): Promise<string> {
+  const maintenant = await getOrderById(orderId);
+  if (!maintenant) return "الطلبية ما ثماش";
+  return afficherDejaTranchee(q.message?.message_id, maintenant);
+}
+
 async function confirmOrder(q: CallbackQuery, orderId: number): Promise<string> {
   const order = await getOrderById(orderId);
   if (!order) return "الطلبية ما ثماش";
   if (order.status !== "nouvelle") return afficherDejaTranchee(q.message?.message_id, order);
 
   const apres = await transitionOrderStatus(orderId, "en_preparation", order.status);
-  if (!apres) return "ما نجّمناش";
+  if (!apres) return trancheeEntreTemps(q, orderId);
   if (q.message?.message_id) {
     await editMessage(
       q.message.message_id,
@@ -124,7 +133,7 @@ async function cancelWithReason(
 
   await setCancelReason(orderId, reason);
   const apres = await transitionOrderStatus(orderId, "annulee", order.status);
-  if (!apres) return "ما نجّمناش";
+  if (!apres) return trancheeEntreTemps(q, orderId);
   if (q.message?.message_id) {
     await editMessage(
       q.message.message_id,

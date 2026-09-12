@@ -13,7 +13,14 @@
 //
 // Le calcul lui-même est ailleurs, sans base ni réseau : contracts/kitchenBoard.ts.
 
-import { ackKitchen, formatKitchenBoard, kitchenKeyboard, undoKitchen } from "@contracts/kitchenBoard";
+import {
+  ackKitchen,
+  formatKitchenBoard,
+  kitchenKeyboard,
+  releaseKitchen,
+  undoKitchen,
+  type KitchenItem,
+} from "@contracts/kitchenBoard";
 import {
   currentKitchenLines,
   getConfirmedKitchenTotals,
@@ -49,8 +56,21 @@ export async function ensureKitchenBaseline(): Promise<void> {
 
 /** Réaffiche le tableau. `annonce` = il y a du poids en plus, il faut que ça
  * sonne. Ne lève jamais : un tableau non rafraîchi ne doit jamais faire
- * échouer la confirmation d'une commande. */
-export async function refreshKitchenBoard(annonce: boolean): Promise<void> {
+ * échouer la confirmation d'une commande.
+ *
+ * UN SEUL rafraîchissement à la fois. Trois confirmations d'affilée sur le
+ * tableau de bord lançaient trois « lire l'ancien, le supprimer, envoyer le
+ * neuf » entrelacés : deux lisaient le même ancien identifiant, et l'un des
+ * deux nouveaux tableaux restait orphelin dans le groupe, avec de vieux
+ * poids et des boutons qui marchaient encore. */
+let file: Promise<void> = Promise.resolve();
+export function refreshKitchenBoard(annonce: boolean): Promise<void> {
+  const tour = file.then(() => rafraichir(annonce));
+  file = tour.catch(() => undefined);
+  return tour;
+}
+
+async function rafraichir(annonce: boolean): Promise<void> {
   if (!isTelegramConfigured()) return;
   try {
     const [{ lines: lignes, canUndo }, ancien] = await Promise.all([
@@ -77,6 +97,21 @@ export async function refreshKitchenBoard(annonce: boolean): Promise<void> {
     if (envoye) await pinMessage(envoye.message_id);
   } catch (err) {
     console.error("[kitchen] tableau non rafraîchi :", err);
+  }
+}
+
+/** Une commande confirmée sort de la cuisine (annulée, supprimée) : son
+ * poids quitte l'acquitté, sinon la suivante du même type serait avalée
+ * (voir releaseKitchen). Ne lève jamais. Sans acquittement enregistré, il
+ * n'y a rien à rendre. */
+export async function applyKitchenRelease(items: KitchenItem[]): Promise<void> {
+  if (!isTelegramConfigured()) return;
+  try {
+    const ack = await readKitchenAck();
+    if (!ack) return;
+    await writeKitchenAck(releaseKitchen(ack, items));
+  } catch (err) {
+    console.error("[kitchen] poids non rendu :", err);
   }
 }
 

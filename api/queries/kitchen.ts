@@ -30,7 +30,7 @@ const CLE_MESSAGE = "kitchen_board_message_id";
  * « annulee » ne sera jamais cuite. Tout le reste est du travail réel. */
 const NON_CONFIRMES = ["nouvelle", "annulee"] as const;
 
-function parseItems(json: string): KitchenItem[] {
+export function parseKitchenItems(json: string): KitchenItem[] {
   try {
     const parsed: unknown = JSON.parse(json);
     return Array.isArray(parsed) ? (parsed as KitchenItem[]) : [];
@@ -48,7 +48,7 @@ export async function getConfirmedKitchenTotals(): Promise<ConfirmedTotals> {
     .select({ items: orders.items })
     .from(orders)
     .where(notInArray(orders.status, [...NON_CONFIRMES]));
-  return accumulateKitchen(rows.map((r) => ({ items: parseItems(r.items) })));
+  return accumulateKitchen(rows.map((r) => ({ items: parseKitchenItems(r.items) })));
 }
 
 /** Le nom ACTUEL du catalogue, en arabe quand il existe : le cuisinier lit

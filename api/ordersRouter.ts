@@ -17,7 +17,8 @@ import { listAvailableProducts } from "./queries/products";
 import { notifyAdminNewOrder } from "./lib/email";
 import { notifyAdminNewOrderTelegram } from "./lib/telegram";
 import { maybeReportMetaPurchase, transitionOrderStatus } from "./lib/orderTransition";
-import { refreshKitchenBoard } from "./lib/telegramKitchen";
+import { applyKitchenRelease, refreshKitchenBoard } from "./lib/telegramKitchen";
+import { parseKitchenItems } from "./queries/kitchen";
 import { currentKitchenLines } from "./queries/kitchen";
 import { getLastOrderId, listOrdersAwaitingCall } from "./queries/reminders";
 import { TRPCError } from "@trpc/server";
@@ -173,7 +174,13 @@ export const ordersRouter = createRouter({
             weightKg: packWeightKg(pack),
             qty: i.qty,
             unitPriceMillimes: pack.priceMillimes,
-            contents: packContents(pack),
+            // Avec l'identifiant produit : sans lui, la cuisine rangeait le
+            // makroudh d'un pack et le même makroudh commandé au poids dans
+            // deux seaux différents, avec deux boutons « تم ».
+            contents: packContents(pack).map((c) => ({
+              ...c,
+              productId: catalog.find((p) => p.name === c.name)?.id,
+            })),
           };
         }
         // Custom Pack : 4 produits différents × 500 g + packaging personnalisé,
@@ -379,6 +386,7 @@ export const ordersRouter = createRouter({
       const avant = await getOrderById(input.id);
       await deleteOrder(input.id);
       if (avant && avant.status !== "nouvelle" && avant.status !== "annulee") {
+        await applyKitchenRelease(parseKitchenItems(avant.items));
         void refreshKitchenBoard(false);
       }
       return { ok: true };

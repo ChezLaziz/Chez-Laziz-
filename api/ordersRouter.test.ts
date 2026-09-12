@@ -8,7 +8,7 @@ const assertAdmin = vi.fn();
 const updateOrderStatus = vi.fn();
 const getOrderById = vi.fn();
 const updatePaymentStatus = vi.fn();
-const markMetaPurchaseReported = vi.fn(async () => undefined);
+const markMetaPurchaseReported = vi.fn(async () => true);
 const sendMetaPurchaseEvent = vi.fn(async () => undefined);
 
 vi.mock("./queries/products", () => ({ listAvailableProducts }));
@@ -263,12 +263,19 @@ describe("orders.create — packs prêts (prix fixes)", () => {
             name: "Laziz VIP",
             weightKg: 2,
             unitPriceMillimes: 69900,
+            // Chaque produit du pack porte son identifiant : la cuisine
+            // range le makroudh du pack et le même makroudh au poids dans
+            // un seul seau.
             contents: [
-              { name: "Makroudh Laziz – Fruits Secs", weightKg: 0.5 },
-              { name: "Makroudh Blanc à la Pistache", weightKg: 0.5 },
-              { name: "Makroudh Blanc au Fraise", weightKg: 0.5 },
-              { name: "Makroudh Zgougou", weightKg: 0.5 },
-            ],
+              "Makroudh Laziz – Fruits Secs",
+              "Makroudh Blanc à la Pistache",
+              "Makroudh Blanc au Fraise",
+              "Makroudh Zgougou",
+            ].map((name) => ({
+              name,
+              weightKg: 0.5,
+              productId: CATALOG_COMPLET.find((p) => p.name === name)!.id,
+            })),
           }),
         ],
         subtotalMillimes: 69900,
