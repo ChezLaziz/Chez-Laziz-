@@ -15,6 +15,7 @@ import { transitionOrderStatus } from "./orderTransition";
 import { applyKitchenAck, applyKitchenUndo } from "./telegramKitchen";
 import {
   answerCallback,
+  chatId,
   buildNewOrderTelegramMessage,
   cancelReasonKeyboard,
   cancelReasonPrompt,
@@ -183,8 +184,8 @@ export async function handleTelegramUpdate(update: unknown): Promise<void> {
   try {
     // Un bouton ne vaut que dans le groupe configuré. Un identifiant de
     // conversation inattendu, c'est quelqu'un d'autre : on ne fait rien.
-    const chatId = q.message?.chat?.id;
-    if (chatId !== undefined && String(chatId) !== String(process.env.TELEGRAM_CHAT_ID)) {
+    const chatIdRecu = q.message?.chat?.id;
+    if (chatIdRecu !== undefined && String(chatIdRecu) !== chatId()) {
       await answerCallback(q.id);
       return;
     }

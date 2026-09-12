@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   buildNewOrderTelegramMessage,
+  chatId,
+  setChatIdOverride,
   cancelReasonPrompt,
   couperPourTelegram,
   decidedOrderMessage,
@@ -147,5 +149,26 @@ describe("decidedOrderMessage", () => {
 
   it("sans nom quand la décision ne vient pas d'un bouton", () => {
     expect(decidedOrderMessage("base", "confirmee")).toBe("base\n\n✅ <b>مؤكّدة</b>");
+  });
+});
+
+describe("chatId — migration d'un groupe vers un supergroupe", () => {
+  beforeEach(() => {
+    setChatIdOverride(null);
+    process.env.TELEGRAM_CHAT_ID = "-5472483644";
+  });
+
+  it("utilise l'identifiant de l'environnement tant que rien n'a migré", () => {
+    expect(chatId()).toBe("-5472483644");
+  });
+
+  it("bascule sur le nouvel identifiant après migration", () => {
+    setChatIdOverride("-1002345678901");
+    expect(chatId()).toBe("-1002345678901");
+  });
+
+  it("rend une chaîne vide plutôt que « undefined » si rien n'est configuré", () => {
+    delete process.env.TELEGRAM_CHAT_ID;
+    expect(chatId()).toBe("");
   });
 });

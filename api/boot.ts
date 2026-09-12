@@ -14,7 +14,8 @@ import { listOrders, type OrderItem } from "./queries/orders";
 import { toCsv, csvResponse } from "./lib/csv";
 import { formatDinars } from "@contracts/shop";
 import { cancelReasonAr } from "@contracts/cancelReasons";
-import { registerTelegramWebhook, telegramWebhookSecret } from "./lib/telegram";
+import { telegramWebhookSecret } from "./lib/telegram";
+import { setupTelegram } from "./lib/telegramSetup";
 import { handleTelegramUpdate } from "./lib/telegramWebhook";
 import { ensureKitchenBaseline } from "./lib/telegramKitchen";
 import { startReminderScheduler } from "./lib/telegramReminders";
@@ -280,7 +281,7 @@ if (env.isProduction) {
     console.log(`Server running on http://localhost:${port}/`);
     // Déclaré à chaque démarrage, et idempotent côté Telegram : poser les
     // deux variables d'environnement suffit, il n'y a rien à faire à la main.
-    void registerTelegramWebhook();
+    void setupTelegram();
     // Avant la première commande, jamais après : voir ensureKitchenBaseline.
     void ensureKitchenBaseline();
     startReminderScheduler();

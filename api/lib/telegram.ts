@@ -70,6 +70,31 @@ export function isTelegramConfigured(): boolean {
   return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
 
+// ---- L'identifiant du groupe, et pourquoi il ne peut pas être une constante
+//
+// Un groupe Telagram ORDINAIRE devient un « supergroupe » dès qu'on le rend
+// public, qu'on active les sujets, ou qu'il grossit — et son identifiant
+// CHANGE à ce moment-là (« -5472483644 » devient « -100... »). L'ancien
+// n'existe plus : tout s'arrêterait, sans une seule erreur visible, exactement
+// le genre de panne muette qui a déjà coûté une journée d'images à cette
+// boutique.
+//
+// Telegram prévient pourtant : il renvoie `migrate_to_chat_id` avec le refus.
+// On l'enregistre et on repart dessus, sans que personne n'ait à toucher une
+// variable d'environnement.
+
+let chatIdCourant: string | null = null;
+
+export function chatId(): string {
+  return chatIdCourant ?? process.env.TELEGRAM_CHAT_ID ?? "";
+}
+
+/** Chargé au démarrage : un groupe migré reste joignable après un
+ * redéploiement. */
+export function setChatIdOverride(id: string | null): void {
+  chatIdCourant = id;
+}
+
 /** Le secret que Telegram renvoie dans l'en-tête de chaque appel au webhook.
  *
  * DÉRIVÉ du jeton du bot plutôt que demandé en plus : une variable de moins à
@@ -88,9 +113,17 @@ export function telegramWebhookSecret(): string {
  * dans le groupe pour rien. */
 const RIEN_A_CHANGER = "message is not modified";
 
+/** Persiste un identifiant de groupe migré. Branché au démarrage plutôt
+ * qu'importé ici : ce module ne connaît pas la base de données. */
+let onMigration: ((id: string) => Promise<void>) | null = null;
+export function setMigrationHandler(fn: (id: string) => Promise<void>): void {
+  onMigration = fn;
+}
+
 export async function tgCall<T = unknown>(
   method: string,
   payload: Record<string, unknown>,
+  deja = false,
 ): Promise<T | null> {
   if (!isTelegramConfigured()) return null;
   try {
@@ -102,9 +135,24 @@ export async function tgCall<T = unknown>(
         body: JSON.stringify(payload),
       },
     );
-    const body = (await res.json()) as { ok: boolean; result?: T; description?: string };
+    const body = (await res.json()) as {
+      ok: boolean;
+      result?: T;
+      description?: string;
+      parameters?: { migrate_to_chat_id?: number };
+    };
     if (!res.ok || !body.ok) {
       if (body.description?.includes(RIEN_A_CHANGER)) return {} as T;
+      // Le groupe est devenu un supergroupe : Telegram donne le nouvel
+      // identifiant dans son refus. On le garde et on refait l'appel une
+      // seule fois — `deja` empêche toute boucle si le second échoue aussi.
+      const migre = body.parameters?.migrate_to_chat_id;
+      if (typeof migre === "number" && !deja) {
+        console.log(`[telegram] le groupe a migré vers ${migre} — enregistré`);
+        chatIdCourant = String(migre);
+        void onMigration?.(String(migre));
+        return tgCall<T>(method, { ...payload, chat_id: String(migre) }, true);
+      }
       // La description porte la vraie cause (bot hors du groupe, jeton
       // révoqué, message trop vieux) ; sans elle on chercherait à l'aveugle.
       // Le jeton n'apparaît jamais dans le journal.
@@ -135,7 +183,7 @@ export async function sendMessage(
   keyboard?: InlineKeyboard,
 ): Promise<{ message_id: number } | null> {
   return tgCall<{ message_id: number }>("sendMessage", {
-    chat_id: process.env.TELEGRAM_CHAT_ID,
+    chat_id: chatId(),
     text: couperPourTelegram(text),
     parse_mode: "HTML",
     disable_web_page_preview: true,
@@ -149,7 +197,7 @@ export async function editMessage(
   keyboard?: InlineKeyboard,
 ): Promise<boolean> {
   const res = await tgCall("editMessageText", {
-    chat_id: process.env.TELEGRAM_CHAT_ID,
+    chat_id: chatId(),
     message_id: messageId,
     text: couperPourTelegram(text),
     parse_mode: "HTML",
@@ -161,7 +209,7 @@ export async function editMessage(
 
 export async function deleteMessage(messageId: number): Promise<void> {
   await tgCall("deleteMessage", {
-    chat_id: process.env.TELEGRAM_CHAT_ID,
+    chat_id: chatId(),
     message_id: messageId,
   });
 }
@@ -171,7 +219,7 @@ export async function deleteMessage(messageId: number): Promise<void> {
  * Silencieux — le message qui vient d'arriver a déjà sonné. */
 export async function pinMessage(messageId: number): Promise<void> {
   await tgCall("pinChatMessage", {
-    chat_id: process.env.TELEGRAM_CHAT_ID,
+    chat_id: chatId(),
     message_id: messageId,
     disable_notification: true,
   });
