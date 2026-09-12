@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { buildNewOrderTelegramMessage, isTelegramConfigured } from "./telegram";
+import {
+  buildNewOrderTelegramMessage,
+  cancelReasonPrompt,
+  couperPourTelegram,
+  decidedOrderMessage,
+  isTelegramConfigured,
+} from "./telegram";
 
 const commande = {
   id: 42,
@@ -97,5 +103,49 @@ describe("buildNewOrderTelegramMessage", () => {
     expect(msg.length).toBeLessThanOrEqual(4096);
     expect(msg.split("\n")[0]).toContain("#42");
     expect(msg).toContain("https://chezlaziz.com/admin");
+  });
+});
+
+describe("couperPourTelegram", () => {
+  it("laisse passer un message normal", () => {
+    expect(couperPourTelegram("salut")).toBe("salut");
+  });
+
+  it("coupe au-delà de 4096 — au-delà, Telegram n'affiche RIEN du tout", () => {
+    const coupe = couperPourTelegram("x".repeat(5000));
+    expect(coupe.length).toBe(4096);
+    expect(coupe.endsWith("\n…")).toBe(true);
+  });
+
+  it("protège le cas réel : une commande déjà à la limite + la question « علاش »", () => {
+    const enorme = buildNewOrderTelegramMessage({
+      ...commande,
+      items: JSON.stringify(
+        Array.from({ length: 300 }, () => ({
+          name: "Produit au nom très long pour remplir le message",
+          weightKg: 1,
+          qty: 1,
+          unitPriceMillimes: 10000,
+        })),
+      ),
+    });
+    expect(enorme.length).toBeLessThanOrEqual(4096);
+    expect(cancelReasonPrompt(enorme).length).toBeGreaterThan(4096);
+    expect(couperPourTelegram(cancelReasonPrompt(enorme)).length).toBe(4096);
+  });
+});
+
+describe("decidedOrderMessage", () => {
+  it("écrit la raison quand elle existe", () => {
+    expect(decidedOrderMessage("base", "annulee", "Slim", "trop_cher")).toContain("الثمن غالي");
+  });
+
+  it("n'invente rien quand la raison est absente ou inconnue", () => {
+    expect(decidedOrderMessage("base", "annulee", "Slim", null)).toBe("base\n\n❌ <b>ملغاة</b> — Slim");
+    expect(decidedOrderMessage("base", "annulee", "Slim", "bidon")).not.toContain("·");
+  });
+
+  it("sans nom quand la décision ne vient pas d'un bouton", () => {
+    expect(decidedOrderMessage("base", "confirmee")).toBe("base\n\n✅ <b>مؤكّدة</b>");
   });
 });

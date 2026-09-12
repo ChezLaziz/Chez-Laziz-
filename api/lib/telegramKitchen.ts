@@ -29,7 +29,13 @@ import {
   writeKitchenAck,
   writeKitchenBoardMessageId,
 } from "../queries/kitchen";
-import { deleteMessage, editMessage, isTelegramConfigured, sendMessage } from "./telegram";
+import {
+  deleteMessage,
+  editMessage,
+  isTelegramConfigured,
+  pinMessage,
+  sendMessage,
+} from "./telegram";
 
 /** Le point de départ du tableau : tout ce qui est DÉJÀ confirmé aujourd'hui
  * est réputé cuit.
@@ -97,6 +103,10 @@ export async function refreshKitchenBoard(annonce: boolean): Promise<void> {
     if (ancien !== null) await deleteMessage(ancien);
     const envoye = await sendMessage(texte, clavier);
     await writeKitchenBoardMessageId(envoye?.message_id ?? null);
+    // Épinglé : le cuisinier retrouve le tableau en haut du groupe sans
+    // remonter les messages de la journée. Le message vient d'arriver, il a
+    // déjà sonné — l'épinglage lui-même reste silencieux.
+    if (envoye) await pinMessage(envoye.message_id);
   } catch (err) {
     console.error("[kitchen] tableau non rafraîchi :", err);
   }

@@ -13,9 +13,11 @@ import { getFullExport } from "./queries/backup";
 import { listOrders, type OrderItem } from "./queries/orders";
 import { toCsv, csvResponse } from "./lib/csv";
 import { formatDinars } from "@contracts/shop";
+import { cancelReasonAr } from "@contracts/cancelReasons";
 import { registerTelegramWebhook, telegramWebhookSecret } from "./lib/telegram";
 import { handleTelegramUpdate } from "./lib/telegramWebhook";
 import { ensureKitchenBaseline } from "./lib/telegramKitchen";
+import { startReminderScheduler } from "./lib/telegramReminders";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -170,6 +172,10 @@ app.get("/api/admin/export/orders.csv", async (c) => {
       o.paymentMethod === "d17" ? "D17" : "Espèces",
       o.paymentStatus,
       o.status,
+      // Vide pour toute annulation d'avant ce champ, et pour les commandes
+      // non annulées. Jamais « autre » : une absence de mesure ne doit pas se
+      // lire comme une mesure.
+      cancelReasonAr(o.cancelReason) ?? "",
       o.note ?? "",
     ];
   });
@@ -191,6 +197,7 @@ app.get("/api/admin/export/orders.csv", async (c) => {
       "Paiement",
       "État du paiement",
       "Statut",
+      "Raison d'annulation",
       "Note",
     ],
     rows,
@@ -276,5 +283,6 @@ if (env.isProduction) {
     void registerTelegramWebhook();
     // Avant la première commande, jamais après : voir ensureKitchenBaseline.
     void ensureKitchenBaseline();
+    startReminderScheduler();
   });
 }

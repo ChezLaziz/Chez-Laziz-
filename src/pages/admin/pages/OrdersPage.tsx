@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { cancelReasonAr } from '@contracts/cancelReasons'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { ErrorState, Skeleton } from '../ui/State'
@@ -46,6 +47,9 @@ type Order = {
   paymentStatus: string
   note: string | null
   status: string
+  /** Pourquoi la commande est morte — voir contracts/cancelReasons.ts. NULL
+   * pour les annulations d'avant ce champ : « on ne sait pas », pas « autre ». */
+  cancelReason: string | null
   carrier: string | null
   trackingNumber: string | null
   // Absent du type jusqu'ici : c'est justement pourquoi un envoi resté
@@ -918,6 +922,15 @@ function OrderRow({
                   ))}
                 </select>
               </label>
+
+              {/* La raison de l'annulation, quand elle a été saisie depuis
+                  Telegram. Captée et jamais montrée, elle ne servirait à
+                  personne : c'est ici qu'on regarde pourquoi une vente meurt. */}
+              {o.status === 'annulee' && cancelReasonAr(o.cancelReason) && (
+                <p className="rounded-lg border border-sand/60 bg-white px-3 py-2.5 text-[13px] text-ink/70">
+                  Raison : <span className="font-medium text-ink">{cancelReasonAr(o.cancelReason)}</span>
+                </p>
+              )}
 
               {o.status !== 'annulee' && (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-sand/60 bg-white px-3 py-2.5">

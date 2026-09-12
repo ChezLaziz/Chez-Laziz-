@@ -118,6 +118,13 @@ export async function deleteOrder(id: number) {
   await getDb().delete(orders).where(eq(orders.id, id));
 }
 
+/** Enregistre POURQUOI une commande est annulée. Posé juste avant le passage
+ * en « annulee », pour qu'aucune annulation faite depuis Telegram n'existe
+ * sans sa raison. */
+export async function setCancelReason(id: number, reason: string): Promise<void> {
+  await getDb().update(orders).set({ cancelReason: reason }).where(eq(orders.id, id));
+}
+
 export async function updateOrderStatus(
   id: number,
   status: (typeof orders.$inferSelect)["status"],

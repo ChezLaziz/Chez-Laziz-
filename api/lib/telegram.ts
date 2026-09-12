@@ -21,6 +21,7 @@ import { createHash } from "node:crypto";
 import type { OrderItem } from "../queries/orders";
 import { formatDinars, formatWeight } from "@contracts/shop";
 import { escapeTelegramHtml } from "@contracts/kitchenBoard";
+import { CANCEL_REASONS, cancelReasonAr } from "@contracts/cancelReasons";
 
 export type NotifiableOrder = {
   id: number;
@@ -117,13 +118,25 @@ export async function tgCall<T = unknown>(
   }
 }
 
+/** Telegram rejette tout message au-delà de 4096 caractères, et rejeter veut
+ * dire : rien ne s'affiche. Le garde-fou est ici, au dernier moment, pour
+ * qu'AUCUN appelant ne puisse l'oublier — un rappel qui grossit, une question
+ * ajoutée sous une commande déjà longue.
+ *
+ * Couper vaut mieux que se taire : la première ligne, celle que lit l'aperçu,
+ * survit toujours. */
+export function couperPourTelegram(texte: string): string {
+  if (texte.length <= LIMITE_TELEGRAM) return texte;
+  return `${texte.slice(0, LIMITE_TELEGRAM - 2)}\n…`;
+}
+
 export async function sendMessage(
   text: string,
   keyboard?: InlineKeyboard,
 ): Promise<{ message_id: number } | null> {
   return tgCall<{ message_id: number }>("sendMessage", {
     chat_id: process.env.TELEGRAM_CHAT_ID,
-    text,
+    text: couperPourTelegram(text),
     parse_mode: "HTML",
     disable_web_page_preview: true,
     ...(keyboard ? { reply_markup: keyboard } : {}),
@@ -138,7 +151,7 @@ export async function editMessage(
   const res = await tgCall("editMessageText", {
     chat_id: process.env.TELEGRAM_CHAT_ID,
     message_id: messageId,
-    text,
+    text: couperPourTelegram(text),
     parse_mode: "HTML",
     disable_web_page_preview: true,
     reply_markup: keyboard ?? { inline_keyboard: [] },
@@ -150,6 +163,17 @@ export async function deleteMessage(messageId: number): Promise<void> {
   await tgCall("deleteMessage", {
     chat_id: process.env.TELEGRAM_CHAT_ID,
     message_id: messageId,
+  });
+}
+
+/** Épingle le tableau du matbakh : il reste accessible en haut de la
+ * conversation, sans remonter des heures de messages pour le retrouver.
+ * Silencieux — le message qui vient d'arriver a déjà sonné. */
+export async function pinMessage(messageId: number): Promise<void> {
+  await tgCall("pinChatMessage", {
+    chat_id: process.env.TELEGRAM_CHAT_ID,
+    message_id: messageId,
+    disable_notification: true,
   });
 }
 
@@ -236,18 +260,45 @@ export function newOrderKeyboard(orderId: number): InlineKeyboard {
   };
 }
 
+/** Après ❌ : POURQUOI. La commande n'est pas encore annulée à ce stade — elle
+ * l'est au moment où une raison est choisie, dans le même geste. Annuler puis
+ * demander la raison laisserait des annulations sans raison dès la première
+ * fois que quelqu'un range son téléphone.
+ *
+ * « رجوع » parce qu'un ❌ touché par erreur doit se rattraper sans avoir rien
+ * changé. */
+export function cancelReasonKeyboard(orderId: number): InlineKeyboard {
+  return {
+    inline_keyboard: [
+      ...CANCEL_REASONS.map((r) => [
+        { text: r.ar, callback_data: `o:r:${r.code}:${orderId}` },
+      ]),
+      [{ text: "↩️ رجوع", callback_data: `o:back:${orderId}` }],
+    ],
+  };
+}
+
+/** La question posée au-dessus des raisons. */
+export function cancelReasonPrompt(base: string): string {
+  return `${base}\n\n❓ <b>علاش تلغات ؟</b>`;
+}
+
 /** Ce que devient le message une fois la décision prise : les boutons
  * disparaissent, la décision reste écrite, avec qui l'a prise. */
 export function decidedOrderMessage(
   base: string,
   decision: "confirmee" | "annulee",
   par?: string,
+  raison?: string | null,
 ): string {
   const etat = decision === "confirmee" ? "✅ <b>مؤكّدة</b>" : "❌ <b>ملغاة</b>";
   // Sans nom quand la décision ne vient pas d'un bouton : elle a été prise
   // dans le tableau de bord, et attribuer ce geste à celui qui vient
   // d'appuyer serait un mensonge écrit dans le groupe.
-  return `${base}\n\n${par ? `${etat} — ${esc(par)}` : etat}`;
+  const ligne = par ? `${etat} — ${esc(par)}` : etat;
+  // Une raison inconnue ne s'écrit pas « autre » : elle ne s'écrit pas.
+  const libelle = cancelReasonAr(raison);
+  return `${base}\n\n${ligne}${libelle ? ` · ${libelle}` : ""}`;
 }
 
 /** Envoie la notification de nouvelle commande ; ne lève jamais. */

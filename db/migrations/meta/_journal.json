@@ -71,6 +71,13 @@
       "when": 1788987637472,
       "tag": "0009_lazy_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789171632277,
+      "tag": "0010_graceful_veda",
+      "breakpoints": true
     }
   ]
 }

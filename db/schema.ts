@@ -155,6 +155,13 @@ export const orders = pgTable("orders", {
   // Étiquette / bordereau, quand le transporteur en fournit un.
   labelUrl: varchar("label_url", { length: 500 }),
   status: orderStatusEnum("status").notNull().default("nouvelle"),
+  // POURQUOI la commande est morte, quand elle est annulée depuis le bouton
+  // Telegram — voir contracts/cancelReasons.ts.
+  //
+  // NULL veut dire « on ne sait pas », et c'est le cas de toutes les
+  // annulations d'avant ce champ : jamais lu comme « autre raison », sinon
+  // une absence de mesure se lirait comme une mesure.
+  cancelReason: varchar("cancel_reason", { length: 30 }),
   // Horodatage de l'envoi de l'événement "Purchase" à Meta (Pixel/Conversions
   // API) — jamais à la création de la commande, seulement une fois la
   // commande confirmée réelle (voir shouldReportMetaPurchase). Empêche un

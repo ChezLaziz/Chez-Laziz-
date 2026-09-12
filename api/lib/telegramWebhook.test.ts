@@ -5,9 +5,10 @@ const transitionOrderStatus = vi.fn();
 const applyKitchenAck = vi.fn(async () => "✅ تسجّل");
 const applyKitchenUndo = vi.fn(async () => "↩️ رجّعناه");
 const answerCallback = vi.fn(async () => undefined);
-const editMessage = vi.fn<(messageId: number, text: string) => Promise<boolean>>();
+const editMessage = vi.fn<(messageId: number, text: string, keyboard?: unknown) => Promise<boolean>>();
 
-vi.mock("../queries/orders", () => ({ getOrderById }));
+const setCancelReason = vi.fn(async () => undefined);
+vi.mock("../queries/orders", () => ({ getOrderById, setCancelReason }));
 vi.mock("./orderTransition", () => ({ transitionOrderStatus }));
 vi.mock("./telegramKitchen", () => ({ applyKitchenAck, applyKitchenUndo }));
 vi.mock("./telegram", async () => {
@@ -19,9 +20,10 @@ const { handleTelegramUpdate } = await import("./telegramWebhook");
 
 const CHAT = "-1001234567890";
 
-const commande = (status: string) => ({
+const commande = (status: string, cancelReason: string | null = null) => ({
   id: 42,
   status,
+  cancelReason,
   customerName: "Nada",
   phone: "52865521",
   governorate: "Bizerte",
@@ -84,12 +86,47 @@ describe("handleTelegramUpdate", () => {
     expect(answerCallback).toHaveBeenCalledWith("cb1", "✅ تأكّدت");
   });
 
-  it("❌ annule", async () => {
+  it("❌ N'ANNULE RIEN : il demande d'abord pourquoi", async () => {
     getOrderById.mockResolvedValue(commande("nouvelle"));
-    transitionOrderStatus.mockResolvedValue(commande("annulee"));
     await handleTelegramUpdate(appui("o:no:42"));
+    expect(transitionOrderStatus).not.toHaveBeenCalled();
+    expect(setCancelReason).not.toHaveBeenCalled();
+    expect(editMessage.mock.calls[0][1]).toContain("علاش تلغات");
+    expect(JSON.stringify(editMessage.mock.calls[0][2])).toContain("o:r:sans_reponse:42");
+  });
+
+  it("la raison choisie annule ET s'enregistre, dans le même geste", async () => {
+    getOrderById.mockResolvedValue(commande("nouvelle"));
+    transitionOrderStatus.mockResolvedValue(commande("annulee", "trop_cher"));
+    await handleTelegramUpdate(appui("o:r:trop_cher:42"));
+    expect(setCancelReason).toHaveBeenCalledWith(42, "trop_cher");
     expect(transitionOrderStatus).toHaveBeenCalledWith(42, "annulee", "nouvelle");
-    expect(editMessage).toHaveBeenCalledWith(77, expect.stringContaining("ملغاة"));
+    const texte = editMessage.mock.calls[0][1];
+    expect(texte).toContain("ملغاة");
+    expect(texte).toContain("الثمن غالي");
+  });
+
+  it("une raison inventée n'annule RIEN — pas d'annulation muette", async () => {
+    getOrderById.mockResolvedValue(commande("nouvelle"));
+    await handleTelegramUpdate(appui("o:r:n_importe_quoi:42"));
+    expect(setCancelReason).not.toHaveBeenCalled();
+    expect(transitionOrderStatus).not.toHaveBeenCalled();
+  });
+
+  it("« رجوع » remet les deux boutons : le ❌ par erreur n'a rien coûté", async () => {
+    getOrderById.mockResolvedValue(commande("nouvelle"));
+    await handleTelegramUpdate(appui("o:back:42"));
+    expect(transitionOrderStatus).not.toHaveBeenCalled();
+    const clavier = JSON.stringify(editMessage.mock.calls[0][2]);
+    expect(clavier).toContain("o:ok:42");
+    expect(clavier).toContain("o:no:42");
+  });
+
+  it("réaffiche la raison enregistrée sur une commande déjà annulée", async () => {
+    getOrderById.mockResolvedValue(commande("annulee", "sans_reponse"));
+    await handleTelegramUpdate(appui("o:ok:42"));
+    expect(transitionOrderStatus).not.toHaveBeenCalled();
+    expect(editMessage.mock.calls[0][1]).toContain("ما جابش تليفون");
   });
 
   it("un deuxième appui ne rejoue RIEN — sinon le poids partirait deux fois en cuisine", async () => {

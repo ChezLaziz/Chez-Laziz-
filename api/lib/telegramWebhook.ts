@@ -9,15 +9,19 @@
 // arriver. Sinon la personne qui confirme depuis son téléphone travaillerait
 // dans une réalité parallèle.
 
-import { getOrderById } from "../queries/orders";
+import { getOrderById, setCancelReason } from "../queries/orders";
+import { isCancelReason } from "@contracts/cancelReasons";
 import { transitionOrderStatus } from "./orderTransition";
 import { applyKitchenAck, applyKitchenUndo } from "./telegramKitchen";
 import {
   answerCallback,
   buildNewOrderTelegramMessage,
+  cancelReasonKeyboard,
+  cancelReasonPrompt,
   decidedOrderMessage,
   editMessage,
   isTelegramConfigured,
+  newOrderKeyboard,
 } from "./telegram";
 
 type CallbackQuery = {
@@ -33,47 +37,140 @@ function qui(from: CallbackQuery["from"]): string {
   return from?.first_name?.trim() || from?.username?.trim() || "؟";
 }
 
-async function decideOrder(
-  q: CallbackQuery,
-  orderId: number,
-  decision: "confirmee" | "annulee",
+/** Une commande déjà tranchée : on réaffiche son ÉTAT RÉEL et on retire les
+ * boutons. L'issue montrée est celle de la commande, pas celle du bouton qu'on
+ * vient de toucher — un ❌ sur une commande déjà confirmée doit lire
+ * « مؤكّدة », sinon le groupe garde une trace fausse. */
+async function afficherDejaTranchee(
+  messageId: number | undefined,
+  order: { status: string; cancelReason: string | null } & Parameters<
+    typeof buildNewOrderTelegramMessage
+  >[0],
 ): Promise<string> {
-  const order = await getOrderById(orderId);
-  if (!order) return "الطلبية ما ثماش";
-  const messageId = q.message?.message_id;
-
-  // Déjà tranchée — par l'autre bouton, par le tableau de bord, ou par un
-  // double appui. On enlève les boutons pour que personne ne retente, et on
-  // ne rejoue surtout pas la transition.
-  if (order.status !== "nouvelle") {
-    if (messageId) {
-      // L'issue affichée est celle de la COMMANDE, pas celle du bouton qu'on
-      // vient d'appuyer : un ❌ sur une commande déjà confirmée doit lire
-      // « مؤكّدة », sinon le groupe garde une trace fausse.
-      await editMessage(
-        messageId,
-        decidedOrderMessage(
-          buildNewOrderTelegramMessage(order),
-          order.status === "annulee" ? "annulee" : "confirmee",
-        ),
-      );
-    }
-    return "تعمّلت قبل";
-  }
-
-  const apres = await transitionOrderStatus(
-    orderId,
-    decision === "confirmee" ? "en_preparation" : "annulee",
-    order.status,
-  );
-  if (!apres) return "ما نجّمناش";
   if (messageId) {
     await editMessage(
       messageId,
-      decidedOrderMessage(buildNewOrderTelegramMessage(apres), decision, qui(q.from)),
+      decidedOrderMessage(
+        buildNewOrderTelegramMessage(order),
+        order.status === "annulee" ? "annulee" : "confirmee",
+        undefined,
+        order.cancelReason,
+      ),
     );
   }
-  return decision === "confirmee" ? "✅ تأكّدت" : "❌ تلغات";
+  return "تعمّلت قبل";
+}
+
+async function confirmOrder(q: CallbackQuery, orderId: number): Promise<string> {
+  const order = await getOrderById(orderId);
+  if (!order) return "الطلبية ما ثماش";
+  if (order.status !== "nouvelle") return afficherDejaTranchee(q.message?.message_id, order);
+
+  const apres = await transitionOrderStatus(orderId, "en_preparation", order.status);
+  if (!apres) return "ما نجّمناش";
+  if (q.message?.message_id) {
+    await editMessage(
+      q.message.message_id,
+      decidedOrderMessage(buildNewOrderTelegramMessage(apres), "confirmee", qui(q.from)),
+    );
+  }
+  return "✅ تأكّدت";
+}
+
+/** ❌ ne fait qu'ouvrir la question : rien n'est annulé avant qu'une raison ne
+ * soit choisie. */
+async function askCancelReason(q: CallbackQuery, orderId: number): Promise<string> {
+  const order = await getOrderById(orderId);
+  if (!order) return "الطلبية ما ثماش";
+  if (order.status !== "nouvelle") return afficherDejaTranchee(q.message?.message_id, order);
+  if (q.message?.message_id) {
+    await editMessage(
+      q.message.message_id,
+      cancelReasonPrompt(buildNewOrderTelegramMessage(order)),
+      cancelReasonKeyboard(orderId),
+    );
+  }
+  return "";
+}
+
+/** « رجوع » : le ❌ touché par erreur n'a rien changé, on remet les deux
+ * boutons d'origine. */
+async function backToDecision(q: CallbackQuery, orderId: number): Promise<string> {
+  const order = await getOrderById(orderId);
+  if (!order) return "الطلبية ما ثماش";
+  if (order.status !== "nouvelle") return afficherDejaTranchee(q.message?.message_id, order);
+  if (q.message?.message_id) {
+    await editMessage(
+      q.message.message_id,
+      buildNewOrderTelegramMessage(order),
+      newOrderKeyboard(orderId),
+    );
+  }
+  return "";
+}
+
+/** La raison choisie annule la commande DANS LE MÊME GESTE : la raison est
+ * écrite avant le changement d'état, donc il n'existe pas d'annulation sans
+ * raison venue de Telegram. */
+async function cancelWithReason(
+  q: CallbackQuery,
+  orderId: number,
+  reason: string,
+): Promise<string> {
+  const order = await getOrderById(orderId);
+  if (!order) return "الطلبية ما ثماش";
+  if (order.status !== "nouvelle") return afficherDejaTranchee(q.message?.message_id, order);
+
+  await setCancelReason(orderId, reason);
+  const apres = await transitionOrderStatus(orderId, "annulee", order.status);
+  if (!apres) return "ما نجّمناش";
+  if (q.message?.message_id) {
+    await editMessage(
+      q.message.message_id,
+      decidedOrderMessage(
+        buildNewOrderTelegramMessage(apres),
+        "annulee",
+        qui(q.from),
+        reason,
+      ),
+    );
+  }
+  return "❌ تلغات";
+}
+
+/** Un identifiant de commande venu d'un bouton : il vient de nous, mais on ne
+ * lui fait pas confiance pour autant. */
+function orderId(data: string, prefixe: string): number | null {
+  const n = Number(data.slice(prefixe.length));
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+async function dispatch(q: CallbackQuery): Promise<string> {
+  const data = q.data ?? "";
+  if (data === "k:undo") return applyKitchenUndo();
+  if (data.startsWith("k:")) return applyKitchenAck(data.slice(2));
+
+  if (data.startsWith("o:ok:")) {
+    const id = orderId(data, "o:ok:");
+    return id ? confirmOrder(q, id) : "";
+  }
+  if (data.startsWith("o:no:")) {
+    const id = orderId(data, "o:no:");
+    return id ? askCancelReason(q, id) : "";
+  }
+  if (data.startsWith("o:back:")) {
+    const id = orderId(data, "o:back:");
+    return id ? backToDecision(q, id) : "";
+  }
+  if (data.startsWith("o:r:")) {
+    // o:r:<raison>:<id> — une raison inconnue ne devient pas une annulation
+    // muette : on ne fait rien plutôt que d'écrire une valeur inventée.
+    const [, , reason, brut] = data.split(":");
+    const id = Number(brut);
+    if (!isCancelReason(reason) || !Number.isInteger(id) || id <= 0) return "";
+    return cancelWithReason(q, id, reason);
+  }
+  return "";
 }
 
 /** Traite une mise à jour Telegram. Ne lève jamais : le webhook doit toujours
@@ -92,19 +189,7 @@ export async function handleTelegramUpdate(update: unknown): Promise<void> {
       return;
     }
 
-    const data = q.data ?? "";
-    let reponse = "";
-    if (data === "k:undo") {
-      reponse = await applyKitchenUndo();
-    } else if (data.startsWith("k:")) {
-      reponse = await applyKitchenAck(data.slice(2));
-    } else if (data.startsWith("o:ok:") || data.startsWith("o:no:")) {
-      const id = Number(data.slice(5));
-      reponse = Number.isInteger(id)
-        ? await decideOrder(q, id, data.startsWith("o:ok:") ? "confirmee" : "annulee")
-        : "";
-    }
-    await answerCallback(q.id, reponse || undefined);
+    await answerCallback(q.id, (await dispatch(q)) || undefined);
   } catch (err) {
     console.error("[telegram] bouton non traité :", err);
     // Sans cette réponse, le bouton tourne indéfiniment sur le téléphone.

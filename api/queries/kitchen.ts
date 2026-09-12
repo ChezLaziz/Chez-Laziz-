@@ -6,9 +6,9 @@
 // de rien.
 
 import { getDb } from "./connection";
-import { orders, products, settings } from "@db/schema";
+import { orders, products } from "@db/schema";
 import { notInArray } from "drizzle-orm";
-import { eq } from "drizzle-orm";
+import { readSetting, writeSetting } from "./settingsStore";
 import {
   EMPTY_ACK,
   accumulateKitchen,
@@ -57,18 +57,6 @@ export async function getKitchenLabels(): Promise<Record<string, string>> {
   const labels: Record<string, string> = {};
   for (const p of rows) labels[kitchenKey(p.id, p.name)] = p.nameAr?.trim() || p.name;
   return labels;
-}
-
-async function readSetting(key: string): Promise<string | null> {
-  const row = await getDb().query.settings.findFirst({ where: eq(settings.key, key) });
-  return row?.value ?? null;
-}
-
-async function writeSetting(key: string, value: string): Promise<void> {
-  await getDb()
-    .insert(settings)
-    .values({ key, value })
-    .onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
 /** L'acquittement enregistré, ou null s'il n'y en a jamais eu — la nuance
