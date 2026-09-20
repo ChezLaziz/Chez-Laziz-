@@ -22,7 +22,7 @@ export function ErrorState({ label = 'Impossible de charger ces données.' }: { 
 }
 
 export function EmptyState({ label }: { label: string }) {
-  return <p className="py-6 text-center text-sm text-ink/45">{label}</p>
+  return <p className="py-4 text-center text-[13px] text-ink/45">{label}</p>
 }
 
 /** Données présentes mais trop maigres pour en tirer une conclusion.

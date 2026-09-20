@@ -62,8 +62,8 @@ export default function TopBar({
       }
     >
       <div
-        className={`flex flex-wrap items-center gap-x-3 gap-y-3 px-4 md:flex-nowrap md:px-6 ${
-          accueil ? 'pb-2 pt-5' : 'min-h-[60px] py-2.5'
+        className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 md:flex-nowrap md:px-6 ${
+          accueil ? 'pb-1.5 pt-3' : 'min-h-[52px] py-2'
         }`}
       >
         <button
@@ -78,11 +78,11 @@ export default function TopBar({
 
         {accueil && greeting ? (
           <div className="min-w-0">
-            <h1 className="font-display text-[26px] leading-tight text-ink sm:text-[30px]">
+            <h1 className="font-display text-[22px] leading-tight text-ink sm:text-[26px]">
               {greeting.hello} <span aria-hidden="true">☀️</span>
             </h1>
-            <p className="mt-1 text-[13px] text-ink/55">{greeting.sub}</p>
-            <div className="mt-3 h-px w-40 bg-gradient-to-r from-sand to-transparent" />
+            <p className="mt-0.5 text-[12.5px] text-ink/55">{greeting.sub}</p>
+            <div className="mt-2 h-px w-32 bg-gradient-to-r from-sand to-transparent" />
           </div>
         ) : (
           <h1 className="font-display text-lg text-ink">{title}</h1>
@@ -119,7 +119,7 @@ export default function TopBar({
                 aria-expanded={menuOpen}
                 className="flex items-center gap-2 rounded-xl py-1 pl-1 pr-2 transition-colors hover:bg-ink/[0.04]"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2a4750] text-[12px] font-semibold text-white">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2a4750] text-[11px] font-semibold text-white">
                   CL
                 </span>
                 <span className="hidden text-left leading-tight sm:block">

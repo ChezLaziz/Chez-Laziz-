@@ -1840,7 +1840,7 @@ function AdminShell({
             cartes, exactement comme sur la maquette. En dessous, la place
             va aux chiffres. */}
         <main
-          className={`relative z-10 px-4 pb-8 pt-4 md:px-6 ${
+          className={`relative z-10 px-4 pb-6 pt-2 md:px-6 ${
             estAccueil ? 'min-[1700px]:pr-[236px]' : ''
           }`}
         >
@@ -1862,7 +1862,7 @@ function BandeauAccueil() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute right-0 top-0 hidden h-[560px] w-[46%] max-w-[620px] select-none overflow-hidden lg:block"
+      className="pointer-events-none absolute right-0 top-0 hidden h-[460px] w-[46%] max-w-[620px] select-none overflow-hidden lg:block"
     >
       <img
         src="/images/admin/band.webp"

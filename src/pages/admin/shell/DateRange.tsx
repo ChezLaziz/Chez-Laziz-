@@ -55,13 +55,13 @@ export default function DateRange({
   }, [open])
 
   return (
-    <div ref={root} className="relative flex flex-wrap items-center gap-2">
+    <div ref={root} className="relative flex flex-wrap items-center gap-1.5">
       <button
         type="button"
         onClick={() => setOpen((o) => (o === 'dates' ? null : 'dates'))}
         aria-haspopup="dialog"
         aria-expanded={open === 'dates'}
-        className="flex items-center gap-2 rounded-xl border border-[#e6e0d9] bg-white px-3 py-2 text-[13px] text-ink shadow-sm transition-colors hover:border-[#cdd8d3]"
+        className="flex items-center gap-1.5 rounded-xl border border-[#e6e0d9] bg-white px-2.5 py-2 text-[12.5px] text-ink shadow-sm transition-colors hover:border-[#cdd8d3]"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="shrink-0 text-ink/45">
           <rect x="3" y="5" width="18" height="16" rx="2.5" />
@@ -79,7 +79,7 @@ export default function DateRange({
         onClick={() => setOpen((o) => (o === 'presets' ? null : 'presets'))}
         aria-haspopup="menu"
         aria-expanded={open === 'presets'}
-        className="flex items-center gap-1.5 rounded-xl border border-[#e6e0d9] bg-white px-3 py-2 text-[13px] text-ink shadow-sm transition-colors hover:border-[#cdd8d3]"
+        className="flex items-center gap-1 rounded-xl border border-[#e6e0d9] bg-white px-2.5 py-2 text-[12.5px] text-ink shadow-sm transition-colors hover:border-[#cdd8d3]"
       >
         {value.preset ? PRESET_LABELS[value.preset] : 'Personnalisé'}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink/40">
@@ -161,7 +161,7 @@ function CustomRangePanel({
     <div
       role="dialog"
       aria-label="Choisir une période"
-      className="absolute left-0 top-full z-40 mt-1.5 w-[min(320px,calc(100vw-2rem))] rounded-xl border border-[#e6e0d9] bg-white p-4 shadow-lg"
+      className="absolute left-0 top-full z-40 mt-1.5 w-[min(320px,calc(100vw-2rem))] rounded-xl border border-[#e6e0d9] bg-white p-3 shadow-lg"
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
