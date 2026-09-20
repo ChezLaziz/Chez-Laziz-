@@ -328,10 +328,55 @@ export default function OrderPage() {
   const [spotlightSlug] = useState<string | null>(() =>
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('produit') : null,
   )
+  /** L'écran « Merci, commande n°X reçue ».
+   *
+   * Relu au montage depuis le stockage local : tirer vers le bas pour
+   * rafraîchir est un réflexe sur téléphone, et la confirmation ne vivait
+   * que dans la mémoire de l'onglet. Après un rafraîchissement, la cliente
+   * retombait sur une page vide — panier effacé, aucun numéro — et
+   * recommandait, ou appelait, inquiète. Voir contracts/lastOrder.ts. */
+  const [placed, setPlaced] = useState<Placed | null>(() => {
+    try {
+      // SEULEMENT SUR UN VRAI RECHARGEMENT. La trace répare un geste précis
+      // — tirer vers le bas pour rafraîchir — et rien d'autre. La relire à
+      // chaque montage de la page ferait tomber sur le reçu, pendant une
+      // heure : le clic publicitaire de reciblage (payé), le lien « Commander »
+      // d'une autre page du site, le retour depuis « Retour au site ». Une
+      // cliente qui ARRIVE veut acheter ; une cliente qui RECHARGE veut
+      // retrouver ce qu'elle vient de faire. Le navigateur sait faire la
+      // différence, lui.
+      const nav = performance.getEntriesByType('navigation')[0] as
+        | PerformanceNavigationTiming
+        | undefined
+      if (nav?.type !== 'reload') return null
+      const trace = parseLastOrder(localStorage.getItem(LAST_ORDER_KEY), Date.now())
+      if (!trace) return null
+      return {
+        id: trace.id,
+        // Le détail ligne à ligne n'est pas conservé : il n'a de sens qu'au
+        // moment de l'envoi, et le récapitulatif complet est déjà parti sur
+        // WhatsApp ou dans le carnet de commandes.
+        recapText: '',
+        recap: {
+          lines: [],
+          subtotalMillimes: trace.subtotalMillimes,
+          totalMillimes: trace.totalMillimes,
+          address: trace.address,
+        },
+      }
+    } catch {
+      // stockage indisponible (navigation privée) — on repart de zéro
+      return null
+    }
+  })
   const spotlight = useMemo(() => findSpotlightProduct(catalog, spotlightSlug), [catalog, spotlightSlug])
   const spotlightTrackedRef = useRef(false)
   useEffect(() => {
-    if (!spotlight || spotlightTrackedRef.current) return
+    // `placed` : l'écran de confirmation remplace toute la boutique (voir le
+    // retour anticipé plus bas). L'effet, lui, s'exécute quand même —
+    // Meta recevait donc un ViewContent pour un produit que personne n'a vu.
+    // Il partira quand la cliente fermera le reçu et verra la carte.
+    if (!spotlight || placed || spotlightTrackedRef.current) return
     spotlightTrackedRef.current = true
     track('view_item_list', {
       item_list_id: 'order_spotlight',
@@ -355,7 +400,7 @@ export default function OrderPage() {
         },
       ],
     })
-  }, [spotlight])
+  }, [spotlight, placed])
   const switchTab = (next: Tab) => {
     setTab(next)
     try {
@@ -419,35 +464,6 @@ export default function OrderPage() {
   const paymentMethod: PaymentMethod = DEFAULT_PAYMENT_METHOD
   // Renouvelé après chaque commande réussie ; voir orderIdempotencyKey.
   const [idempotencySalt, setIdempotencySalt] = useState(() => newIdempotencyKey())
-  /** L'écran « Merci, commande n°X reçue ».
-   *
-   * Relu au montage depuis le stockage local : tirer vers le bas pour
-   * rafraîchir est un réflexe sur téléphone, et la confirmation ne vivait
-   * que dans la mémoire de l'onglet. Après un rafraîchissement, la cliente
-   * retombait sur une page vide — panier effacé, aucun numéro — et
-   * recommandait, ou appelait, inquiète. Voir contracts/lastOrder.ts. */
-  const [placed, setPlaced] = useState<Placed | null>(() => {
-    try {
-      const trace = parseLastOrder(localStorage.getItem(LAST_ORDER_KEY), Date.now())
-      if (!trace) return null
-      return {
-        id: trace.id,
-        // Le détail ligne à ligne n'est pas conservé : il n'a de sens qu'au
-        // moment de l'envoi, et le récapitulatif complet est déjà parti sur
-        // WhatsApp ou dans le carnet de commandes.
-        recapText: '',
-        recap: {
-          lines: [],
-          subtotalMillimes: trace.subtotalMillimes,
-          totalMillimes: trace.totalMillimes,
-          address: trace.address,
-        },
-      }
-    } catch {
-      // stockage indisponible (navigation privée) — on repart de zéro
-      return null
-    }
-  })
   const [recapCopied, setRecapCopied] = useState(false)
   const checkoutStartedRef = useRef(false)
   /** La précision est facultative : elle reste repliée tant que le client
@@ -1128,7 +1144,7 @@ export default function OrderPage() {
   if (placed) {
     return (
       <div className="min-h-screen bg-[#faf6f3]">
-        <TopBar whatsAppHref={whatsAppHref} count={itemCount} onWhatsApp={noterDepartWhatsApp} />
+        <TopBar whatsAppHref={whatsAppHref} count={0} onWhatsApp={noterDepartWhatsApp} />
         <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-20 text-center md:py-28">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#b8912e]/15 text-accent">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1160,16 +1176,22 @@ export default function OrderPage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-4 space-y-1 border-t border-sand/60 pt-3 text-sm font-light text-ink/60">
-              <div className="flex justify-between">
-                <span>{isAr ? 'المجموع الجزئي' : 'Sous-total'}</span>
-                <span>{formatPriceDT(placed.recap.subtotalMillimes, lang)}</span>
+            {/* Le détail n'existe qu'à l'instant de l'envoi : une confirmation
+                relue après un rechargement n'a plus que le numéro et les
+                montants. On n'affiche alors pas un sous-total suivi d'un
+                total identique, qui ferait douter du prix payé. */}
+            {placed.recap.lines.length > 0 && (
+              <div className="mt-4 space-y-1 border-t border-sand/60 pt-3 text-sm font-light text-ink/60">
+                <div className="flex justify-between">
+                  <span>{isAr ? 'المجموع الجزئي' : 'Sous-total'}</span>
+                  <span>{formatPriceDT(placed.recap.subtotalMillimes, lang)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{isAr ? 'التوصيل' : 'Livraison'}</span>
+                  <span>{formatPriceDT(DELIVERY_FEE_MILLIMES, lang)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>{isAr ? 'التوصيل' : 'Livraison'}</span>
-                <span>{formatPriceDT(DELIVERY_FEE_MILLIMES, lang)}</span>
-              </div>
-            </div>
+            )}
             <div className="mt-2 flex justify-between border-t border-sand/60 pt-3">
               <span className="text-xs uppercase tracking-[0.2em] text-ink/50">{isAr ? 'المجموع' : 'Total'}</span>
               <span className="font-display text-xl text-accent">{formatPriceDT(placed.recap.totalMillimes, lang)}</span>
@@ -1228,7 +1250,7 @@ export default function OrderPage() {
               }
               setPlaced(null)
             }}
-            className="mt-6 text-xs uppercase tracking-[0.15em] text-ink/50 underline underline-offset-2 transition-colors hover:text-ink"
+            className="mt-4 flex w-full items-center justify-center rounded-full border border-accent px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-accent transition-colors hover:bg-accent hover:text-white sm:w-auto"
           >
             {isAr ? 'اطلبوا مرة أخرى' : 'Passer une nouvelle commande'}
           </button>
