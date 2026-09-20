@@ -18,6 +18,7 @@ import {
   parseRememberedCustomer,
   serializeRememberedCustomer,
 } from '@contracts/customerMemory'
+import { LAST_ORDER_KEY, parseLastOrder, serializeLastOrder } from '@contracts/lastOrder'
 import ProductImage from '@/components/ProductImage'
 import { track } from '@/lib/analytics'
 import { trackMeta, type MetaContentItem } from '@/lib/metaPixel'
@@ -243,10 +244,26 @@ const SPOTLIGHT_KEYWORDS: Record<string, string> = {
   zgougou: 'zgougou',
   chamia: 'chamia',
 }
+/** « Café » et « Cafe » sont le même makroudh.
+ *
+ * Le rapprochement se faisait sur `toLowerCase()` seul, qui ne retire pas
+ * les accents : un produit saisi « Makroudh Cafe Laziz » depuis l'admin
+ * n'était JAMAIS trouvé par /commande?produit=cafe. La visiteuse venue de
+ * la publicité arrivait alors en haut de trois mille pixels de catalogue
+ * sans le produit qu'on lui avait promis, et le ViewContent Meta ne partait
+ * pas — l'annonce était payée, la trace perdue. Une seule lettre accentuée
+ * tapée autrement suffisait. */
+function sansAccents(texte: string): string {
+  return texte
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
 function findSpotlightProduct(catalog: CatalogProduct[], slug: string | null): CatalogProduct | undefined {
   const keyword = slug ? SPOTLIGHT_KEYWORDS[slug.toLowerCase()] : undefined
   if (!keyword) return undefined
-  return catalog.find((p) => p.name.toLowerCase().includes(keyword))
+  const cherche = sansAccents(keyword)
+  return catalog.find((p) => sansAccents(p.name).includes(cherche))
 }
 
 type Placed = {
@@ -368,7 +385,15 @@ export default function OrderPage() {
   const [delegationId, setDelegationId] = useState(remembered?.delegationId ?? '')
   const delegationsQuery = trpc.orders.delegations.useQuery(
     { governorate: governorate as (typeof TUNISIA_GOVERNORATES)[number] },
-    { enabled: !!governorate, staleTime: 60 * 60 * 1000 },
+    // UNE SEULE REPRISE, ET PAS TROIS. C'est le champ OBLIGATOIRE qui
+    // bloque le bouton : tant que la requête tourne, le sélecteur est gris
+    // et le client, à qui l'on écrit « choisissez la délégation », ne peut
+    // même pas l'ouvrir. Avec les reprises par défaut, cette case morte
+    // pouvait durer une dizaine de secondes sur une connexion tunisienne
+    // moyenne. Une reprise suffit à absorber un paquet perdu ; au-delà, on
+    // bascule vite en saisie libre (voir listUnavailable), où le client
+    // écrit sa ville à la main et commande quand même.
+    { enabled: !!governorate, staleTime: 60 * 60 * 1000, retry: 1 },
   )
   const delegations = delegationsQuery.data ?? []
   // Une délégation mémorisée qui n'est plus dans la liste laisserait le
@@ -394,7 +419,35 @@ export default function OrderPage() {
   const paymentMethod: PaymentMethod = DEFAULT_PAYMENT_METHOD
   // Renouvelé après chaque commande réussie ; voir orderIdempotencyKey.
   const [idempotencySalt, setIdempotencySalt] = useState(() => newIdempotencyKey())
-  const [placed, setPlaced] = useState<Placed | null>(null)
+  /** L'écran « Merci, commande n°X reçue ».
+   *
+   * Relu au montage depuis le stockage local : tirer vers le bas pour
+   * rafraîchir est un réflexe sur téléphone, et la confirmation ne vivait
+   * que dans la mémoire de l'onglet. Après un rafraîchissement, la cliente
+   * retombait sur une page vide — panier effacé, aucun numéro — et
+   * recommandait, ou appelait, inquiète. Voir contracts/lastOrder.ts. */
+  const [placed, setPlaced] = useState<Placed | null>(() => {
+    try {
+      const trace = parseLastOrder(localStorage.getItem(LAST_ORDER_KEY), Date.now())
+      if (!trace) return null
+      return {
+        id: trace.id,
+        // Le détail ligne à ligne n'est pas conservé : il n'a de sens qu'au
+        // moment de l'envoi, et le récapitulatif complet est déjà parti sur
+        // WhatsApp ou dans le carnet de commandes.
+        recapText: '',
+        recap: {
+          lines: [],
+          subtotalMillimes: trace.subtotalMillimes,
+          totalMillimes: trace.totalMillimes,
+          address: trace.address,
+        },
+      }
+    } catch {
+      // stockage indisponible (navigation privée) — on repart de zéro
+      return null
+    }
+  })
   const [recapCopied, setRecapCopied] = useState(false)
   const checkoutStartedRef = useRef(false)
   /** La précision est facultative : elle reste repliée tant que le client
@@ -992,6 +1045,25 @@ export default function OrderPage() {
           // Le calcul local reste le repli : si la réponse arrivait sans ses
           // montants, mieux vaut le chiffre affiché pendant la saisie que
           // rien du tout.
+          // La trace qui fait survivre cet écran à un rechargement. Écrite
+          // AVANT l'affichage : si le stockage refuse (navigation privée),
+          // on continue quand même, on perd seulement la survie.
+          try {
+            if (order?.id) {
+              localStorage.setItem(
+                LAST_ORDER_KEY,
+                serializeLastOrder({
+                  id: order.id,
+                  totalMillimes: order.totalMillimes ?? total,
+                  subtotalMillimes: order.subtotalMillimes ?? subtotal,
+                  address: addressLine,
+                  at: Date.now(),
+                }),
+              )
+            }
+          } catch {
+            // stockage indisponible — sans importance ici
+          }
           setPlaced({
             id: order?.id ?? 0,
             recapText: text,
@@ -1074,7 +1146,7 @@ export default function OrderPage() {
 
           <div className={`mt-10 w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm ${isAr ? 'text-right' : 'text-left'}`}>
             <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-accent">{isAr ? 'ملخص الطلب' : 'Récapitulatif'}</p>
-            <ul className="mt-4 space-y-3 text-[15px] font-light">
+            <ul className="mt-4 space-y-3 text-[15px] font-light empty:mt-0">
               {placed.recap.lines.map((l) => (
                 <li key={l.key}>
                   <div className="flex items-baseline">
@@ -1125,6 +1197,7 @@ export default function OrderPage() {
               {isAr ? 'العودة إلى الموقع' : 'Retour au site'}
             </Link>
           </div>
+          {placed.recapText !== '' && (
           <button
             type="button"
             onClick={copyRecap}
@@ -1137,6 +1210,27 @@ export default function OrderPage() {
               : recapCopied
                 ? 'Récapitulatif copié ✓'
                 : 'Copier le récapitulatif pour le coller sur Messenger'}
+          </button>
+          )}
+
+          {/* SANS CE BOUTON, LA CORRECTION PRÉCÉDENTE DEVIENDRAIT UN PIÈGE.
+              La confirmation survit maintenant une heure : sans porte de
+              sortie, une cliente qui veut commander une seconde fois dans
+              l'heure retrouverait cet écran à chaque visite et ne pourrait
+              plus rien acheter. Elle efface la trace et rend la boutique. */}
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.removeItem(LAST_ORDER_KEY)
+              } catch {
+                // stockage indisponible — l'écran se ferme quand même
+              }
+              setPlaced(null)
+            }}
+            className="mt-6 text-xs uppercase tracking-[0.15em] text-ink/50 underline underline-offset-2 transition-colors hover:text-ink"
+          >
+            {isAr ? 'اطلبوا مرة أخرى' : 'Passer une nouvelle commande'}
           </button>
         </main>
       </div>
@@ -1812,7 +1906,9 @@ export default function OrderPage() {
                                 ? 'اختاروا الولاية أولاً'
                                 : "Choisissez d'abord le gouvernorat"
                               : delegationsQuery.isLoading
-                                ? '…'
+                                ? isAr
+                                  ? 'جارٍ تحميل المعتمديات…'
+                                  : 'Chargement des délégations…'
                                 : isAr
                                   ? 'المعتمدية'
                                   : 'Délégation'}
