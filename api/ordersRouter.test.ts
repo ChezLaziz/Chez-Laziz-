@@ -9,7 +9,11 @@ const updateOrderStatus = vi.fn();
 const getOrderById = vi.fn();
 const updatePaymentStatus = vi.fn();
 const markMetaPurchaseReported = vi.fn(async () => true);
-const sendMetaPurchaseEvent = vi.fn(async () => undefined);
+const unmarkMetaPurchaseReported = vi.fn(async () => undefined);
+// VRAI par défaut : la valeur de retour décide désormais si la réservation
+// « signalé à Meta » est gardée ou rendue. Un mock qui renvoie undefined
+// ferait démarquer toutes les commandes des tests, en silence.
+const sendMetaPurchaseEvent = vi.fn(async () => true);
 
 vi.mock("./queries/products", () => ({ listAvailableProducts }));
 vi.mock("./queries/orders", () => ({
@@ -20,6 +24,7 @@ vi.mock("./queries/orders", () => ({
   listOrders: vi.fn(),
   getOrderById,
   markMetaPurchaseReported,
+  unmarkMetaPurchaseReported,
 }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
 vi.mock("./lib/email", () => ({ notifyAdminNewOrder: vi.fn(async () => undefined) }));
@@ -431,6 +436,26 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
     );
     await caller.setStatus({ token: "t", id: 42, status: "terminee" });
     expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
+  });
+
+  it("garde la réservation quand Meta a bien reçu l'achat", async () => {
+    sendMetaPurchaseEvent.mockResolvedValueOnce(true);
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
+    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    await new Promise((r) => setTimeout(r, 0)); // l'envoi est lancé sans await
+    expect(unmarkMetaPurchaseReported).not.toHaveBeenCalled();
+  });
+
+  it("REND la réservation si l'envoi échoue — sinon la vente devient invisible pour Meta à vie", async () => {
+    // Jeton expiré, coupure réseau, Meta qui répond 500 : la commande existe,
+    // le patron l'encaisse, et sans reprise l'algorithme n'apprend rien
+    // d'elle. La prochaine avance de statut retentera ; Meta déduplique sur
+    // event_id = order-42, donc la reprise ne peut pas compter deux fois.
+    sendMetaPurchaseEvent.mockResolvedValueOnce(false);
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
+    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(unmarkMetaPurchaseReported).toHaveBeenCalledWith(42);
   });
 });
 

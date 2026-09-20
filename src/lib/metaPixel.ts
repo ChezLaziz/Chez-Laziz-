@@ -31,6 +31,30 @@ declare global {
 
 let initialized = false
 
+/** Les événements émis AVANT que la cliente n'ait touché « Accepter ».
+ *
+ * Le Pixel ne se charge qu'au consentement : d'ici là window.fbq n'existe
+ * pas, et chaque trackMeta repartait dans le vide — l'appelant, lui, pose
+ * son verrou « déjà envoyé » et ne réessaiera jamais. Le ViewContent du
+ * produit mis en avant, seul signal de haut d'entonnoir de la page que la
+ * publicité paie, était ainsi perdu pour TOUTE nouvelle visiteuse : la
+ * bannière cookies s'affiche par-dessus, elle accepte trois secondes plus
+ * tard, et l'événement n'existait déjà plus.
+ *
+ * On les met de côté et on les rejoue à l'initialisation. Si elle REFUSE,
+ * initMetaPixel n'est jamais appelé : la file n'est jamais vidée, rien ne
+ * part — le refus reste respecté à la lettre. */
+type EvenementEnAttente = { event: string; payload: Record<string, unknown>; eventId?: string }
+const enAttente: EvenementEnAttente[] = []
+/** Plafond : un panier composé longuement sans consentement ne doit pas
+ * faire enfler la file indéfiniment. */
+const ATTENTE_MAX = 20
+
+function envoyer(event: string, payload: Record<string, unknown>, eventId?: string) {
+  if (eventId) window.fbq!('track', event, payload, { eventID: eventId })
+  else window.fbq!('track', event, payload)
+}
+
 export function initMetaPixel() {
   if (!PIXEL_ID || initialized || typeof window === 'undefined') return
   initialized = true
@@ -53,6 +77,8 @@ export function initMetaPixel() {
     document.head.appendChild(script)
   }
   window.fbq('init', PIXEL_ID)
+  // APRÈS l'init, jamais avant : un track antérieur serait ignoré par Meta.
+  for (const e of enAttente.splice(0)) envoyer(e.event, e.payload, e.eventId)
 }
 
 export function trackMetaPageView() {
@@ -86,7 +112,8 @@ export function trackMeta(
   params: { value: number; contents: MetaContentItem[] },
   eventId?: string,
 ) {
-  if (!PIXEL_ID || !window.fbq) return
+  // Le test du Pixel reste EN PREMIER : sans identifiant, on n'empile rien.
+  if (!PIXEL_ID) return
   const payload = {
     currency: 'TND',
     value: params.value,
@@ -95,6 +122,9 @@ export function trackMeta(
     contents: params.contents,
     num_items: params.contents.reduce((n, c) => n + (c.quantity ?? 1), 0),
   }
-  if (eventId) window.fbq('track', event, payload, { eventID: eventId })
-  else window.fbq('track', event, payload)
+  if (!window.fbq) {
+    if (enAttente.length < ATTENTE_MAX) enAttente.push({ event, payload, eventId })
+    return
+  }
+  envoyer(event, payload, eventId)
 }

@@ -152,11 +152,16 @@ function matchFields(ev: MetaPurchaseEvent): Record<string, string[]> {
 }
 
 /** Envoie l'événement "Purchase" ; ne lève jamais (journalise l'échec) —
- * appelée sans await après la création de la commande. */
-export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<void> {
+ * appelée sans await après la création de la commande.
+ *
+ * Rend VRAI seulement si Meta a accepté l'envoi. L'appelant réserve le
+ * signalement avant d'appeler (verrou anti-doublon) : sans cette réponse, il
+ * ne saurait pas qu'il doit rendre la réservation, et une panne réseau de
+ * trois secondes effacerait la vente des yeux de Meta pour toujours. */
+export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<boolean> {
   if (!isMetaConversionsApiConfigured()) {
     console.log(`[meta-capi] non configuré — commande #${ev.orderId} non envoyée à Meta`);
-    return;
+    return false;
   }
   const eventId = `order-${ev.orderId}`;
   const body = {
@@ -215,10 +220,12 @@ export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<void
     );
     if (!res.ok) {
       console.error(`[meta-capi] échec (${res.status}) pour la commande #${ev.orderId}: ${await res.text()}`);
-    } else {
-      console.log(`[meta-capi] Purchase envoyé pour la commande #${ev.orderId} (event_id=${eventId})`);
+      return false;
     }
+    console.log(`[meta-capi] Purchase envoyé pour la commande #${ev.orderId} (event_id=${eventId})`);
+    return true;
   } catch (err) {
     console.error(`[meta-capi] erreur réseau pour la commande #${ev.orderId}:`, err);
+    return false;
   }
 }

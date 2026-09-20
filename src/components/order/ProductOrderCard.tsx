@@ -17,12 +17,16 @@ export default function ProductOrderCard({
   qtyByWeight,
   onAdd,
   onSetQty,
+  sizes = '(max-width: 640px) 45vw, 320px',
 }: {
   product: CatalogProduct
   /** Quantité déjà commandée pour chaque poids de ce produit. */
   qtyByWeight: Partial<Record<WeightKg, number>>
   onAdd: (weightKg: WeightKg) => void
   onSetQty: (weightKg: WeightKg, qty: number) => void
+  /** Place réelle de la photo. Par défaut celle de la grille à deux
+   * colonnes ; la carte mise en avant, elle, prend toute la largeur. */
+  sizes?: string
 }) {
   const lang = useLang()
   const isAr = lang === 'ar'
@@ -43,7 +47,7 @@ export default function ProductOrderCard({
       aria-label={`${displayName} — ${formatPriceDT(product.priceMillimes, lang)} ${isAr ? 'للكيلوغرام' : 'le kilo'}`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-sand/30">
-        <ProductImage src={product.imageUrl} alt={displayName} compact />
+        <ProductImage src={product.imageUrl} alt={displayName} compact sizes={sizes} />
         {badge && (
           // Pas d'interlettrage forcé en arabe : il casse les ligatures.
           <span className={`absolute left-3 top-3 rounded-full bg-[#faf6f3]/95 px-2.5 py-1 text-[9px] font-semibold text-accent ${isAr ? 'tracking-normal' : 'uppercase tracking-[0.2em]'}`}>
@@ -98,7 +102,14 @@ export default function ProductOrderCard({
             value={weight}
             onChange={(e) => setWeight(Number(e.target.value) as WeightKg)}
             aria-label={`${isAr ? 'الوزن' : 'Poids'} — ${displayName}`}
-            className="h-11 w-full rounded-lg border border-sand bg-white px-3 text-sm text-ink outline-none focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25"
+            // 16 px, pas 14 : en dessous, Safari sur iPhone AGRANDIT la page
+            // dès qu'on touche un champ, et ne la remet jamais d'elle-même.
+            // Le tout premier geste de la cliente — choisir son poids — faisait
+            // déborder la grille et sortir à moitié la barre « Commander » de
+            // l'écran. (Interdire le zoom dans le viewport corrigerait l'effet
+            // en supprimant aussi le zoom manuel, dont les clientes se servent
+            // pour lire : on règle la cause.)
+            className="h-11 w-full rounded-lg border border-sand bg-white px-3 text-base text-ink outline-none focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25"
           >
             {ALLOWED_WEIGHTS_KG.map((w) => (
               <option key={w} value={w}>

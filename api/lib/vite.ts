@@ -31,15 +31,61 @@ type App = Hono<{ Bindings: HttpBindings }>;
  * s'affiche vraiment. */
 const PRELOAD_HERO = /\s*<link rel="preload" as="image"[^>]*>/g;
 
+/** L'adresse que ce HTML déclare être — écrite en dur sur l'accueil.
+ *
+ * index.html est servi tel quel pour toutes les routes, y compris /commande.
+ * Le robot d'aperçu de WhatsApp et de Facebook n'exécute PAS le JavaScript :
+ * il lit ce HTML brut. Quand le patron colle le lien de sa page de commande
+ * dans un groupe, l'aperçu annonçait donc l'accueil, et og:url renvoyait
+ * carrément Facebook vers l'accueil — le clic n'arrivait jamais sur la page
+ * qui vend. On réécrit les deux adresses pour la page réellement servie ;
+ * useSEO les corrige déjà côté navigateur, mais trop tard pour un robot. */
+const OG_URL = /(<meta property="og:url" content=")[^"]*(")/;
+const CANONICAL = /(<link rel="canonical" href=")[^"]*(")/;
+
+const ORDER_CHUNK = /^OrderPage-.*\.js$/;
+
 function estAccueil(pathname: string): boolean {
   return pathname === "/" || pathname === "/ar" || pathname === "/ar/";
 }
 
-export function spaFallback(indexHtml: string) {
+function estCommande(pathname: string): boolean {
+  return pathname === "/commande" || pathname === "/ar/commande";
+}
+
+/** Le fichier de code de la page de commande, tel que Vite l'a nommé.
+ *
+ * Jamais d'exception : un build dont les noms changent ne doit pas empêcher
+ * le serveur de démarrer — on se contente alors de ne rien précharger. */
+export function chunkCommande(distPath: string): string | null {
+  try {
+    const f = fs.readdirSync(path.resolve(distPath, "assets")).find((n) => ORDER_CHUNK.test(n));
+    return f ? `/assets/${f}` : null;
+  } catch {
+    return null;
+  }
+}
+
+export function spaFallback(indexHtml: string, chunkOrderPage?: string | null) {
   const sansHero = indexHtml.replace(PRELOAD_HERO, "");
+  // DÉRIVÉ DE sansHero, jamais de indexHtml : /commande ne doit pas
+  // retrouver le préchargement de la photo d'accueil qu'on vient d'ôter.
+  //
+  // Le navigateur ne découvre le code de la page de commande qu'après avoir
+  // téléchargé ET exécuté le bundle principal (le découpage est un import()
+  // dans src/App.tsx) : un aller-retour de plus avant le premier prix, sur
+  // la seule page que la publicité paie. `crossorigin` est obligatoire —
+  // l'entrée en porte un, et sans lui le navigateur télécharge deux fois.
+  const commande = (chunkOrderPage
+    ? sansHero.replace("</head>", `<link rel="modulepreload" crossorigin href="${chunkOrderPage}"></head>`)
+    : sansHero
+  )
+    .replace(OG_URL, "$1https://chezlaziz.com/commande$2")
+    .replace(CANONICAL, "$1https://chezlaziz.com/commande$2");
+
   return (c: Context) => {
     const pathname = new URL(c.req.url).pathname;
-    const html = estAccueil(pathname) ? indexHtml : sansHero;
+    const html = estAccueil(pathname) ? indexHtml : estCommande(pathname) ? commande : sansHero;
     // Sans directive explicite, certains navigateurs/proxys peuvent mettre en
     // cache ce HTML et continuer à référencer d'anciens bundles hashés après
     // un déploiement — on force donc une revalidation systématique.
@@ -75,5 +121,5 @@ export function serveStaticFiles(app: App) {
       },
     }),
   );
-  app.notFound(spaFallback(indexHtml));
+  app.notFound(spaFallback(indexHtml, chunkCommande(distPath)));
 }

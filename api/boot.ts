@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { secureHeaders } from "hono/secure-headers";
+import { compress } from "hono/compress";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
@@ -25,6 +26,20 @@ import { warmProductThumbnails } from "./lib/thumbnailWarmup";
 import { runSelfCheck } from "./lib/selfCheck";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
+
+// RIEN N'ÉTAIT COMPRESSÉ. Les fichiers sont servis tels quels (voir
+// api/lib/vite.ts) : sur /commande — la page que la publicité paie — le
+// chemin bloquant pèse 595 ko là où les mêmes octets gzippés en font 167.
+// Sur une 4G chargée d'un quartier tunisien, c'est environ deux secondes
+// d'écran vide de plus avant le premier makroudh, payées à chaque clic.
+//
+// En TOUT PREMIER, avant tout le reste : un middleware Hono n'enveloppe que
+// ce qui est enregistré APRÈS lui, et serveStatic n'est branché qu'en bas de
+// ce fichier. Posé plus bas, il raterait justement les fichiers statiques.
+// Le filtre de type intégré laisse les photos (webp, jpeg) intactes — elles
+// sont déjà compressées — et le seuil de 1 ko évite de gaspiller du CPU sur
+// les petites réponses.
+app.use("*", compress());
 
 // Railway termine le TLS puis transmet la requête en clair à ce service ;
 // sans ce contrôle, une visite en http:// reste servie telle quelle au

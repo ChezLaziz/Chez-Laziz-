@@ -4,6 +4,7 @@ import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
 import { formatTND, PHONE_TEL } from '@/lib/shop'
 import { track } from '@/lib/analytics'
+import { trackMeta } from '@/lib/metaPixel'
 import { setJsonLd } from '@/hooks/useSEO'
 import ProductImage from '@/components/ProductImage'
 import { useLang } from '@/lib/i18n'
@@ -278,6 +279,16 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
                     track('add_to_cart', {
                       value: p.priceMillimes / 1000,
                       items: [{ item_id: String(p.id), item_name: p.name, item_variant: '1 kg', price: p.priceMillimes / 1000, quantity: 1 }],
+                    })
+                    // META AUSSI, pas seulement Google. Un ajout fait ici —
+                    // sur l'accueil ou sur /collection — n'était dit qu'à
+                    // Google Analytics : ces clientes n'entraient dans aucune
+                    // audience de reciblage « a mis au panier sans commander »,
+                    // et la campagne, optimisée sur AddToCart, ne les comptait
+                    // pas. Même référence produit que partout ailleurs.
+                    trackMeta('AddToCart', {
+                      value: p.priceMillimes / 1000,
+                      contents: [{ id: String(p.id), quantity: 1, item_price: p.priceMillimes / 1000 }],
                     })
                   }}
                   onSetQty={(q) => setQty(p.id, 1, q)}

@@ -152,12 +152,22 @@ function TopBar({ whatsAppHref, count, onWhatsApp }: { whatsAppHref: string; cou
 }
 
 const inputCls =
-  'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25'
+  'w-full rounded-lg border border-sand bg-white px-4 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25'
 const stepperBtnCls =
   'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
 
 /** Au-delà, on rend son bouton au client plutôt que de le laisser attendre. */
 const SUBMIT_STALL_MS = 20_000
+
+/** Au-delà, la liste des délégations est considérée comme perdue.
+ *
+ * `isError` ne se lève que sur une réponse en erreur. Une requête qui part
+ * et ne revient JAMAIS — tunnel, 4G qui décroche, serveur qui pend — reste
+ * `isLoading` pour toujours : le sélecteur obligatoire restait grisé, et la
+ * cliente avait beau avoir tout rempli, elle ne pouvait plus envoyer. Même
+ * délai que l'envoi : à dix secondes on changerait le champ sous les doigts
+ * d'une cliente seulement lente. */
+const DELEGATIONS_STALL_MS = 20_000
 
 const GENERIC_ERROR = `Une erreur est survenue — réessayez, ou appelez-nous au ${PHONE_DISPLAY}.`
 const GENERIC_ERROR_AR = `حدث خطأ — أعيدوا المحاولة، أو اتصلوا بنا على ⁦${PHONE_DISPLAY}⁩.`
@@ -282,6 +292,12 @@ type Placed = {
   }
 }
 
+/** Une confirmation par document, pas une par montage : voir l'initialiseur
+ * de `placed`. Volontairement au niveau du module — un vrai rechargement
+ * réévalue le fichier et le remet à faux, ce qui est exactement la règle
+ * qu'on veut. */
+let recuDejaAffiche = false
+
 export default function OrderPage() {
   const lang = useLang()
   const isAr = lang === 'ar'
@@ -337,6 +353,21 @@ export default function OrderPage() {
    * recommandait, ou appelait, inquiète. Voir contracts/lastOrder.ts. */
   const [placed, setPlaced] = useState<Placed | null>(() => {
     try {
+      // UNE SEULE FOIS PAR DOCUMENT. Le rechargement qu'on répare ne se
+      // produit qu'une fois ; tout ce qui suit dans la même page — revenir
+      // à la boutique puis rouvrir /commande par un lien interne — est une
+      // navigation ordinaire. Sans ce verrou, un rechargement fait n'importe
+      // où sur le site suffisait à ce que le reçu reprenne la page à chaque
+      // arrivée sur /commande, pendant une heure. Un VRAI rechargement
+      // réévalue le module : le drapeau repart à faux, le geste continue de
+      // marcher autant de fois qu'on veut.
+      if (recuDejaAffiche) return null
+      // JAMAIS PAR-DESSUS UN PANIER PLEIN. Une commande acceptée vide le
+      // panier (voir clear() à l'envoi) : un panier non vide au montage est
+      // donc une commande EN COURS de composition, pas un reçu à retrouver.
+      // Sinon, une cliente qui recharge pendant sa DEUXIÈME commande voit le
+      // reçu de la première par-dessus son panier plein.
+      if (lines.length > 0) return null
       // SEULEMENT SUR UN VRAI RECHARGEMENT. La trace répare un geste précis
       // — tirer vers le bas pour rafraîchir — et rien d'autre. La relire à
       // chaque montage de la page ferait tomber sur le reçu, pendant une
@@ -454,8 +485,25 @@ export default function OrderPage() {
   // main qu'un client qui ne peut pas commander. Avant tout choix de
   // gouvernorat, c'est le sélecteur (désactivé) qui s'affiche, pas un champ
   // texte — sinon la page changerait de forme sous les doigts du client.
+  // Une liste qui ne revient jamais n'est pas une liste qui charge : au bout
+  // de DELEGATIONS_STALL_MS on rend la main, en saisie libre. COLLANT jusqu'au
+  // prochain gouvernorat : si le drapeau retombait à l'arrivée tardive de la
+  // réponse, le champ texte redeviendrait un sélecteur VIDE et obligatoire, la
+  // ville déjà écrite disparaîtrait de l'écran, et on la bloquerait à nouveau.
+  // On retient POUR QUEL gouvernorat l'attente a trop duré, pas un simple
+  // oui/non : le drapeau tombe alors de lui-même au changement de
+  // gouvernorat, sans avoir à le remettre à zéro dans l'effet.
+  const [govTropLent, setGovTropLent] = useState<string | null>(null)
+  useEffect(() => {
+    if (!governorate) return
+    const t = setTimeout(() => setGovTropLent(governorate), DELEGATIONS_STALL_MS)
+    return () => clearTimeout(t)
+  }, [governorate])
+  const listeTropLente = !!governorate && govTropLent === governorate
   const listUnavailable =
-    !!governorate && !delegationsQuery.isLoading && (delegationsQuery.isError || delegations.length === 0)
+    !!governorate &&
+    ((!delegationsQuery.isLoading && (delegationsQuery.isError || delegations.length === 0)) ||
+      (delegationsQuery.isLoading && listeTropLente))
   const useDelegationList = !listUnavailable
   const [address, setAddress] = useState(remembered?.address ?? '')
   const [note, setNote] = useState('')
@@ -491,6 +539,14 @@ export default function OrderPage() {
    * Replié, il reste une ligne — vignettes, quantité, total — dépliable d'un
    * geste par qui veut vérifier. */
   const [linesOpen, setLinesOpen] = useState(false)
+  // Le drapeau se lève pour TOUT reçu affiché — restauré au rechargement
+  // comme fraîchement obtenu après l'envoi. Dans un effet et non dans
+  // l'initialiseur : celui-ci doit rester pur, StrictMode l'appelle deux
+  // fois en développement.
+  useEffect(() => {
+    if (placed) recuDejaAffiche = true
+  }, [placed])
+
   const formRef = useRef<HTMLFormElement>(null)
   /** Le vrai bouton « Commander », observé.
    *
@@ -543,7 +599,18 @@ export default function OrderPage() {
    * parfaitement valide. */
   const catalogReady = !isLoading && !catalogError && catalog.length > 0
   const orphelines = useMemo(
-    () => (catalogReady ? unresolvableLines(lines, catalog.map((p) => p.id)) : []),
+    () =>
+      catalogReady
+        ? // LES NOMS AUSSI, sinon la moitié de la règle manque : sans eux,
+          // unresolvableLines déclare TOUJOURS un pack chiffrable (voir
+          // contracts/cartPruning.ts), alors que le serveur, lui, le refuse
+          // dès qu'un seul de ses makroudh est indisponible. Le bandeau
+          // d'alerte et son bouton « Retirer » ne s'affichaient donc jamais
+          // pour un coffret : la cliente remplissait ses six champs pour se
+          // faire refuser au dernier appui, sans rien à toucher pour s'en
+          // sortir. On donne exactement ce qu'on donne déjà à la suppression.
+          unresolvableLines(lines, catalog.map((p) => p.id), catalog.map((p) => p.name))
+        : [],
     [catalogReady, lines, catalog],
   )
   const orphanCount = orphelines.reduce((s, l) => s + l.qty, 0)
@@ -740,6 +807,14 @@ export default function OrderPage() {
   }
 
   const phoneValid = isValidTunisianPhone(phone)
+  /** « Numéro tunisien invalide (8 chiffres) » en rouge dès le PREMIER
+   * chiffre tapé : le champ le plus sensible du formulaire accusait la
+   * cliente pendant toute sa saisie, sur le geste même qui la fait avancer.
+   * On n'a le droit de juger qu'une fois qu'elle a fini — c'est-à-dire
+   * quand elle quitte le champ. Un compteur de chiffres ne marche pas :
+   * « 216… » et « 00216… » repasseraient en rouge en cours de route. */
+  const [phoneTouched, setPhoneTouched] = useState(false)
+  const phoneEnFaute = phoneTouched && phone.length > 0 && !phoneValid
   const addressValid =
     name.trim().length >= 2 && phoneValid && !!governorate && city.trim().length > 0 && address.trim().length >= 5
   /** La commande est-elle COMPLÈTE ? Rien d'autre.
@@ -1154,10 +1229,29 @@ export default function OrderPage() {
           <h1 className="mt-8 font-display text-4xl md:text-5xl">
             {isAr ? <>شكرًا، الطلب رقم {placed.id} استُلم&nbsp;!</> : <>Merci, commande n°{placed.id} reçue&nbsp;!</>}
           </h1>
+          {/* LE NUMÉRO QU'ON VA APPELER, RELU À L'ÉCRAN. La page promet un
+              appel sans jamais montrer sur quel numéro : une cliente qui a
+              tapé un chiffre de travers n'a aucun moyen de s'en apercevoir,
+              et l'appel de confirmation — la seule preuve d'achat d'une
+              boutique qui encaisse à la livraison — tombe dans le vide.
+              Quand la mémoire client n'a rien (reçu retrouvé après un
+              rechargement), on retombe mot pour mot sur la phrase d'avant. */}
           <p className="mt-5 max-w-md text-[15px] font-light leading-relaxed text-ink/70">
-            {isAr
-              ? 'سنتصل بكم في أقرب وقت لتأكيد طلبكم. الدفع نقدًا عند التسليم.'
-              : 'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'}
+            {isAr ? (
+              phone.trim() ? (
+                <>
+                  سنتصل بكم على <span dir="ltr" className="font-medium text-ink">{phone.trim()}</span> لتأكيد طلبكم. الدفع نقدًا عند التسليم.
+                </>
+              ) : (
+                'سنتصل بكم في أقرب وقت لتأكيد طلبكم. الدفع نقدًا عند التسليم.'
+              )
+            ) : phone.trim() ? (
+              <>
+                Nous vous appelons au <span dir="ltr" className="font-medium text-ink">{phone.trim()}</span> pour confirmer votre commande. Paiement en espèces à la livraison.
+              </>
+            ) : (
+              'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'
+            )}
           </p>
 
           <div className={`mt-10 w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm ${isAr ? 'text-right' : 'text-left'}`}>
@@ -1374,6 +1468,13 @@ export default function OrderPage() {
               qtyByWeight={qtyByWeightFor(spotlight.id)}
               onAdd={(w) => handleAddProduct(spotlight, w)}
               onSetQty={(w, q) => setQty(spotlight.id, w, q)}
+              // La carte occupe toute la largeur (max-w-sm = 384 px, moins
+              // les 40 px de marge en dessous de 424 px), pas la moitié comme
+              // dans la grille. Sans le dire, le navigateur prenait la
+              // vignette de 200 px pour un affichage de 353 px : la toute
+              // première photo que voit une cliente venue de la publicité
+              // était visiblement floue.
+              sizes="(max-width: 424px) calc(100vw - 40px), 384px"
             />
             <a
               href={MAPS_URL}
@@ -1591,7 +1692,13 @@ export default function OrderPage() {
                   type="button"
                   onClick={() => {
                     switchTab('produits')
-                    scrollToId('panel-produits')
+                    // Le panneau visé porte encore `hidden` à cet instant —
+                    // React groupe les changements d'état, le DOM n'est pas
+                    // à jour et le défilement ne trouve rien. La cliente
+                    // appuyait, l'onglet changeait au-dessus d'elle, et elle
+                    // restait devant « votre commande est vide ». Même
+                    // parade qu'ailleurs dans ce fichier.
+                    setTimeout(() => scrollToId('panel-produits'), 50)
                   }}
                   className="gold-cta rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
                 >
@@ -1601,7 +1708,13 @@ export default function OrderPage() {
                   type="button"
                   onClick={() => {
                     switchTab('packs')
-                    scrollToId('panel-packs')
+                    // Le panneau visé porte encore `hidden` à cet instant —
+                    // React groupe les changements d'état, le DOM n'est pas
+                    // à jour et le défilement ne trouve rien. La cliente
+                    // appuyait, l'onglet changeait au-dessus d'elle, et elle
+                    // restait devant « votre commande est vide ». Même
+                    // parade qu'ailleurs dans ce fichier.
+                    setTimeout(() => scrollToId('panel-packs'), 50)
                   }}
                   className="rounded-full border border-ink/25 px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-ink hover:text-[#faf6f3]"
                 >
@@ -1611,7 +1724,13 @@ export default function OrderPage() {
                   type="button"
                   onClick={() => {
                     switchTab('custom')
-                    scrollToId('composer')
+                    // Le panneau visé porte encore `hidden` à cet instant —
+                    // React groupe les changements d'état, le DOM n'est pas
+                    // à jour et le défilement ne trouve rien. La cliente
+                    // appuyait, l'onglet changeait au-dessus d'elle, et elle
+                    // restait devant « votre commande est vide ». Même
+                    // parade qu'ailleurs dans ce fichier.
+                    setTimeout(() => scrollToId('composer'), 50)
                   }}
                   className="rounded-full border border-ink/25 px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-ink hover:text-[#faf6f3]"
                 >
@@ -1853,14 +1972,15 @@ export default function OrderPage() {
                         onFocus={onCheckoutStart}
                         placeholder={isAr ? 'الهاتف (مثال: 23 691 039)' : 'Téléphone (ex : 23 691 039)'}
                         aria-label={isAr ? 'الهاتف' : 'Téléphone'}
-                        aria-invalid={phone.length > 0 && !phoneValid}
+                        onBlur={() => setPhoneTouched(true)}
+                        aria-invalid={phoneEnFaute}
                         type="tel"
                         inputMode="tel"
                         autoComplete="tel"
                         dir="ltr"
                         className={inputCls}
                       />
-                      {phone.length > 0 && !phoneValid ? (
+                      {phoneEnFaute ? (
                         <p className="mt-1.5 text-xs text-red-300" role="alert">
                           {isAr ? 'رقم هاتف تونسي غير صحيح (8 أرقام).' : 'Numéro tunisien invalide (8 chiffres).'}
                         </p>
