@@ -5,7 +5,7 @@
 // c'est garantir qu'un jour l'un des deux oubliera Meta ou la cuisine.
 
 import type { OrderItem } from "../queries/orders";
-import { markMetaPurchaseReported, updateOrderStatus } from "../queries/orders";
+import { markMetaPurchaseReported, unmarkMetaPurchaseReported, updateOrderStatus } from "../queries/orders";
 import { sendMetaPurchaseEvent, shouldReportMetaPurchase } from "./metaConversionsApi";
 import { metaContentId } from "@contracts/metaContentId";
 import { applyKitchenRelease, refreshKitchenBoard } from "./telegramKitchen";
@@ -80,7 +80,13 @@ export async function maybeReportMetaPurchase(order: {
     customerName: order.customerName,
     city: order.city,
     governorate: order.governorate,
-  });
+  })
+    // Toujours sans await : un aller-retour vers Meta, sans délai maximum,
+    // sur le chemin du bouton ✅ de Telegram et du tableau de bord ferait
+    // attendre le patron pour rien. Mais si l'envoi a échoué, on rend la
+    // réservation — sinon la vente reste invisible pour Meta à vie.
+    .then((envoye) => (envoye ? undefined : unmarkMetaPurchaseReported(order.id)))
+    .catch(() => {});
 }
 
 /** Une commande qui compte pour la cuisine : confirmée par un humain et pas

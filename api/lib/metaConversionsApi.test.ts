@@ -195,9 +195,11 @@ describe("sendMetaPurchaseEvent", () => {
         throw new Error("network down");
       }),
     );
+    // Ne lève jamais, ET dit que ça n'est pas passé : c'est sur cette réponse
+    // que l'appelant rend la réservation « signalé à Meta ».
     await expect(
       sendMetaPurchaseEvent({ orderId: 7, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
   });
 
   it("n'échoue jamais si Meta répond une erreur HTTP", async () => {
@@ -206,7 +208,21 @@ describe("sendMetaPurchaseEvent", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("bad token", { status: 401 })));
     await expect(
       sendMetaPurchaseEvent({ orderId: 8, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
+  });
+
+  it("dit VRAI quand Meta a accepté — et faux quand rien n'est configuré", async () => {
+    process.env.META_PIXEL_ID = "999";
+    process.env.META_CONVERSIONS_API_TOKEN = "secret-token";
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"events_received":1}', { status: 200 })));
+    await expect(
+      sendMetaPurchaseEvent({ orderId: 9, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
+    ).resolves.toBe(true);
+
+    delete process.env.META_CONVERSIONS_API_TOKEN;
+    await expect(
+      sendMetaPurchaseEvent({ orderId: 10, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
+    ).resolves.toBe(false);
   });
 });
 

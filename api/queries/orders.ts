@@ -303,6 +303,19 @@ export async function markMetaPurchaseReported(id: number): Promise<boolean> {
   return rows.length === 1;
 }
 
+/** Rend la réservation quand l'envoi a ÉCHOUÉ.
+ *
+ * Le drapeau n'a de sens que comme verrou anti-doublon sur un envoi réussi.
+ * Posé avant l'envoi et jamais rendu, il transformait la moindre panne — un
+ * jeton expiré, une coupure de trois secondes, Meta qui répond 500 — en
+ * vente définitivement invisible pour la publicité : la commande existe,
+ * le patron l'encaisse, et l'algorithme n'apprend rien d'elle. La prochaine
+ * avance de statut retentera, et Meta déduplique sur event_id = order-<id>,
+ * donc une reprise ne peut pas compter deux fois la même vente. */
+export async function unmarkMetaPurchaseReported(id: number): Promise<void> {
+  await getDb().update(orders).set({ metaPurchaseReportedAt: null }).where(eq(orders.id, id));
+}
+
 export async function createContactMessage(data: {
   name: string;
   phone?: string;

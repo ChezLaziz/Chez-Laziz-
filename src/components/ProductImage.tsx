@@ -50,12 +50,19 @@ export default function ProductImage({
   className = '',
   compact = false,
   eager = false,
+  sizes,
 }: {
   src: string | null | undefined
   alt: string
   className?: string
   /** Version miniature (liste de commande) : logo seul, sans légende. */
   compact?: boolean
+  /** La place RÉELLE de l'image, quand ce n'est pas celle d'une vignette de
+   * grille — la carte mise en avant par un lien publicitaire, par exemple,
+   * occupe toute la largeur du téléphone. Sans cette dérogation, le
+   * navigateur demandait la version 200 px pour un affichage de 353 px : la
+   * première photo que voit une cliente venue de la publicité était floue. */
+  sizes?: string
   /** Image principale visible d'emblée (haut d'une page de renvoi
    * publicitaire) : la différer coûte le plus gros rendu de la page. */
   eager?: boolean
@@ -82,7 +89,7 @@ export default function ProductImage({
         // Réservé aux photos servies par notre propre stockage : une URL
         // externe ne connaît pas le paramètre ?w=.
         srcSet={largeursDisponibles(src)}
-        sizes={compact ? '96px' : '(max-width: 640px) 45vw, 320px'}
+        sizes={sizes ?? (compact ? '96px' : '(max-width: 640px) 45vw, 320px')}
         alt={alt}
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}
