@@ -236,6 +236,10 @@ describe("correspondance avancée — ce que Meta reconnaît, ou pas", () => {
       customerName: "Nada Merai",
       city: "Jarzouna",
       governorate: "Bizerte",
+      // Cliente qui a ACCEPTÉ les cookies : le Pixel s'est chargé et a posé
+      // _fbp. Sans ce signal, l'identité n'est plus transmise du tout — voir
+      // matchFields et la politique de confidentialité.
+      signals: { fbp: "fb.1.1700000000.987" },
     });
     const corps = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body);
     const ud = corps.data[0].user_data;
@@ -274,5 +278,56 @@ describe("correspondance avancée — ce que Meta reconnaît, ou pas", () => {
     vi.stubGlobal("fetch", fetchMock);
     await sendMetaPurchaseEvent({ orderId: 1, phone: "23691039", totalMillimes: 8000, contentIds: ["1"] });
     expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body).test_event_code).toBe("TEST123");
+  });
+});
+
+describe("consentement — ce que Meta reçoit quand le client a refusé les cookies", () => {
+  // La politique de confidentialité promet, en français et en arabe, que le
+  // client qui refuse ne transmet rien de ce qu'il a écrit. Sans fbc ni fbp,
+  // le Pixel ne s'est jamais chargé : c'est la signature d'un refus.
+  const commande = {
+    orderId: 7,
+    phone: "23691039",
+    totalMillimes: 30000,
+    contentIds: ["1"],
+    customerName: "Amina Hamdi",
+    city: "La Marsa",
+    governorate: "Tunis",
+  };
+
+  async function envoyer(signals?: Record<string, string>) {
+    process.env.META_PIXEL_ID = "999";
+    process.env.META_CONVERSIONS_API_TOKEN = "secret-token";
+    const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(
+      async () => new Response("{}", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await sendMetaPurchaseEvent({ ...commande, signals });
+    return JSON.parse(fetchMock.mock.calls[0]![1].body as string).data[0].user_data;
+  }
+
+  it("sans consentement : ni prénom, ni nom, ni ville, ni gouvernorat", async () => {
+    const userData = await envoyer();
+    expect(userData.fn).toBeUndefined();
+    expect(userData.ln).toBeUndefined();
+    expect(userData.ct).toBeUndefined();
+    expect(userData.st).toBeUndefined();
+    // Le téléphone reste : il identifie la commande, et la politique le dit.
+    expect(userData.ph[0]).toBe(sha256("+21623691039"));
+  });
+
+  it("avec consentement (fbp posé par le Pixel) : la correspondance complète part", async () => {
+    const userData = await envoyer({ fbp: "fb.1.1700000000.123" });
+    expect(userData.fn[0]).toBe(sha256("amina"));
+    expect(userData.ln[0]).toBe(sha256("hamdi"));
+    expect(userData.ct[0]).toBe(sha256("lamarsa"));
+    expect(userData.st[0]).toBe(sha256("tunis"));
+  });
+
+  it("jamais rien en clair, consentement ou pas", async () => {
+    const avec = JSON.stringify(await envoyer({ fbc: "fb.1.1700000000.abc" }));
+    expect(avec).not.toContain("Amina");
+    expect(avec).not.toContain("Marsa");
+    expect(avec).not.toContain("23691039");
   });
 });

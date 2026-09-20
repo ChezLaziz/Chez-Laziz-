@@ -354,6 +354,44 @@ export function decidedOrderMessage(
   return `${base}\n\n${ligne}${libelle ? ` · ${libelle}` : ""}`;
 }
 
+/** Message écrit depuis le site (commande spéciale, mariage, Aïd, grande
+ * quantité…).
+ *
+ * Il ne sonnait NULLE PART : `contact.send` écrivait la ligne en base et
+ * s'arrêtait là, pendant que `orders.create` faisait sonner Telegram et
+ * partir un e-mail. Une demande de douze kilos pour un mariage attendait
+ * donc que quelqu'un pense à ouvrir l'onglet Messages. C'est le chemin le
+ * plus court de la page vers une vente perdue. */
+export function buildNewMessageTelegramMessage(m: {
+  name: string;
+  phone?: string | null;
+  message: string;
+}): string {
+  const lignes = [
+    "✉️ <b>Nouveau message du site</b>",
+    `👤 ${couperPourTelegram(m.name)}`,
+    ...(m.phone ? [`📞 ${couperPourTelegram(m.phone)}`] : []),
+    "",
+    couperPourTelegram(m.message),
+  ];
+  return lignes.join("\n");
+}
+
+/** Envoie la notification de nouveau message ; ne lève jamais. */
+export async function notifyAdminNewMessageTelegram(m: {
+  name: string;
+  phone?: string | null;
+  message: string;
+}): Promise<void> {
+  if (!isTelegramConfigured()) {
+    console.log("[telegram] non configuré — message du site non notifié");
+    return;
+  }
+  // Pas de clavier : un message ne se valide pas, il se lit et se rappelle.
+  const envoye = await sendMessage(buildNewMessageTelegramMessage(m));
+  if (envoye) console.log("[telegram] message du site notifié");
+}
+
 /** Envoie la notification de nouvelle commande ; ne lève jamais. */
 export async function notifyAdminNewOrderTelegram(order: NotifiableOrder): Promise<void> {
   if (!isTelegramConfigured()) {

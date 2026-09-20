@@ -20,20 +20,37 @@ type App = Hono<{ Bindings: HttpBindings }>;
  *   qui demandent explicitement du JSON (scripts, outils) reçoivent une
  *   petite réponse JSON.
  */
+/** Les deux `<link rel=preload as=image>` de l'accueil.
+ *
+ * index.html est servi TEL QUEL pour toutes les routes : la photo d'accueil
+ * (100 ko en version mobile, 250 ko en version large) était donc réclamée en
+ * priorité HAUTE sur /commande — la page que la publicité paie — alors
+ * qu'elle n'y est jamais affichée. Elle volait la bande passante au code
+ * dont dépend l'affichage des produits, sur des téléphones où chaque
+ * centaine de kilo-octets se voit. On ne la précharge plus que là où elle
+ * s'affiche vraiment. */
+const PRELOAD_HERO = /\s*<link rel="preload" as="image"[^>]*>/g;
+
+function estAccueil(pathname: string): boolean {
+  return pathname === "/" || pathname === "/ar" || pathname === "/ar/";
+}
+
 export function spaFallback(indexHtml: string) {
+  const sansHero = indexHtml.replace(PRELOAD_HERO, "");
   return (c: Context) => {
     const pathname = new URL(c.req.url).pathname;
+    const html = estAccueil(pathname) ? indexHtml : sansHero;
     // Sans directive explicite, certains navigateurs/proxys peuvent mettre en
     // cache ce HTML et continuer à référencer d'anciens bundles hashés après
     // un déploiement — on force donc une revalidation systématique.
     c.header("Cache-Control", "no-cache");
-    if (isKnownPublicPath(pathname)) return c.html(indexHtml, 200);
+    if (isKnownPublicPath(pathname)) return c.html(html, 200);
 
     const accept = c.req.header("accept") ?? "";
     if (accept.includes("application/json") && !accept.includes("text/html")) {
       return c.json({ error: "Not Found" }, 404);
     }
-    return c.html(indexHtml, 404);
+    return c.html(html, 404);
   };
 }
 

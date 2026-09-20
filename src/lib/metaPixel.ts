@@ -70,7 +70,19 @@ export function trackMeta(
   // « Contact » = le client part vers WhatsApp. PAS « Purchase » : personne
   // n'a encore acheté, et apprendre à Meta que cliquer vaut vendre enverrait
   // le budget sur des gens qui cliquent sans jamais commander.
-  event: 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'AddPaymentInfo' | 'Purchase' | 'Contact',
+  // « Lead » = la commande vient d'être ACCEPTÉE par le serveur. Ce n'est
+  // toujours pas « Purchase » : personne n'a payé, et la commande sera
+  // confirmée au téléphone. Mais c'est le geste le plus proche d'une vente
+  // que la page puisse mesurer à l'instant même — entre lui et le Purchase
+  // serveur (qui attend l'appel), Meta n'avait RIEN à apprendre.
+  event:
+    | 'ViewContent'
+    | 'AddToCart'
+    | 'InitiateCheckout'
+    | 'AddPaymentInfo'
+    | 'Purchase'
+    | 'Contact'
+    | 'Lead',
   params: { value: number; contents: MetaContentItem[] },
   eventId?: string,
 ) {

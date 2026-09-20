@@ -121,9 +121,24 @@ export type MetaPurchaseEvent = {
 };
 
 /** fn / ln / ct / st / country — chacun haché, chacun optionnel. Le pays est
- * toujours « tn » : la boutique ne livre qu'en Tunisie. */
+ * toujours « tn » : la boutique ne livre qu'en Tunisie.
+ *
+ * RIEN DE TOUT CELA SANS CONSENTEMENT. La politique de confidentialité
+ * promet au client qui refuse les cookies que les outils publicitaires ne
+ * reçoivent rien de ce qu'il a écrit dans le formulaire. Le serveur, lui,
+ * envoyait quand même son prénom, son nom, sa ville et son gouvernorat —
+ * hachés, mais envoyés. Un engagement écrit dans deux langues ne se règle
+ * pas par « c'est haché ».
+ *
+ * Le consentement se lit à l'absence de fbc ET de fbp : ces deux cookies
+ * n'existent que si le Pixel s'est chargé, et le Pixel ne se charge
+ * qu'après « Accepter » (voir src/hooks/useTrackVisit.ts et
+ * contracts/metaSignals.ts). Sans eux, il ne part que le téléphone haché,
+ * qui sert d'identifiant de la commande elle-même. */
 function matchFields(ev: MetaPurchaseEvent): Record<string, string[]> {
   const out: Record<string, string[]> = { country: [sha256("tn")] };
+  const consenti = Boolean(ev.signals?.fbc || ev.signals?.fbp);
+  if (!consenti) return out;
   if (ev.customerName) {
     const { fn, ln } = splitName(ev.customerName);
     if (fn) out.fn = [sha256(fn)];

@@ -397,6 +397,14 @@ export default function OrderPage() {
   const [placed, setPlaced] = useState<Placed | null>(null)
   const [recapCopied, setRecapCopied] = useState(false)
   const checkoutStartedRef = useRef(false)
+  /** La précision est facultative : elle reste repliée tant que le client
+   * ne la demande pas. Dépliée, elle ne se replie plus — on ne reprend pas
+   * un champ dans lequel quelqu'un est peut-être en train d'écrire. */
+  const [noteOuverte, setNoteOuverte] = useState(false)
+  /** Le formulaire écrit du bas reste replié : la plupart des clients qui
+   * arrivent jusque-là veulent joindre quelqu'un, pas remplir quatre champs
+   * de plus. Il s'ouvre pour ceux qui le demandent. */
+  const [msgOuvert, setMsgOuvert] = useState(false)
   const cartViewedRef = useRef(false)
 
   const [msgName, setMsgName] = useState('')
@@ -828,6 +836,14 @@ export default function OrderPage() {
     }, 350)
   }
 
+  /** Le client a commencé à remplir — posé sur TOUS les champs de livraison,
+   * pas seulement le nom et le téléphone.
+   *
+   * readRememberedCustomer pré-remplit nom, téléphone, gouvernorat, ville et
+   * adresse : un habitué commençait donc souvent par un champ qui ne
+   * déclenchait rien, et traversait tout le tunnel sans jamais émettre
+   * InitiateCheckout. Le palier du milieu était aveugle précisément chez les
+   * meilleurs clients. La garde ci-dessous suffit à n'en envoyer qu'un. */
   const onCheckoutStart = () => {
     if (checkoutStartedRef.current || items.length === 0) return
     checkoutStartedRef.current = true
@@ -947,6 +963,23 @@ export default function OrderPage() {
           // L'événement est envoyé côté serveur uniquement une fois la
           // commande réellement confirmée — voir api/lib/metaConversionsApi.ts
           // et maybeReportMetaPurchase dans api/ordersRouter.ts.
+          //
+          // MAIS PLUS RIEN NON PLUS, C'ÉTAIT LE TROU. Entre « le client
+          // touche le champ nom » (InitiateCheckout) et un Purchase qui
+          // arrive des heures plus tard, quand le patron a appelé, Meta
+          // n'apprenait rien du geste le plus significatif de la page : six
+          // champs remplis et COMMANDER appuyé. On envoie donc « Lead » —
+          // le mot juste pour « une demande ferme, pas encore payée » — avec
+          // le total réel du serveur et un identifiant unique par commande,
+          // pour qu'un rechargement ou un double envoi ne le compte pas deux
+          // fois. Ce n'est pas un achat et ça ne prétend pas l'être.
+          if (order?.id) {
+            trackMeta(
+              'Lead',
+              { value: totalReel / 1000, contents: metaContents() },
+              `lead-order-${order.id}`,
+            )
+          }
           // LES MONTANTS DU SERVEUR, PAS CEUX DU NAVIGATEUR.
           //
           // Le serveur recalcule tout et enregistre SON total : c'est celui
@@ -1423,7 +1456,7 @@ export default function OrderPage() {
               </p>
               <button
                 type="button"
-                onClick={() => dropUnresolvable(catalog.map((p) => p.id))}
+                onClick={() => dropUnresolvable(catalog.map((p) => p.id), catalog.map((p) => p.name))}
                 className="mt-2 min-h-9 rounded-full border border-ink/25 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:border-[#b8912e] hover:text-accent"
               >
                 {isAr ? 'أزيلوه من السلة' : 'Retirer de mon panier'}
@@ -1723,6 +1756,7 @@ export default function OrderPage() {
                       <select
                         id="f-gov"
                         required
+                        onFocus={onCheckoutStart}
                         value={governorate}
                         onChange={(e) => {
                           setGovernorate(e.target.value)
@@ -1759,6 +1793,7 @@ export default function OrderPage() {
                         <select
                           id="f-city"
                           required
+                          onFocus={onCheckoutStart}
                           value={delegationChoisie}
                           disabled={!governorate || delegationsQuery.isLoading}
                           onChange={(e) => {
@@ -1792,6 +1827,7 @@ export default function OrderPage() {
                         <input
                           id="f-city"
                           required
+                          onFocus={onCheckoutStart}
                           value={city}
                           onChange={(e) => {
                             setCity(e.target.value)
@@ -1809,6 +1845,7 @@ export default function OrderPage() {
                       <textarea
                         id="f-address"
                         required
+                        onFocus={onCheckoutStart}
                         value={address}
                         onChange={(e) => {
                           setAddress(e.target.value)
@@ -1826,14 +1863,26 @@ export default function OrderPage() {
                       />
                       {hintFor('f-address')}
                     </div>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder={isAr ? 'ملاحظة؟ (تاريخ مرغوب، مناسبة…)' : 'Précision ? (date souhaitée, occasion…)'}
-                      aria-label={isAr ? 'ملاحظة (اختياري)' : 'Précision (facultatif)'}
-                      rows={2}
-                      className={`${inputCls} resize-none`}
-                    />
+                    {noteOuverte ? (
+                      <textarea
+                        value={note}
+                        autoFocus
+                        onChange={(e) => setNote(e.target.value)}
+                        onFocus={onCheckoutStart}
+                        placeholder={isAr ? 'ملاحظة؟ (تاريخ مرغوب، مناسبة…)' : 'Précision ? (date souhaitée, occasion…)'}
+                        aria-label={isAr ? 'ملاحظة (اختياري)' : 'Précision (facultatif)'}
+                        rows={2}
+                        className={`${inputCls} resize-none`}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setNoteOuverte(true)}
+                        className="text-[13px] text-[#faf6f3]/55 underline underline-offset-4 transition-colors hover:text-[#faf6f3]"
+                      >
+                        {isAr ? '+ زيد ملاحظة (تاريخ، مناسبة…)' : '+ Ajouter une précision (date, occasion…)'}
+                      </button>
+                    )}
                   </div>
 
                   <div className="mt-6 flex items-baseline border-t border-[#faf6f3]/15 pt-5">
@@ -1914,25 +1963,26 @@ export default function OrderPage() {
                   {/* Un client bloqué devant un formulaire s'en va sans rien
                       dire. Ici il a deux autres portes, à l'endroit exact où
                       il hésite — et elles mènent à une vraie personne. */}
-                  <div className="mt-4 flex items-center gap-3">
+                  <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
                     <a
                       href={whatsAppHref}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={noterDepartWhatsApp}
-                      className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                      className="flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#25D366] px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
                     >
                       <WhatsAppIcon />
                       {isAr ? 'اطلبوا عبر واتساب' : 'Commander par WhatsApp'}
                     </a>
                     <a
                       href={PHONE_TEL}
-                      aria-label={isAr ? 'اتصلوا بنا' : 'Nous appeler'}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#faf6f3]/30 text-[#faf6f3] transition-colors hover:border-[#faf6f3]"
+                      dir="ltr"
+                      className="flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#faf6f3]/30 px-4 text-[13px] font-semibold text-[#faf6f3] transition-colors hover:border-[#faf6f3]"
                     >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
                         <path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" strokeLinejoin="round" />
                       </svg>
+                      {PHONE_DISPLAY}
                     </a>
                   </div>
                   {!canSubmit && !createOrder.isPending && (
@@ -1947,13 +1997,6 @@ export default function OrderPage() {
                       {friendlyError(createOrder.error.message, isAr)}
                     </p>
                   )}
-                  <p className="mt-5 text-center text-xs font-light tracking-wide text-[#faf6f3]/50">
-                    {isAr ? (
-                      <>أو اتصلوا مباشرة: <a href={PHONE_TEL} dir="ltr" className="underline">{PHONE_DISPLAY}</a></>
-                    ) : (
-                      <>Ou appelez directement : <a href={PHONE_TEL} className="underline">{PHONE_DISPLAY}</a></>
-                    )}
-                  </p>
                 </div>
               </div>
             </form>
@@ -1985,7 +2028,33 @@ export default function OrderPage() {
             </p>
           </div>
           <div className="min-w-0 lg:col-span-7">
-            {msgSent ? (
+            {!msgOuvert && !msgSent ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <a
+                  href={`https://wa.me/${WHATSAPP_DIGITS}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  <WhatsAppIcon />
+                  {isAr ? 'راسلونا على واتساب' : 'Écrire sur WhatsApp'}
+                </a>
+                <a
+                  href={PHONE_TEL}
+                  dir="ltr"
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-full border border-sand px-5 text-[13px] font-semibold text-ink transition-colors hover:border-accent"
+                >
+                  {PHONE_DISPLAY}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setMsgOuvert(true)}
+                  className="min-h-11 text-[13px] text-ink/55 underline underline-offset-4 transition-colors hover:text-accent"
+                >
+                  {isAr ? 'ولا اكتبولنا هنا' : 'ou écrivez-nous ici'}
+                </button>
+              </div>
+            ) : msgSent ? (
               <div className="rounded-xl border border-[#b8912e] bg-[#f5ece5] p-8 text-center">
                 <p className="font-display text-2xl">{isAr ? 'الرسالة أُرسلت، شكرًا!' : 'Message envoyé, merci !'}</p>
                 <p className="mt-2 text-sm font-light text-ink/60">{isAr ? 'سنرد عليكم في أقرب وقت.' : 'Nous vous répondrons très vite.'}</p>
@@ -2100,13 +2169,23 @@ export default function OrderPage() {
                   }}
                   className="gold-cta shrink-0 rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
+                  {/* Le mot doit dire ce que l'appui fait. Tant que le
+                      récapitulatif n'est pas à l'écran, ce bouton n'envoie
+                      rien : il y conduit. Écrire « Commander » à cet
+                      instant, c'est promettre une commande et livrer un
+                      défilement de deux mille pixels — au seul moment du
+                      tunnel où le client décide. */}
                   {createOrder.isPending && !submitStalled
                     ? isAr
                       ? 'إرسال…'
                       : 'Envoi…'
-                    : isAr
-                      ? 'اطلب الآن'
-                      : 'Commander'}
+                    : recapVisible
+                      ? isAr
+                        ? 'اطلب الآن'
+                        : 'Commander'
+                      : isAr
+                        ? 'شوف طلبي'
+                        : 'Voir ma commande'}
                 </button>
               </>
             )}

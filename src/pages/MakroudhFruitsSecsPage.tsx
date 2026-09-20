@@ -134,9 +134,6 @@ export default function MakroudhFruitsSecsPage() {
                 <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Link
                     to={orderHref}
-                    onClick={() =>
-                      trackMeta('InitiateCheckout', metaContent)
-                    }
                     className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
                   >
                     اطلب توّا
@@ -213,7 +210,6 @@ export default function MakroudhFruitsSecsPage() {
               </p>
               <Link
                 to={orderHref}
-                onClick={() => trackMeta('InitiateCheckout', metaContent)}
                 className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
               >
                 اطلب توّا
@@ -272,9 +268,6 @@ export default function MakroudhFruitsSecsPage() {
               <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   to={orderHref}
-                  onClick={() =>
-                    trackMeta('InitiateCheckout', metaContent)
-                  }
                   className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
                 >
                   Commander maintenant
@@ -366,7 +359,6 @@ export default function MakroudhFruitsSecsPage() {
             </p>
             <Link
               to={orderHref}
-              onClick={() => trackMeta('InitiateCheckout', metaContent)}
               className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
             >
               Commander maintenant
