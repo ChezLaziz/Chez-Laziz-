@@ -39,9 +39,30 @@ const FaqMakroudhPage = lazy(() => import('./pages/blog/FaqMakroudhPage'))
 const PourquoiKairouanPage = lazy(() => import('./pages/blog/PourquoiKairouanPage'))
 const NouvellesSaveursPage = lazy(() => import('./pages/blog/NouvellesSaveursPage'))
 
+/** Ce que le visiteur voit pendant que le code de la page arrive.
+ *
+ * C'était `null` : un écran BLANC. Sur la page que la publicité paie,
+ * ouverte depuis un téléphone en 3G, cela veut dire quelques centaines de
+ * millisecondes — parfois plus — de page vide avant le premier makroudh.
+ * Le visiteur d'une annonce n'attend pas devant du vide : il revient en
+ * arrière, et l'annonce est facturée quand même.
+ *
+ * Volontairement minimal : le fond de la maison et trois traits qui disent
+ * « ça charge ». Rien qui ressemble à un contenu qu'on ne tiendra pas. */
+function EcranDAttente() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#faf6f3] px-6">
+      <img src="/images/logo.webp" alt="" aria-hidden="true" className="h-12 w-12 animate-pulse opacity-70" />
+      <div className="h-2 w-40 animate-pulse rounded-full bg-sand/60" />
+      <div className="h-2 w-28 animate-pulse rounded-full bg-sand/40" />
+      <span className="sr-only">Chargement…</span>
+    </div>
+  )
+}
+
 function Lazy({ Component }: { Component: React.ComponentType }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<EcranDAttente />}>
       <Component />
     </Suspense>
   )

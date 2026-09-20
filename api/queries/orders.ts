@@ -50,9 +50,15 @@ export async function createOrder(data: {
   metaClientUserAgent?: string;
 }) {
   // Double clic / nouvelle tentative réseau : même clé → même commande.
+  //
+  // `rejouee` dit à l'appelant que rien n'a été créé. Sans cela, il
+  // notifiait quand même : UNE commande en base, mais DEUX messages
+  // Telegram avec leur bouton ✅ et deux e-mails. Le patron croyait à deux
+  // commandes et appelait le client deux fois — sur une boutique qui vit de
+  // la confiance au téléphone, c'est cher payé pour un envoi lent.
   if (data.idempotencyKey) {
     const existing = await findOrderByIdempotencyKey(data.idempotencyKey);
-    if (existing) return existing;
+    if (existing) return Object.assign(existing, { rejouee: true as const });
   }
   let id: number;
   try {
@@ -89,7 +95,7 @@ export async function createOrder(data: {
     // échoue sur la contrainte unique — on renvoie la commande de la première.
     if (data.idempotencyKey) {
       const existing = await findOrderByIdempotencyKey(data.idempotencyKey);
-      if (existing) return existing;
+      if (existing) return Object.assign(existing, { rejouee: true as const });
     }
     throw err;
   }

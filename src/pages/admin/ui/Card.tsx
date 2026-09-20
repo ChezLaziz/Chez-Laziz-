@@ -22,15 +22,15 @@ export function Card({
 }) {
   return (
     <section
-      className={`flex flex-col rounded-2xl border border-[#ece7e1] bg-white p-4 shadow-[0_1px_2px_rgba(60,56,53,0.04),0_10px_30px_-18px_rgba(60,56,53,0.35)] sm:p-5 ${className}`}
+      className={`flex flex-col rounded-2xl border border-[#ece7e1] bg-white p-3.5 shadow-[0_1px_2px_rgba(60,56,53,0.04),0_10px_30px_-18px_rgba(60,56,53,0.35)] sm:p-4 ${className}`}
     >
       {(title || action) && (
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-2.5 flex items-center justify-between gap-3">
           {title && (
-            <h2 className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-ink">
+            <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-semibold leading-tight text-ink">
               {icon && (
                 <span className="shrink-0 text-[#2a4750]">
-                  <DashIcon name={icon} size={17} />
+                  <DashIcon name={icon} size={15} />
                 </span>
               )}
               <span className="truncate">{title}</span>
@@ -70,17 +70,17 @@ export function TrendBadge({
   comparable?: boolean
 }) {
   if (!comparable) {
-    return <span className="text-[11px] text-ink/40">pas encore assez d'historique</span>
+    return <span className="text-[11px] leading-[1.3] text-ink/40">pas encore assez d'historique</span>
   }
   if (trend.changePercent === null) {
-    return <span className="text-[11px] text-ink/40">pas de comparaison</span>
+    return <span className="text-[11px] leading-[1.3] text-ink/40">pas de comparaison</span>
   }
   const pct = trend.changePercent
   const flat = Math.abs(pct) < 0.05
   const good = inverse ? pct < 0 : pct > 0
   const color = flat ? 'text-ink/45' : good ? 'text-green-600' : 'text-red-600'
   return (
-    <span className={`inline-flex items-center gap-1 text-[12px] font-semibold ${color}`}>
+    <span className={`inline-flex items-center gap-1 text-[12px] font-semibold leading-[1.25] ${color}`}>
       <Arrow direction={flat ? 'flat' : pct > 0 ? 'up' : 'down'} />
       {pct > 0 && !flat ? '+' : ''}
       {Math.abs(pct) < 10 ? pct.toFixed(1) : Math.round(pct)}%
@@ -146,29 +146,29 @@ export function Kpi({
           : trend.value.toLocaleString('fr-FR'))
 
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-[#ece7e1] bg-white p-4 shadow-[0_1px_2px_rgba(60,56,53,0.04),0_10px_30px_-18px_rgba(60,56,53,0.35)] sm:gap-4 sm:p-5">
+    <div className="flex items-start gap-2.5 rounded-2xl border border-[#ece7e1] bg-white p-3.5 shadow-[0_1px_2px_rgba(60,56,53,0.04),0_10px_30px_-18px_rgba(60,56,53,0.35)] sm:gap-3 sm:p-4">
       <span
         className={`flex shrink-0 items-center justify-center text-[#2a4750] ${
-          compact ? 'h-11 w-11 rounded-full' : 'h-11 w-11 rounded-xl'
+          compact ? 'h-9 w-9 rounded-full' : 'h-9 w-9 rounded-xl'
         }`}
         style={{ backgroundColor: DASH.tile }}
         aria-hidden="true"
       >
-        <DashIcon name={icon} size={compact ? 19 : 20} />
+        <DashIcon name={icon} size={compact ? 17 : 18} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] text-ink/55">{label}</p>
-        <p className="mt-0.5 font-display text-[26px] leading-tight text-ink sm:text-[28px]">
+        <p className="truncate text-[12.5px] leading-[1.3] text-ink/55">{label}</p>
+        <p className="font-display text-[22px] leading-[1.15] text-ink sm:text-[24px]">
           {display}
         </p>
-        <div className={`mt-1 ${compact ? 'flex flex-wrap items-center gap-x-2' : ''}`}>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2">
           {note ? (
-            <p className="text-[11px] leading-snug text-ink/40">{note}</p>
+            <p className="text-[11px] leading-[1.3] text-ink/40">{note}</p>
           ) : trend ? (
             <>
               <TrendBadge trend={trend} inverse={inverse} comparable={comparable} />
               {comparable && trend.changePercent !== null && (
-                <p className={`text-[11px] text-ink/45 ${compact ? '' : 'mt-0.5'}`}>
+                <p className="text-[11px] leading-[1.35] text-ink/45">
                   vs période précédente
                 </p>
               )}

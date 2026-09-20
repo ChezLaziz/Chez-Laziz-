@@ -67,7 +67,7 @@ type CartContextValue = {
   /** Retire les lignes que le catalogue ne sait plus chiffrer, et rend leur
    * nombre d'articles. À N'APPELER QUE catalogue réellement chargé : voir
    * contracts/cartPruning.ts. Avec une liste vide, tout partirait. */
-  dropUnresolvable: (availableProductIds: number[]) => number
+  dropUnresolvable: (availableProductIds: number[], availableProductNames?: string[]) => number
   clear: () => void
 }
 
@@ -138,11 +138,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
       setLineQty: (key, qty) => setLines((ls) => withQty(ls, key, qty)),
       removeLine: (key) => setLines((ls) => ls.filter((l) => cartLineKey(l) !== key)),
-      dropUnresolvable: (availableProductIds) => {
+      dropUnresolvable: (availableProductIds, availableProductNames) => {
         const ids = new Set(availableProductIds)
-        const orphelines = lines.filter((l) => !lineIsResolvable(l, ids))
+        const names = availableProductNames ? new Set(availableProductNames) : undefined
+        const orphelines = lines.filter((l) => !lineIsResolvable(l, ids, names))
         if (orphelines.length === 0) return 0
-        setLines((ls) => ls.filter((l) => lineIsResolvable(l, ids)))
+        setLines((ls) => ls.filter((l) => lineIsResolvable(l, ids, names)))
         return orphelines.reduce((s, l) => s + l.qty, 0)
       },
       clear: () => setLines([]),

@@ -20,7 +20,7 @@ export default function Donut({
   total,
   totalLabel,
   valueFormat = 'count',
-  height = 140,
+  height = 116,
 }: {
   slices: DonutSlice[]
   total: number
@@ -33,7 +33,7 @@ export default function Donut({
   const drawn = slices.filter((d) => d.value > 0)
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-5">
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
       <div className="relative shrink-0" style={{ width: height, height }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -70,14 +70,14 @@ export default function Donut({
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display text-[24px] leading-none text-ink">
+          <span className="font-display text-[20px] leading-none text-ink">
             {total.toLocaleString('fr-FR')}
           </span>
-          <span className="mt-1 text-[11px] text-ink/45">{totalLabel}</span>
+          <span className="mt-0.5 text-[11px] text-ink/45">{totalLabel}</span>
         </div>
       </div>
 
-      <ul className="w-full min-w-0 flex-1 space-y-1.5">
+      <ul className="w-full min-w-0 flex-1 space-y-1">
         {slices.map((d) => {
           const right =
             valueFormat === 'percent'
@@ -102,7 +102,7 @@ export default function Donut({
                 <button
                   type="button"
                   onClick={d.onSelect}
-                  className="flex w-full items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-ink/[0.04]"
+                  className="flex min-h-[32px] w-full items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-ink/[0.04]"
                 >
                   {row}
                 </button>

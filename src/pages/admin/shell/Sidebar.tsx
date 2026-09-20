@@ -43,15 +43,15 @@ export default function Sidebar({
 
   return (
     <div className="flex h-full flex-col bg-[#f3efe9]">
-      <div className="px-5 pb-5 pt-6 text-center">
-        <OliveBranch className="mx-auto h-7 w-14 text-[#7d9188]" />
-        <p className="mt-2 font-display text-[19px] tracking-[0.16em] text-ink">CHEZ&nbsp;LAZIZ</p>
-        <p className="mt-0.5 font-display text-[11px] italic text-ink/50">
+      <div className="px-5 pb-3 pt-4 text-center">
+        <OliveBranch className="mx-auto h-6 w-12 text-[#7d9188]" />
+        <p className="mt-1.5 font-display text-[17px] tracking-[0.14em] text-ink">CHEZ&nbsp;LAZIZ</p>
+        <p className="font-display text-[11px] italic leading-snug text-ink/50">
           Le goût authentique de la Tunisie
         </p>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+      <nav className="flex-1 overflow-y-auto px-3 pb-2">
         {items.map((item) => {
           const isActive = active === item.id
           return (
@@ -62,7 +62,7 @@ export default function Sidebar({
                 onClose?.()
               }}
               aria-current={isActive ? 'page' : undefined}
-              className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] transition-colors ${
+              className={`mb-0.5 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] transition-colors ${
                 isActive
                   ? 'bg-[#dcdfde] font-semibold text-ink'
                   : 'text-ink/70 hover:bg-ink/[0.045] hover:text-ink'
@@ -82,7 +82,7 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="px-3 pb-2">
+      <div className="px-3 pb-1">
         {/* L'écran de l'atelier s'ouvre sur UN AUTRE appareil — la tablette
             posée près du four — d'où le nouvel onglet : on ne veut pas
             remplacer le tableau de bord de celui qui clique. */}
@@ -113,18 +113,18 @@ export default function Sidebar({
       {/* Pied de colonne de la maquette. Décoratif — donc masqué quand la
           colonne est courte (téléphone couché) plutôt que de pousser la
           navigation hors de l'écran. */}
-      <div className="hidden shrink-0 px-5 pb-6 pt-2 text-center sm:block">
-        <OliveBranch className="mx-auto h-6 w-12 text-[#a8b8ae]" />
-        <div className="mx-auto mt-2 h-px w-6 bg-sand/70" />
-        <p className="mt-2 font-display text-[15px] leading-relaxed text-[#c3ab8f]">
+      <div className="hidden shrink-0 px-5 pb-3 pt-1.5 text-center sm:block">
+        <OliveBranch className="mx-auto h-5 w-10 text-[#a8b8ae]" />
+        <div className="mx-auto mt-1.5 h-px w-6 bg-sand/70" />
+        <p className="mt-1.5 font-display text-[13px] leading-[1.35] text-[#c3ab8f]">
           Tradition
           <br />
           Qualité
           <br />
           Partage
         </p>
-        <div className="mx-auto mt-3 h-px w-10 bg-sand/70" />
-        <p className="mt-2.5 text-[10px] font-medium uppercase tracking-[0.3em] text-ink/35">
+        <div className="mx-auto mt-2 h-px w-10 bg-sand/70" />
+        <p className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.3em] text-ink/35">
           Tunisie <span className="text-[#b08968]">♥</span>
         </p>
       </div>

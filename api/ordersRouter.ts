@@ -276,7 +276,10 @@ export const ordersRouter = createRouter({
       // Conversions API n'est PAS déclenché ici : une commande qui vient
       // d'être créée n'est ni confirmée ni payée — voir maybeReportMetaPurchase,
       // appelée seulement depuis setStatus/setPaymentStatus.
-      if (order) {
+      // `rejouee` : la clé d'idempotence a retrouvé une commande déjà
+      // enregistrée (double appui, reprise réseau). Elle a déjà sonné une
+      // fois ; la notifier de nouveau ferait croire à deux commandes.
+      if (order && !("rejouee" in order && order.rejouee)) {
         void notifyAdminNewOrder(order);
         void notifyAdminNewOrderTelegram(order);
       }

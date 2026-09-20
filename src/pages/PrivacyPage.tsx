@@ -94,15 +94,19 @@ export default function PrivacyPage() {
                         Meta Pixel (فيسبوك/انستغرام) يخلينا نقيسو فعالية إعلاناتنا وما نعاودوش
                         نوروكم إعلان شفتوه ديجا. لما تتأكد الطلبية، رقم هاتفكم يتشفر (يولي غير
                         مقروء وما يترجعش) قبل ما يتبعث لـ Meta باش يربط الشراء بالحملة
-                        الإعلانية — أبدًا بشكل واضح، أبدًا اسمكم ولا عنوانكم.
+                        الإعلانية — أبدًا بشكل واضح. إذا قبلتو الكوكيز، يتبعث معاه كذلك
+                        اسمكم، مدينتكم وولايتكم، مشفّرين بنفس الطريقة، باش Meta تنجّم تعرف
+                        الشراء. كان دُستو على «رفض»، ما يتبعث غير رقم الهاتف المشفّر — لا
+                        اسم، لا مدينة، لا ولاية.
                       </li>
                     )}
                   </ul>
                   <p className="mt-2">
-                    في الحالتين، غير المنتجات المطلوبة أو المشاهدة والمبالغ هي اللي تتبعث —
-                    أبدًا محتوى الاستمارات (الاسم، العنوان، صورة الدفع). إذا دُستو على
-                    «رفض»، ما يتحمّل حتى واحد من هاذوكم الأداتين؛ يبقى غير العداد الداخلي
-                    شغال.
+                    في الحالتين، من الموقع روحو ما يتبعث غير المنتجات المطلوبة أو المشاهدة
+                    والمبالغ — أبدًا عنوانكم بالتفصيل ولا محتوى الاستمارات. إذا دُستو على
+                    «رفض»، ما يتحمّل حتى واحد من هاذوكم الأداتين في المتصفّح؛ يبقى غير
+                    العداد الداخلي شغال، وما يتبعث لـ Meta غير رقم الهاتف المشفّر وقت تأكيد
+                    الطلبية.
                   </p>
                 </>
               )}
@@ -215,16 +219,22 @@ export default function PrivacyPage() {
                       publicité déjà vue. Lorsqu'une commande est confirmée, votre
                       numéro de téléphone est haché (rendu illisible, irréversible)
                       avant d'être transmis à Meta pour associer l'achat à la
-                      campagne publicitaire — jamais en clair, jamais votre nom ni
-                      votre adresse.
+                      campagne publicitaire — jamais en clair. Si vous avez accepté
+                      les cookies, votre prénom, votre nom, votre ville et votre
+                      gouvernorat partent avec lui, hachés de la même façon, pour
+                      que Meta puisse reconnaître l'achat. Si vous avez cliqué sur
+                      « Refuser », seul le téléphone haché est transmis — ni nom,
+                      ni ville, ni gouvernorat.
                     </li>
                   )}
                 </ul>
                 <p className="mt-2">
-                  Dans les deux cas, seuls les produits consultés ou commandés et les
-                  montants sont transmis — jamais le contenu des formulaires (nom,
-                  adresse, capture d'écran). Si vous cliquez sur « Refuser », aucun de
-                  ces deux outils ne se charge ; seul le compteur interne reste actif.
+                  Dans les deux cas, depuis le site lui-même, seuls les produits
+                  consultés ou commandés et les montants sont transmis — jamais votre
+                  adresse détaillée ni le contenu des formulaires. Si vous cliquez sur
+                  « Refuser », aucun de ces deux outils ne se charge dans votre
+                  navigateur ; seul le compteur interne reste actif, et Meta ne reçoit
+                  que le téléphone haché au moment où la commande est confirmée.
                 </p>
               </>
             )}

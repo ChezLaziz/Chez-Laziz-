@@ -18,6 +18,7 @@ import {
   resetPasswordWithToken,
 } from "./queries/admin";
 import { sendPasswordResetEmail } from "./lib/email";
+import { notifyAdminNewMessageTelegram } from "./lib/telegram";
 
 export const contactRouter = createRouter({
   /** Envoyer un message (public) */
@@ -31,6 +32,9 @@ export const contactRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       await createContactMessage(input);
+      // Sans attendre, et sans jamais faire échouer l'envoi du message si
+      // Telegram est muet — même principe que pour les commandes.
+      void notifyAdminNewMessageTelegram(input);
       return { ok: true };
     }),
 

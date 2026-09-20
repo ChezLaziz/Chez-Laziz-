@@ -38,20 +38,20 @@ function trendOf(value: number, previous: number): Trend {
 
 function LoadingBoard() {
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-[104px] rounded-2xl" />
+          <Skeleton key={i} className="h-[92px] rounded-2xl" />
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-12">
-        <Skeleton className="h-[260px] rounded-2xl lg:col-span-6" />
-        <Skeleton className="h-[260px] rounded-2xl lg:col-span-3" />
-        <Skeleton className="h-[260px] rounded-2xl lg:col-span-3" />
+      <div className="grid gap-3 lg:grid-cols-12">
+        <Skeleton className="h-[238px] rounded-2xl lg:col-span-12 min-[1480px]:col-span-5" />
+        <Skeleton className="h-[200px] rounded-2xl lg:col-span-6 min-[1480px]:col-span-4" />
+        <Skeleton className="h-[190px] rounded-2xl lg:col-span-6 min-[1480px]:col-span-3" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-[104px] rounded-2xl" />
+          <Skeleton key={i} className="h-[92px] rounded-2xl" />
         ))}
       </div>
     </div>
@@ -131,11 +131,11 @@ export default function OverviewPage({
     data.orders.previous === 0 ? 0 : data.previousMargins.costMillimes / data.orders.previous
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Quatre chiffres, pas vingt. Chacun répond à une question distincte :
           combien j'ai gagné, combien de commandes, combien de personnes, en
           quelle quantité. */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi icon="revenue" label="Chiffre d'affaires" trend={data.revenueMillimes} format="money" comparable={comparable} />
         <Kpi icon="orders" label="Commandes" trend={data.orders} comparable={comparable} />
         <Kpi icon="customers" label="Clients" trend={data.customers} comparable={comparable} />
@@ -144,18 +144,18 @@ export default function OverviewPage({
 
       {/* Le CA exclut les 8 DT de livraison : dit une fois, ici, plutôt que
           répété sous chaque montant de la page. */}
-      <p className="px-1 text-[11px] text-ink/40">
+      <p className="!mt-1 px-1 text-[11px] leading-snug text-ink/40">
         Chiffre d'affaires hors frais de livraison (encaissés pour le transporteur). Commandes
         annulées exclues.
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-12">
+      <div className="grid gap-3 lg:grid-cols-12">
         <Card
           title="Évolution du chiffre d'affaires"
           icon="chart"
-          className="lg:col-span-12 2xl:col-span-5"
+          className="lg:col-span-12 min-[1480px]:col-span-5"
           action={
-            <span className="shrink-0 rounded-lg border border-[#e6e0d9] px-2.5 py-1 text-[12px] text-ink/55">
+            <span className="shrink-0 rounded-lg border border-[#e6e0d9] px-2 py-0.5 text-[11px] text-ink/55">
               {periodLabel}
             </span>
           }
@@ -163,9 +163,9 @@ export default function OverviewPage({
           {!hasSales ? (
             <EmptyState label="Aucune vente sur cette période." />
           ) : (
-            <div className="h-[224px]">
+            <div className="h-[160px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.revenueTrend} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                <AreaChart data={data.revenueTrend} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={DASH.sage} stopOpacity={0.45} />
@@ -216,7 +216,7 @@ export default function OverviewPage({
 
         <Card
           title="Sources de commandes"
-          className="lg:col-span-6 2xl:col-span-4"
+          className="lg:col-span-6 min-[1480px]:col-span-4"
           bodyClassName="flex flex-col justify-center"
         >
           {acq.totalOrders === 0 ? (
@@ -230,7 +230,7 @@ export default function OverviewPage({
                 valueFormat="percent"
               />
               {!acq.hasAnyAttribution && (
-                <p className="mt-3 text-[11px] leading-relaxed text-ink/40">
+                <p className="mt-2 text-[11px] leading-snug text-ink/40">
                   Aucune commande ne porte encore d'origine : étiquetez les liens publicitaires
                   (utm_source) pour que cette carte se remplisse.
                 </p>
@@ -241,18 +241,18 @@ export default function OverviewPage({
 
         <Card
           title="Statut des commandes"
-          className="lg:col-span-6 2xl:col-span-3"
+          className="lg:col-span-6 min-[1480px]:col-span-3"
           bodyClassName="flex flex-col justify-center"
         >
           {statusTotal === 0 ? (
             <EmptyState label="Aucune commande sur cette période." />
           ) : (
-            <Donut slices={statusSlices} total={statusTotal} totalLabel="total" height={124} />
+            <Donut slices={statusSlices} total={statusTotal} totalLabel="total" height={104} />
           )}
         </Card>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi
           icon="basket"
           label="Panier moyen"
@@ -285,7 +285,7 @@ export default function OverviewPage({
           // ne sait pas combien de personnes sont venues, donc aucun taux
           // de conversion ne peut en être tiré. Mieux vaut un tiret qu'un
           // pourcentage qui se lirait comme une mesure.
-          note="visiteurs uniques non mesurés — voir Fiabilité des données"
+          note="visiteurs uniques non mesurés"
           compact
         />
         <Kpi
@@ -301,10 +301,10 @@ export default function OverviewPage({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
+      <div className="grid gap-3 lg:grid-cols-12">
         <Card
           title="Produits les plus vendus"
-          className="lg:col-span-6 2xl:col-span-4"
+          className="lg:col-span-6 min-[1480px]:col-span-4"
           action={
             <button
               onClick={onGoToCatalogue}
@@ -317,10 +317,10 @@ export default function OverviewPage({
           {data.topProducts.length === 0 ? (
             <EmptyState label="Aucune vente sur cette période." />
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {data.topProducts.slice(0, 4).map((p) => (
                 <li key={p.key} className="flex items-center gap-3">
-                  <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-[#f5ece5]">
+                  <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#f5ece5]">
                     <ProductImage src={p.imageUrl} alt="" compact />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{p.name}</span>
@@ -354,7 +354,7 @@ export default function OverviewPage({
 
         <Card
           title="Commandes récentes"
-          className="lg:col-span-6 2xl:col-span-5"
+          className="lg:col-span-6 min-[1480px]:col-span-5"
           action={
             <button
               onClick={() => onGoToOrders(null)}
@@ -368,37 +368,37 @@ export default function OverviewPage({
             <EmptyState label="Aucune commande sur cette période." />
           ) : (
             <div className="-mx-1 overflow-x-auto">
-              <table className="w-full min-w-[420px] text-[13px]">
+              <table className="w-full min-w-[380px] text-[13px]">
                 <thead>
                   <tr className="text-left text-[11px] text-ink/40">
-                    <th className="rounded-l-lg bg-ink/[0.025] py-2 pl-3 pr-3 font-medium">#</th>
-                    <th className="bg-ink/[0.025] py-2 pr-3 font-medium">Client</th>
-                    <th className="bg-ink/[0.025] py-2 pr-3 font-medium">Produits</th>
-                    <th className="bg-ink/[0.025] py-2 pr-3 text-right font-medium">Total</th>
-                    <th className="rounded-r-lg bg-ink/[0.025] py-2 pr-3 font-medium">Statut</th>
+                    <th className="rounded-l-lg bg-ink/[0.025] py-1.5 pl-2.5 pr-2 font-medium">#</th>
+                    <th className="bg-ink/[0.025] py-1.5 pr-3 font-medium">Client</th>
+                    <th className="bg-ink/[0.025] py-1.5 pr-3 font-medium">Produits</th>
+                    <th className="bg-ink/[0.025] py-1.5 pr-3 text-right font-medium">Total</th>
+                    <th className="rounded-r-lg bg-ink/[0.025] py-1.5 pr-3 font-medium">Statut</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.recentOrders.map((o) => (
                     <tr key={o.id} className="border-b border-sand/40 last:border-0">
-                      <td className="py-2.5 pl-3 pr-3 text-ink/70">#{o.id}</td>
-                      <td className="py-2.5 pr-3 text-ink">
-                        <span className="block max-w-[110px] truncate">{o.customerName}</span>
+                      <td className="py-1.5 pl-2.5 pr-2 text-ink/70">#{o.id}</td>
+                      <td className="py-1.5 pr-3 text-ink">
+                        <span className="block max-w-[92px] truncate">{o.customerName}</span>
                       </td>
-                      <td className="py-2.5 pr-3 text-ink/70">
-                        <span className="block max-w-[150px] truncate">
+                      <td className="py-1.5 pr-3 text-ink/70">
+                        <span className="block max-w-[116px] truncate">
                           {o.firstItemName}
                           {o.extraItems > 0 && (
                             <span className="text-ink/40"> +{o.extraItems}</span>
                           )}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap py-2.5 pr-3 text-right font-medium text-ink">
+                      <td className="whitespace-nowrap py-1.5 pr-3 text-right font-medium text-ink">
                         {moneyDT(o.totalMillimes)} DT
                       </td>
-                      <td className="py-2.5 pr-3">
+                      <td className="py-1.5 pr-3">
                         <span
-                          className={`inline-block whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium ${
+                          className={`inline-block whitespace-nowrap rounded-md border px-2 py-0 text-[11px] font-medium leading-[1.6] ${
                             STATUS_VIEW[o.status as keyof typeof STATUS_VIEW]?.pill ??
                             'border-ink/10 bg-ink/[0.05] text-ink/60'
                           }`}
@@ -414,7 +414,7 @@ export default function OverviewPage({
           )}
         </Card>
 
-        <PromoCard className="lg:col-span-12 2xl:col-span-3" />
+        <PromoCard className="lg:col-span-12 min-[1480px]:col-span-3" />
       </div>
 
       {/* ------------------------------------------------------------------
@@ -424,12 +424,12 @@ export default function OverviewPage({
           dessine le haut de page ; elle ne dit pas de jeter ces chiffres.
           ------------------------------------------------------------------ */}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Commandes par jour" icon="orders">
           {!hasSales ? (
             <EmptyState label="Aucune vente sur cette période." />
           ) : (
-            <div className="h-44">
+            <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.revenueTrend} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
                   <CartesianGrid vertical={false} stroke="#eeeae5" />
@@ -471,31 +471,31 @@ export default function OverviewPage({
             <EmptyState label="Aucune vente sur cette période." />
           ) : (
             <div className="-mx-1 overflow-x-auto">
-              <table className="w-full min-w-[380px] text-sm">
+              <table className="w-full min-w-[380px] text-[13px]">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wide text-ink/40">
-                    <th className="pb-2 pl-1 font-medium">Gouvernorat</th>
-                    <th className="pb-2 text-right font-medium">CA (DT)</th>
-                    <th className="pb-2 text-right font-medium">Cmd</th>
-                    <th className="pb-2 pr-1 text-right font-medium">Panier (DT)</th>
+                    <th className="pb-1.5 pl-1 font-medium">Gouvernorat</th>
+                    <th className="pb-1.5 text-right font-medium">CA (DT)</th>
+                    <th className="pb-1.5 text-right font-medium">Cmd</th>
+                    <th className="pb-1.5 pr-1 text-right font-medium">Panier (DT)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.topGovernorates.slice(0, 6).map((g) => (
                     <tr key={g.governorate} className="border-t border-sand/50">
-                      <td className="py-2 pl-1">
+                      <td className="py-1.5 pl-1">
                         <span className="text-ink">{g.governorate}</span>
                         {g.topProductName && (
-                          <span className="block truncate text-[11px] text-ink/40">
+                          <span className="ml-2 inline-block max-w-[150px] truncate align-bottom text-[11px] text-ink/40">
                             {g.topProductName}
                           </span>
                         )}
                       </td>
-                      <td className="py-2 text-right font-medium text-ink">
+                      <td className="py-1.5 text-right font-medium text-ink">
                         {moneyDT(g.revenueMillimes)}
                       </td>
-                      <td className="py-2 text-right text-ink/60">{g.orders}</td>
-                      <td className="py-2 pr-1 text-right text-ink/60">
+                      <td className="py-1.5 text-right text-ink/60">{g.orders}</td>
+                      <td className="py-1.5 pr-1 text-right text-ink/60">
                         {moneyDT(g.aovMillimes)}
                       </td>
                     </tr>
@@ -507,7 +507,7 @@ export default function OverviewPage({
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         {/* Impact business de la livraison — pas sa gestion. Chez Laziz
             sous-traite le transport : ce bloc mesure ce que l'entreprise
             perd, il ne pilote ni tournées ni livreurs. */}
@@ -515,7 +515,7 @@ export default function OverviewPage({
           {data.delivery.completed + data.delivery.cancelled + data.delivery.inProgress === 0 ? (
             <EmptyState label="Aucune commande sur cette période." />
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <MiniStat
                 label="Terminées"
                 value={`${(data.delivery.completionRate * 100).toFixed(0)}%`}
@@ -545,7 +545,7 @@ export default function OverviewPage({
               Pas encore assez de données pour dégager un signal fiable sur cette période.
             </p>
           ) : (
-            <ul className="space-y-2.5">
+            <ul className="space-y-2">
               {signals.map((s) => (
                 <li key={s.id} className="flex gap-2.5">
                   <span
@@ -555,7 +555,7 @@ export default function OverviewPage({
                         s.tone === 'good' ? DASH.green : s.tone === 'bad' ? DASH.red : DASH.gold,
                     }}
                   />
-                  <p className="text-sm leading-relaxed text-ink/75">{s.text}</p>
+                  <p className="text-[13px] leading-snug text-ink/75">{s.text}</p>
                 </li>
               ))}
             </ul>
@@ -565,7 +565,7 @@ export default function OverviewPage({
 
       <DataQualityNote quality={data.dataQuality} pageViews={data.pageViews.value} />
 
-      <p className="pb-2 pt-1 text-center text-[11px] text-ink/35">
+      <p className="pt-0.5 text-center text-[11px] text-ink/35">
         Fait avec passion en Tunisie
         <span className="mx-2 text-ink/20">|</span>
         Chez Laziz
@@ -586,10 +586,10 @@ export default function OverviewPage({
 function PromoCard({ className = '' }: { className?: string }) {
   return (
     <article
-      className={`relative min-h-[200px] overflow-hidden rounded-2xl border border-[#ece7e1] shadow-[0_1px_2px_rgba(60,56,53,0.04),0_10px_30px_-18px_rgba(60,56,53,0.35)] ${className}`}
+      className={`relative min-h-[168px] overflow-hidden rounded-2xl border border-[#ece7e1] shadow-[0_1px_2px_rgba(60,56,53,0.04),0_10px_30px_-18px_rgba(60,56,53,0.35)] ${className}`}
     >
       <picture>
-        <source media="(min-width: 1536px)" srcSet="/images/admin/promo.webp" />
+        <source media="(min-width: 1480px)" srcSet="/images/admin/promo.webp" />
         <img
           src="/images/admin/promo-wide.webp"
           alt="Makroudh Chez Laziz"
@@ -605,7 +605,7 @@ function PromoCard({ className = '' }: { className?: string }) {
             'linear-gradient(120deg, rgba(38,44,42,.82) 0%, rgba(38,44,42,.55) 42%, rgba(38,44,42,.08) 78%)',
         }}
       />
-      <div className="relative flex h-full min-h-[200px] flex-col justify-between p-5">
+      <div className="relative flex h-full min-h-[168px] flex-col justify-between p-4">
         <div>
           <p className="font-display text-[19px] italic leading-snug text-white/95">
             Plus qu'un dessert,
@@ -636,7 +636,7 @@ function MiniStat({
   return (
     <div>
       <p className="text-[11px] uppercase tracking-wide text-ink/40">{label}</p>
-      <p className={`mt-1 font-display text-xl ${tone === 'bad' ? 'text-red-600' : 'text-ink'}`}>
+      <p className={`font-display text-[19px] leading-tight ${tone === 'bad' ? 'text-red-600' : 'text-ink'}`}>
         {value}
       </p>
       <p className="text-[11px] text-ink/40">{sub}</p>
@@ -655,14 +655,14 @@ function DataQualityNote({
 }) {
   const pct = (n: number) => `${Math.round(n * 100)}%`
   return (
-    <details className="rounded-2xl border border-[#ece7e1] bg-white px-5 py-3">
+    <details className="rounded-2xl border border-[#ece7e1] bg-white px-4 py-2.5">
       <summary className="cursor-pointer text-xs font-medium text-ink/50">
         Fiabilité des données
       </summary>
-      <ul className="mt-3 space-y-1.5 text-xs text-ink/55">
+      <ul className="mt-2 space-y-1 text-xs text-ink/55">
         <li>Identité client (téléphone exploitable) : {pct(quality.customerIdCoverage)}</li>
         <li>Gouvernorat renseigné : {pct(quality.governorateCoverage)}</li>
-        <li className="pt-1.5 text-ink/45">
+        <li className="pt-1 text-ink/45">
           {pageViews.toLocaleString('fr-FR')} pages vues sur la période. Comptées une fois par page
           et par session : ce n'est ni un nombre de visiteurs ni un total de pages vues, et aucun
           taux de conversion fiable ne peut en être déduit.
