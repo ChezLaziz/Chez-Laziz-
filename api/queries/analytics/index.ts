@@ -98,18 +98,26 @@ async function fetchCustomerOrderHistory(): Promise<AnalyticsOrder[]> {
   return rows.map((r) => ({ ...r, items: [] }));
 }
 
-/** Coûts de revient au kilo, par produit. Les produits sans coût saisi sont
- * volontairement ABSENTS de la Map plutôt que présents à 0 : le calcul de
- * marge doit pouvoir distinguer « coûte 0 » de « on ne sait pas ». */
-async function fetchProductCosts(): Promise<CostsByProductId> {
+/** Catalogue réduit à ce dont l'analytique a besoin : le coût de revient
+ * (marges) et la photo (vignettes des produits les plus vendus).
+ *
+ * Les produits sans coût saisi sont volontairement ABSENTS de la Map des
+ * coûts plutôt que présents à 0 : le calcul de marge doit pouvoir
+ * distinguer « coûte 0 » de « on ne sait pas ». */
+async function fetchProductCatalog(): Promise<{
+  costs: CostsByProductId;
+  images: Map<number, string>;
+}> {
   const rows = await getDb()
-    .select({ id: products.id, cost: products.costPerKgMillimes })
+    .select({ id: products.id, cost: products.costPerKgMillimes, imageUrl: products.imageUrl })
     .from(products);
-  const map: CostsByProductId = new Map();
+  const costs: CostsByProductId = new Map();
+  const images = new Map<number, string>();
   for (const r of rows) {
-    if (r.cost !== null) map.set(r.id, r.cost);
+    if (r.cost !== null) costs.set(r.id, r.cost);
+    if (r.imageUrl) images.set(r.id, r.imageUrl);
   }
-  return map;
+  return { costs, images };
 }
 
 async function countPageViews(period: Period): Promise<number> {
@@ -132,6 +140,40 @@ function withTrend(value: number, previous: number): MetricWithTrend {
 }
 
 export type RevenuePoint = { day: string; revenueMillimes: number; orders: number };
+
+/** Dernières commandes de la période — le fil d'activité du tableau de bord.
+ *
+ * Volontairement RÉDUIT : ni téléphone, ni adresse, ni note. Le carnet de
+ * commandes affiche tout cela, avec ses actions ; ici on ne montre que de
+ * quoi reconnaître une commande et cliquer pour l'ouvrir. */
+export type RecentOrder = {
+  id: number;
+  customerName: string;
+  /** Premier article, celui qui identifie la commande d'un coup d'œil. */
+  firstItemName: string;
+  /** Articles supplémentaires, pour écrire « +2 » sans les énumérer. */
+  extraItems: number;
+  /** Sous-total + livraison : c'est le montant que le client paie, et
+   * celui que le carnet de commandes affiche sur la même ligne. */
+  totalMillimes: number;
+  status: string;
+  createdAt: string;
+};
+
+function recentOrders(allOrders: AnalyticsOrder[], limit = 5): RecentOrder[] {
+  return [...allOrders]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit)
+    .map((o) => ({
+      id: o.id,
+      customerName: o.customerName,
+      firstItemName: o.items[0]?.name ?? "—",
+      extraItems: Math.max(o.items.length - 1, 0),
+      totalMillimes: o.subtotalMillimes + o.deliveryFeeMillimes,
+      status: o.status,
+      createdAt: new Date(o.createdAt).toISOString(),
+    }));
+}
 
 function revenueByDay(validOrders: AnalyticsOrder[], period: Period): RevenuePoint[] {
   const byDay = new Map<string, { revenueMillimes: number; orders: number }>();
@@ -193,8 +235,14 @@ export type OverviewData = {
   customers: MetricWithTrend;
   unitsSold: MetricWithTrend;
   revenueTrend: RevenuePoint[];
-  topProducts: ReturnType<typeof computeProductStats>;
+  /** `imageUrl` : la photo du catalogue, pour la vignette du tableau de
+   * bord. null quand le produit n'en a pas — l'interface montre alors un
+   * emplacement neutre, jamais la photo d'un autre produit. */
+  topProducts: (ReturnType<typeof computeProductStats>[number] & {
+    imageUrl: string | null;
+  })[];
   topGovernorates: ReturnType<typeof computeGovernorateStats>;
+  recentOrders: RecentOrder[];
   customerSplit: ReturnType<typeof computeCustomerSplit>;
   delivery: ReturnType<typeof computeDeliveryImpact>;
   statusCounts: Record<string, number>;
@@ -212,6 +260,9 @@ export type OverviewData = {
   productByGovernorate: ReturnType<typeof computeProductGovernorateMatrix>;
   governorateDelivery: ReturnType<typeof computeGovernorateDelivery>;
   customerMetrics: ReturnType<typeof computeCustomerMetrics>;
+  /** Mêmes métriques clients sur la période précédente : sans elles, une
+   * carte « clients récurrents » ne peut afficher aucune variation. */
+  previousCustomerMetrics: ReturnType<typeof computeCustomerMetrics>;
   margins: ReturnType<typeof computeMargins>;
   previousMargins: ReturnType<typeof computeMargins>;
   acquisition: ReturnType<typeof computeAcquisition>;
@@ -223,14 +274,15 @@ export type OverviewData = {
  * top produits) qui chargeaient la table entière en mémoire, chacun de son
  * côté, toutes les 30 secondes. */
 export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
-  const [currentAll, previousAll, history, costs, viewsNow, viewsBefore] = await Promise.all([
+  const [currentAll, previousAll, history, catalog, viewsNow, viewsBefore] = await Promise.all([
     fetchOrdersInPeriod(periods.current),
     fetchOrdersInPeriod(periods.previous),
     fetchCustomerOrderHistory(),
-    fetchProductCosts(),
+    fetchProductCatalog(),
     countPageViews(periods.current),
     countPageViews(periods.previous),
   ]);
+  const costs = catalog.costs;
 
   const current = currentAll.filter(isValidOrder);
   const previous = previousAll.filter(isValidOrder);
@@ -268,8 +320,12 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     customers: withTrend(totals.customers, prevTotals.customers),
     unitsSold: withTrend(totals.unitsSold, prevTotals.unitsSold),
     revenueTrend: revenueByDay(current, periods.current),
-    topProducts: productsNow.slice(0, 8),
+    topProducts: productsNow.slice(0, 8).map((p) => ({
+      ...p,
+      imageUrl: p.productId === null ? null : (catalog.images.get(p.productId) ?? null),
+    })),
     topGovernorates: governoratesNow.slice(0, 8),
+    recentOrders: recentOrders(currentAll),
     customerSplit: computeCustomerSplit(current, priorIds),
     delivery: computeDeliveryImpact(currentAll),
     statusCounts,
@@ -289,6 +345,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     productByGovernorate: computeProductGovernorateMatrix(current),
     governorateDelivery: computeGovernorateDelivery(currentAll),
     customerMetrics: computeCustomerMetrics(current, histories, periods.current.start),
+    previousCustomerMetrics: computeCustomerMetrics(previous, histories, periods.previous.start),
     margins,
     previousMargins: computeMargins(previous, costs),
     acquisition,

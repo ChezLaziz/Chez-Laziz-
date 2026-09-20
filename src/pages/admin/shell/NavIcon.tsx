@@ -16,33 +16,34 @@ export default function NavIcon({ id }: { id: NavId }) {
 function paths(id: NavId) {
   switch (id) {
     case 'apercu':
+      // Maison : l'accueil du tableau de bord, comme sur la maquette.
       return (
         <>
-          <rect x="3" y="3" width="8" height="8" rx="1.5" />
-          <rect x="13" y="3" width="8" height="5" rx="1.5" />
-          <rect x="13" y="12" width="8" height="9" rx="1.5" />
-          <rect x="3" y="15" width="8" height="6" rx="1.5" />
+          <path d="M3.5 10.5 12 3.8l8.5 6.7V19a1.6 1.6 0 0 1-1.6 1.6H5.1A1.6 1.6 0 0 1 3.5 19Z" strokeLinejoin="round" />
+          <path d="M9.6 20.6v-6h4.8v6" strokeLinejoin="round" />
         </>
       )
     case 'commandes':
       return (
         <>
-          <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" strokeLinejoin="round" />
-          <path d="M9 8h6M9 12h6" strokeLinecap="round" />
+          <rect x="4" y="5" width="16" height="15" rx="2.5" />
+          <path d="M9 3.5h6v3H9z" strokeLinejoin="round" />
+          <path d="M8.5 12.5h7M8.5 16h4.5" strokeLinecap="round" />
         </>
       )
     case 'catalogue':
+      // Cabas : le catalogue et ses prix, côté vente.
       return (
         <>
-          <rect x="3" y="4" width="18" height="16" rx="2" />
-          <path d="M3 9h18M8 4v16" />
+          <path d="M4 8h16l-1 11.2a2 2 0 0 1-2 1.8H7a2 2 0 0 1-2-1.8Z" strokeLinejoin="round" />
+          <path d="M9 8V6.4a3 3 0 0 1 6 0V8" strokeLinecap="round" />
         </>
       )
     case 'messages':
       return (
         <>
-          <rect x="3" y="5" width="18" height="14" rx="2" />
-          <path d="m4 6.5 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M20.5 11.6c0 4-3.8 7.2-8.5 7.2a9.9 9.9 0 0 1-2.6-.34L4.5 20l1.2-3.3a6.8 6.8 0 0 1-2.2-5.1c0-4 3.8-7.2 8.5-7.2s8.5 3.2 8.5 7.2Z" strokeLinejoin="round" />
+          <path d="M8.6 11.6h.01M12 11.6h.01M15.4 11.6h.01" strokeLinecap="round" strokeWidth="2.2" />
         </>
       )
     case 'contenu':

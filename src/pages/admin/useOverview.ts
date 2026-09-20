@@ -1,5 +1,5 @@
 import { trpc } from '@/providers/trpc'
-import type { PresetRange } from '@contracts/analytics'
+import { periodInput, type DashboardPeriod } from './shell/period'
 
 /** UNE requête analytique pour tout le tableau de bord.
  *
@@ -7,10 +7,13 @@ import type { PresetRange } from '@contracts/analytics'
  * endpoints distincts, chacun rafraîchi toutes les 30 s, pour afficher les
  * mêmes nombres. Les pages partagent désormais ce hook : React Query
  * dédoublonne sur la clé, donc plusieurs blocs peuvent le consommer sans
- * déclencher plusieurs appels. */
-export function useOverview(token: string, period: PresetRange) {
+ * déclencher plusieurs appels.
+ *
+ * La clé inclut la période : changer de dates recharge, revenir aux
+ * précédentes ressert le cache sans rien redemander. */
+export function useOverview(token: string, period: DashboardPeriod) {
   return trpc.dashboard.overview.useQuery(
-    { token, period: { preset: period } },
+    { token, period: periodInput(period) },
     {
       // 30 s suffisaient à trois requêtes plein-table ; ici une seule
       // requête bornée à la période, rafraîchie moins souvent.

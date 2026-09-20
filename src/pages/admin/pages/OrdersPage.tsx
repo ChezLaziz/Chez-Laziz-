@@ -186,8 +186,12 @@ export default function OrdersPage({
   const isToShip = (o: Order) => o.status !== 'annulee' && o.status !== 'terminee' && !o.trackingNumber
 
   const query = search.trim().toLowerCase()
+  // Le tableau de bord peut demander PLUSIEURS statuts d'un coup — son
+  // anneau groupe « en préparation » et « prête » sous « en cours ». Le
+  // filtre reste exact : on liste les statuts demandés, pas un voisinage.
+  const statusesWanted = statusFilter ? statusFilter.split(',') : null
   const scoped = orders.filter((o) => {
-    if (statusFilter && o.status !== statusFilter) return false
+    if (statusesWanted && !statusesWanted.includes(o.status)) return false
     if (!query) return true
     const hay = `#${o.id} ${o.customerName} ${o.phone} ${o.city} ${o.governorate} ${o.address} ${o.trackingNumber ?? ''}`
     return hay.toLowerCase().includes(query)
@@ -284,7 +288,10 @@ export default function OrdersPage({
       {statusFilter && (
         <div className="flex items-center gap-3 rounded-lg border border-[#b8912e]/40 bg-[#b8912e]/10 px-4 py-2.5 text-sm">
           <span className="font-medium text-accent">
-            Filtré : {STATUS_META[statusFilter as Status]?.label ?? statusFilter}
+            Filtré :{' '}
+            {(statusesWanted ?? [])
+              .map((st) => STATUS_META[st as Status]?.label ?? st)
+              .join(' · ')}
           </span>
           <button
             onClick={onClearFilter}

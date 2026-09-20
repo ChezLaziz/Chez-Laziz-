@@ -5,10 +5,10 @@ import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import Ornament from '@/components/Ornament'
 import { useSEO } from '@/hooks/useSEO'
-import type { PresetRange } from '@contracts/analytics'
 import Sidebar from './admin/shell/Sidebar'
 import TopBar from './admin/shell/TopBar'
 import DateRange from './admin/shell/DateRange'
+import { defaultPeriod, type DashboardPeriod } from './admin/shell/period'
 import { ANALYTICS_PAGES, NAV_GROUPS, type NavId } from './admin/shell/nav'
 import OverviewPage from './admin/pages/OverviewPage'
 import OrdersPage from './admin/pages/OrdersPage'
@@ -1707,7 +1707,7 @@ export default function AdminPage() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [tab, setTab] = useState<NavId>('apercu')
   const [orderFilter, setOrderFilter] = useState<string | null>(null)
-  const [period, setPeriod] = useState<PresetRange>('30d')
+  const [period, setPeriod] = useState<DashboardPeriod>(defaultPeriod)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Vérifie le token stocké ; si invalide/expiré → retour au login.
@@ -1756,6 +1756,7 @@ export default function AdminPage() {
             setOrderFilter(status)
             setTab('commandes')
           }}
+          onGoToCatalogue={() => setTab('catalogue')}
         />
       )}
       {tab === 'commandes' && (
@@ -1782,8 +1783,8 @@ function AdminShell({
 }: {
   tab: NavId
   onSelectTab: (id: NavId) => void
-  period: PresetRange
-  onPeriodChange: (p: PresetRange) => void
+  period: DashboardPeriod
+  onPeriodChange: (p: DashboardPeriod) => void
   drawerOpen: boolean
   onDrawerChange: (open: boolean) => void
   token: string
@@ -1795,12 +1796,13 @@ function AdminShell({
   const unreadCount = useOverview(token, period).data?.unreadCount
 
   const title = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === tab)?.label ?? ''
+  const estAccueil = ANALYTICS_PAGES.has(tab)
 
   return (
     <div className="min-h-screen bg-[#faf6f3] lg:flex">
       {/* Colonne fixe à partir de lg ; en dessous, tiroir superposé. */}
-      <aside className="hidden w-60 shrink-0 border-r border-sand/60 lg:sticky lg:top-0 lg:block lg:h-screen">
-        <Sidebar active={tab} onSelect={onSelectTab} />
+      <aside className="hidden w-64 shrink-0 border-r border-[#e6ded3] lg:sticky lg:top-0 lg:block lg:h-screen">
+        <Sidebar active={tab} onSelect={onSelectTab} unreadCount={unreadCount ?? 0} />
       </aside>
 
       {drawerOpen && (
@@ -1811,32 +1813,83 @@ function AdminShell({
             aria-hidden="true"
           />
           <div className="absolute inset-y-0 left-0 w-64 shadow-xl">
-            <Sidebar active={tab} onSelect={onSelectTab} onClose={() => onDrawerChange(false)} />
+            <Sidebar
+              active={tab}
+              onSelect={onSelectTab}
+              onClose={() => onDrawerChange(false)}
+              unreadCount={unreadCount ?? 0}
+            />
           </div>
         </div>
       )}
 
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
+        {estAccueil && <BandeauAccueil />}
         <TopBar
           title={title}
+          variant={estAccueil ? 'accueil' : 'page'}
+          greeting={{ hello: 'Bonjour !', sub: 'Merci de faire partie de cette belle aventure.' }}
           unreadCount={unreadCount ?? 0}
           onOpenMessages={() => onSelectTab('messages')}
           onOpenMenu={() => onDrawerChange(true)}
           onLogout={onLogout}
-          right={
-            ANALYTICS_PAGES.has(tab) ? (
-              <div className="hidden sm:block">
-                <DateRange value={period} onChange={onPeriodChange} />
-              </div>
-            ) : undefined
-          }
+          right={estAccueil ? <DateRange value={period} onChange={onPeriodChange} /> : undefined}
         />
-        {ANALYTICS_PAGES.has(tab) && (
-          <div className="border-b border-sand/60 bg-white px-4 py-2 sm:hidden">
-            <DateRange value={period} onChange={onPeriodChange} />
-          </div>
-        )}
-        <main className="px-4 py-6 md:px-6">{children}</main>
+        {/* Sur très grand écran, le contenu laisse une marge à droite : la
+            photo du bandeau et sa signature restent visibles à côté des
+            cartes, exactement comme sur la maquette. En dessous, la place
+            va aux chiffres. */}
+        <main
+          className={`relative z-10 px-4 pb-8 pt-4 md:px-6 ${
+            estAccueil ? 'min-[1700px]:pr-[236px]' : ''
+          }`}
+        >
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+/** Bandeau photo du tableau de bord — la vue de Sidi Bou Saïd de la
+ * maquette, posée en haut à droite et fondue dans le fond.
+ *
+ * Purement décoratif : masqué sous `lg`, où la même image passerait
+ * derrière le texte de l'en-tête au lieu de rester à côté. `aria-hidden`
+ * et sans texte alternatif — il n'y a rien à annoncer à un lecteur
+ * d'écran. */
+function BandeauAccueil() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute right-0 top-0 hidden h-[560px] w-[46%] max-w-[620px] select-none overflow-hidden lg:block"
+    >
+      <img
+        src="/images/admin/band.webp"
+        alt=""
+        className="h-full w-full object-cover opacity-[0.78]"
+        style={{
+          WebkitMaskImage:
+            'linear-gradient(to right, transparent, #000 38%), linear-gradient(to bottom, #000 55%, transparent 96%)',
+          WebkitMaskComposite: 'source-in',
+          maskImage:
+            'linear-gradient(to right, transparent, #000 38%), linear-gradient(to bottom, #000 55%, transparent 96%)',
+          maskComposite: 'intersect',
+        }}
+      />
+      {/* Voile clair : la photo doit rester un fond, pas un sujet — sans
+          lui, le texte de l'en-tête perd son contraste. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#faf6f3]/45 via-transparent to-[#faf6f3]/70" />
+      <div className="absolute right-8 top-14 hidden text-right min-[1700px]:block">
+        <p className="font-display text-[26px] italic leading-snug text-[#2a4750] drop-shadow-sm">
+          Le goût authentique
+          <br />
+          de la Tunisie
+        </p>
+        <div className="ml-auto mt-3 h-px w-16 bg-[#2a4750]/35" />
+        <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.32em] text-[#2a4750]/70">
+          Tradition · Qualité · Partage
+        </p>
       </div>
     </div>
   )

@@ -29,13 +29,13 @@ export type NavId = 'apercu' | 'commandes' | 'catalogue' | 'messages' | 'contenu
 export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] }[] = [
   {
     group: 'Pilotage',
-    items: [{ id: 'apercu', label: "Vue d'ensemble" }],
+    items: [{ id: 'apercu', label: 'Tableau de bord' }],
   },
   {
     group: 'Gestion',
     items: [
       { id: 'commandes', label: 'Commandes' },
-      { id: 'catalogue', label: 'Catalogue & prix' },
+      { id: 'catalogue', label: 'Produits' },
       { id: 'messages', label: 'Messages' },
       { id: 'contenu', label: 'Contenu du site' },
       { id: 'parametres', label: 'Paramètres' },
