@@ -36,22 +36,59 @@ export type ReportableOrder = {
  * appeler après toute mise à jour de statut, jamais à la création.
  * Ne renvoie vrai qu'une seule fois par commande.
  *
- * UN SEUL SIGNAL DEPUIS LE RETRAIT DE D17 : l'avancement du statut au-delà
- * de « nouvelle », c'est-à-dire le moment où un humain a appelé le client et
- * confirmé la commande. C'est la seule preuve dont dispose une boutique qui
- * encaisse à la livraison — aucun paiement n'a lieu en ligne.
+ * « TERMINÉE », C'EST-À-DIRE LIVRÉE ET ENCAISSÉE. Pas la confirmation
+ * téléphonique, qui ne prouve qu'une intention.
  *
- * Il existait une seconde branche : une commande D17 comptait dès qu'un
- * administrateur approuvait la capture de virement. D17 est retiré, et
- * aucune commande ne l'a jamais emprunté.
+ * Le seuil était l'avancement du statut au-delà de « nouvelle » — le moment
+ * où un humain appelle le client. Sur soixante-trois commandes d'un mois,
+ * DIX ont été annulées et HUIT de ces dix avaient déjà été signalées comme
+ * des achats : elles avaient passé l'appel, puis le colis a été refusé à la
+ * porte. Meta apprenait donc à chercher des gens qui commandent et ne
+ * paient pas — exactement le contraire de ce qu'on veut lui montrer, et
+ * c'est le piège classique du paiement à la livraison.
  *
- * « paid » (l'argent encaissé par le livreur) ne déclenche RIEN ici : c'est
- * une écriture de gestion qui arrive après coup, et la commande a de toute
- * façon déjà été signalée au moment de sa confirmation. */
+ * CE QUE ÇA COÛTE, ET POURQUOI ON LE PAIE QUAND MÊME. Une cliente qui
+ * demande à être livrée dans dix jours sort de la fenêtre d'attribution de
+ * sept jours de Meta : sa vente est réelle, mais la publicité ne s'en verra
+ * plus créditée. Une poignée de ventes perdues de vue coûte moins cher
+ * qu'un modèle entraîné sur des refus : une fausse conversion oriente
+ * activement le ciblage vers les mauvaises personnes, une conversion
+ * manquante ne fait que réduire le volume du signal.
+ *
+ * « paid » (l'argent noté encaissé) ne déclenche toujours RIEN : c'est une
+ * écriture de gestion faite après coup, et la boutique la tient de façon
+ * irrégulière — cinquante commandes livrées restent marquées « à
+ * encaisser ». « terminée » est le seul état tenu à jour fidèlement. */
 export function shouldReportMetaPurchase(order: ReportableOrder): boolean {
   if (order.metaPurchaseReportedAt) return false;
-  if (order.status === "annulee") return false;
-  return order.status !== "nouvelle";
+  return order.status === "terminee";
+}
+
+/** Meta refuse un event_time de plus de sept jours — et il refuse la
+ * REQUÊTE ENTIÈRE, pas seulement l'événement fautif. On garde une marge
+ * d'une heure : la commande peut attendre dans une file, l'horloge du
+ * serveur peut dériver, et un envoi rejeté ne se rattrape jamais. */
+const EVENT_TIME_MAX_AGE_S = 7 * 24 * 3600 - 3600;
+
+/** Quand l'achat a EU LIEU, du point de vue de la publicité.
+ *
+ * Le colis part le lendemain, mais la décision d'acheter date de la
+ * commande : c'est elle qui suit le clic publicitaire, et c'est cette
+ * date-là que Meta doit rapprocher de l'annonce. Envoyer l'heure de la
+ * livraison ferait manquer l'attribution d'une vente pourtant causée par
+ * la publicité.
+ *
+ * Au-delà de sept jours — la cliente qui demande à être livrée « dans dix
+ * jours » — on renvoie l'heure réelle de l'envoi. C'est la vérité, et la
+ * fenêtre d'attribution est de toute façon dépassée : mieux vaut un achat
+ * compté sans être attribué qu'une requête rejetée en bloc. On ne fabrique
+ * PAS une date de complaisance à six jours et vingt-trois heures. */
+export function eventTimeSeconds(orderedAt: Date | null | undefined, now: number): number {
+  const maintenant = Math.floor(now / 1000);
+  if (!orderedAt) return maintenant;
+  const commande = Math.floor(orderedAt.getTime() / 1000);
+  if (!Number.isFinite(commande) || commande > maintenant) return maintenant;
+  return maintenant - commande > EVENT_TIME_MAX_AGE_S ? maintenant : commande;
 }
 
 export function sha256(value: string): string {
@@ -113,6 +150,9 @@ export type MetaPurchaseEvent = {
   city?: string;
   governorate?: string;
   sourceUrl?: string;
+  /** L'heure de la COMMANDE, pas celle de l'envoi à Meta — voir
+   * eventTimeSeconds. Absente, on retombe sur l'instant présent. */
+  orderedAt?: Date | null;
   /** Signaux captés à la création de la commande — voir
    * contracts/metaSignals.ts. Tous absents si le client a refusé les
    * cookies : on n'envoie alors que le téléphone haché, comme avant. */
@@ -203,7 +243,7 @@ async function envoyer(
     data: [
       {
         event_name: eventName,
-        event_time: Math.floor(Date.now() / 1000),
+        event_time: eventTimeSeconds(ev.orderedAt, Date.now()),
         event_id: eventId,
         event_source_url: ev.sourceUrl ?? "https://chezlaziz.com/commande",
         action_source: "website",

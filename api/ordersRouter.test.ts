@@ -451,9 +451,9 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
     getOrderById.mockResolvedValue(makeOrder({ status: "nouvelle" }));
   });
 
-  it("signale l'achat dès que l'admin confirme (statut qui avance après « nouvelle »)", async () => {
-    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
-    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+  it("signale l'achat quand la commande est LIVRÉE (« terminée »)", async () => {
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "terminee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "terminee" });
     expect(markMetaPurchaseReported).toHaveBeenCalledWith(42);
     expect(sendMetaPurchaseEvent).toHaveBeenCalledWith(
       expect.objectContaining({ orderId: 42, phone: "23691039", contentIds: ["1"] }),
@@ -464,14 +464,32 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
     // Les compter gonflait le ROAS rapporté par Meta (24 au lieu de 16, soit
     // +50 % sur ce panier) et faussait l'enchère à la valeur. C'est aussi la
     // base qu'utilisent AddToCart, InitiateCheckout et Lead côté navigateur.
-    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
-    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "terminee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "terminee" });
     const appels = sendMetaPurchaseEvent.mock.calls as unknown as [
       { subtotalMillimes: number },
     ][];
     const envoye = appels.at(-1)![0];
     expect(envoye.subtotalMillimes).toBe(16000);
     expect(envoye).not.toHaveProperty("totalMillimes");
+  });
+
+  it("n'envoie RIEN à la confirmation téléphonique — le colis peut encore être refusé", async () => {
+    // C'est le piège du paiement à la livraison : 8 des 10 annulations du
+    // mois dernier avaient déjà passé l'appel.
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
+    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
+    expect(markMetaPurchaseReported).not.toHaveBeenCalled();
+  });
+
+  it("transmet l'heure de la COMMANDE, pour que Meta la rapproche du clic", async () => {
+    const commande = new Date(Date.now() - 26 * 3600 * 1000);
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "terminee", createdAt: commande }));
+    await caller.setStatus({ token: "t", id: 42, status: "terminee" });
+    expect(sendMetaPurchaseEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ orderedAt: commande }),
+    );
   });
 
   it("n'envoie rien si la commande est annulée directement", async () => {
@@ -531,8 +549,8 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
 
   it("garde la réservation quand Meta a bien reçu l'achat", async () => {
     sendMetaPurchaseEvent.mockResolvedValueOnce(true);
-    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
-    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "terminee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "terminee" });
     await new Promise((r) => setTimeout(r, 0)); // l'envoi est lancé sans await
     expect(unmarkMetaPurchaseReported).not.toHaveBeenCalled();
   });
@@ -543,8 +561,8 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
     // d'elle. La prochaine avance de statut retentera ; Meta déduplique sur
     // event_id = order-42, donc la reprise ne peut pas compter deux fois.
     sendMetaPurchaseEvent.mockResolvedValueOnce(false);
-    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
-    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "terminee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "terminee" });
     await new Promise((r) => setTimeout(r, 0));
     expect(unmarkMetaPurchaseReported).toHaveBeenCalledWith(42);
   });
