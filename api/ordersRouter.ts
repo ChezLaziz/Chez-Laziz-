@@ -26,7 +26,7 @@ import { currentKitchenLines } from "./queries/kitchen";
 import { getLastOrderId, listOrdersAwaitingCall } from "./queries/reminders";
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
-import { metaUserSignals } from "@contracts/metaSignals";
+import { metaSignalsForOrder, metaUserSignals } from "@contracts/metaSignals";
 import {
   ALLOWED_WEIGHTS_KG,
   DELIVERY_FEE_MILLIMES,
@@ -274,7 +274,10 @@ export const ordersRouter = createRouter({
         // quand un humain confirme la commande, et la requête du client
         // n'existe plus à ce moment-là. Rien n'est retenu si le Pixel ne
         // s'est pas chargé — c'est-à-dire si le client a refusé les cookies.
-        ...(signals ?? {}),
+        // metaSignalsForOrder, JAMAIS `...signals` : les noms diffèrent
+        // entre le contrat et les colonnes, et l'étalement direct les
+        // perdait tous en silence. Voir contracts/metaSignals.ts.
+        ...metaSignalsForOrder(signals),
       });
       // Notifications : sans attendre, et sans jamais faire échouer la
       // commande si un envoi échoue (voir api/lib/email.ts et

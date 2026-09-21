@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clientIpFromHeaders, metaUserSignals, readCookie } from './metaSignals'
+import { clientIpFromHeaders, metaSignalsForOrder, metaUserSignals, readCookie } from './metaSignals'
 
 const FBC = 'fb.1.1719500000000.IwAR0abcdef'
 const FBP = 'fb.1.1719500000000.123456789'
@@ -75,3 +75,54 @@ describe('metaUserSignals', () => {
     expect(s?.clientUserAgent).toHaveLength(400)
   })
 })
+
+describe("metaSignalsForOrder — le bogue qui a coûté trente jours d'attribution", () => {
+  const complet = {
+    fbc: "fb.1.1726900000.IwAR_abc",
+    fbp: "fb.1.1726900000.1234567890",
+    clientIp: "197.15.1.1",
+    clientUserAgent: "Mozilla/5.0 (iPhone)",
+  };
+
+  it("rend EXACTEMENT les quatre noms de colonnes de la commande", () => {
+    // Ce test est la raison d'être de la fonction. Le routeur étalait
+    // `...signals` dans createOrder : les noms ne correspondaient pas, les
+    // quatre valeurs tombaient dans le vide, et TypeScript ne disait rien
+    // parce que les colonnes sont facultatives. Zéro commande a porté fbc
+    // ou fbp, et Meta n'a attribué aucun achat à aucune publicité.
+    expect(metaSignalsForOrder(complet)).toEqual({
+      metaFbc: "fb.1.1726900000.IwAR_abc",
+      metaFbp: "fb.1.1726900000.1234567890",
+      metaClientIp: "197.15.1.1",
+      metaClientUserAgent: "Mozilla/5.0 (iPhone)",
+    });
+  });
+
+  it("n'utilise aucun des noms du contrat — c'est là qu'était l'erreur", () => {
+    const rendu = metaSignalsForOrder(complet) as Record<string, unknown>;
+    for (const nom of ["fbc", "fbp", "clientIp", "clientUserAgent"]) {
+      expect(rendu).not.toHaveProperty(nom);
+    }
+  });
+
+  it("ne pose que ce qui existe — un champ absent ne devient pas undefined", () => {
+    expect(metaSignalsForOrder({ fbp: "fb.1.2.3" })).toEqual({ metaFbp: "fb.1.2.3" });
+  });
+
+  it("rend un objet vide sans consentement, pour être étalé sans risque", () => {
+    expect(metaSignalsForOrder(null)).toEqual({});
+    expect(metaSignalsForOrder(undefined)).toEqual({});
+  });
+
+  it("boucle avec metaUserSignals : du cookie brut jusqu'aux colonnes", () => {
+    const signaux = metaUserSignals({
+      cookie: "_fbp=fb.1.1726900000.1234567890; _fbc=fb.1.1726900000.IwAR_abc; autre=x",
+      xForwardedFor: "197.15.1.1, 10.0.0.1",
+      userAgent: "Mozilla/5.0 (iPhone)",
+    });
+    const pourLaCommande = metaSignalsForOrder(signaux);
+    expect(pourLaCommande.metaFbc).toBe("fb.1.1726900000.IwAR_abc");
+    expect(pourLaCommande.metaFbp).toBe("fb.1.1726900000.1234567890");
+    expect(pourLaCommande.metaClientIp).toBe("197.15.1.1");
+  });
+});
