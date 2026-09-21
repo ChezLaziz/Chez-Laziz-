@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { cancelReasonAr } from '@contracts/cancelReasons'
+import { CANCEL_REASONS, cancelReasonAr, type CancelReason } from '@contracts/cancelReasons'
 import { trpc } from '@/providers/trpc'
 import { formatTND } from '@/lib/shop'
 import { ErrorState, Skeleton } from '../ui/State'
@@ -363,7 +363,7 @@ export default function OrdersPage({
                 onSelect={() => setSelected((s) => toggle(s, o.id))}
                 open={expanded.has(o.id)}
                 onToggle={() => setExpanded((s) => toggle(s, o.id))}
-                onStatus={(status) => setStatus.mutate({ token, id: o.id, status })}
+                onStatus={(status, cancelReason) => setStatus.mutate({ token, id: o.id, status, cancelReason })}
                 onPayment={(paymentStatus) =>
                   setPaymentStatus.mutate({ token, id: o.id, paymentStatus })
                 }
@@ -755,7 +755,7 @@ function OrderRow({
   onSelect: () => void
   open: boolean
   onToggle: () => void
-  onStatus: (s: Status) => void
+  onStatus: (s: Status, cancelReason?: CancelReason) => void
   onPayment: (p: 'paid' | 'pending') => void
   onTracking: (t: string) => void
   onClearCarrier: () => void
@@ -779,6 +779,8 @@ function OrderRow({
   const meta = STATUS_META[o.status as Status] ?? STATUS_META.nouvelle
   const [tracking, setTracking] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  /** Les quatre raisons, ouvertes juste avant de fermer une commande. */
+  const [demandeRaison, setDemandeRaison] = useState(false)
 
   return (
     <li className={`border-t border-sand/50 ${selected ? 'bg-[#b8912e]/[0.05]' : ''}`}>
@@ -923,7 +925,21 @@ function OrderRow({
                 </span>
                 <select
                   value={o.status}
-                  onChange={(e) => onStatus(e.target.value as Status)}
+                  onChange={(e) => {
+                    const suivant = e.target.value as Status
+                    // POURQUOI, avant de fermer. Le bouton ❌ de Telegram
+                    // demande déjà la raison ; d'ici, la commande mourait en
+                    // silence. Sur du paiement à la livraison l'annulation
+                    // EST le coût principal, et une raison sur deux
+                    // manquait — donc aucune décision publicitaire ne
+                    // pouvait s'y appuyer.
+                    if (suivant === 'annulee' && o.status !== 'annulee') {
+                      setDemandeRaison(true)
+                      return
+                    }
+                    setDemandeRaison(false)
+                    onStatus(suivant)
+                  }}
                   className={`min-h-10 w-full rounded-lg border px-3 text-sm font-medium outline-none ${meta.cls}`}
                 >
                   {STATUSES.map((s) => (
@@ -933,6 +949,49 @@ function OrderRow({
                   ))}
                 </select>
               </label>
+
+              {demandeRaison && (
+                <div className="rounded-lg border border-red-200 bg-red-50/60 px-3 py-2.5">
+                  <p className="mb-2 text-[13px] font-medium text-ink">Pourquoi cette commande meurt-elle&nbsp;?</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CANCEL_REASONS.map((r) => (
+                      <button
+                        key={r.code}
+                        type="button"
+                        onClick={() => {
+                          setDemandeRaison(false)
+                          onStatus('annulee', r.code)
+                        }}
+                        className="min-h-9 rounded-full border border-ink/20 bg-white px-3 text-xs font-medium text-ink transition-colors hover:border-red-400 hover:text-red-700"
+                      >
+                        {r.ar}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex gap-3">
+                    {/* Jamais de blocage : mieux vaut une commande
+                        correctement fermée sans raison qu'un carnet où
+                        traînent des commandes mortes restées « nouvelle ». */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDemandeRaison(false)
+                        onStatus('annulee')
+                      }}
+                      className="text-xs text-ink/50 underline underline-offset-2 hover:text-ink"
+                    >
+                      Annuler sans raison
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDemandeRaison(false)}
+                      className="text-xs text-ink/50 underline underline-offset-2 hover:text-ink"
+                    >
+                      Revenir
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* La raison de l'annulation, quand elle a été saisie depuis
                   Telegram. Captée et jamais montrée, elle ne servirait à

@@ -9,8 +9,10 @@ import {
   createOrder,
   deleteOrder,
   setOrderCarrier,
+  setCancelReason,
 } from "./queries/orders";
 import { CARRIER_KEYS } from "@contracts/carriers";
+import { CANCEL_REASONS } from "@contracts/cancelReasons";
 import { assertAdmin } from "./queries/admin";
 import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
@@ -48,6 +50,10 @@ import {
   packContents,
   packWeightKg,
 } from "@contracts/packs";
+
+/** Les quatre raisons, dans l'ordre où Telegram les propose — une seule
+ * liste pour les deux chemins d'annulation. */
+const CANCEL_REASON_CODES = CANCEL_REASONS.map((r) => r.code) as unknown as [string, ...string[]];
 
 const orderStatusEnum = z.enum([
   "nouvelle",
@@ -331,6 +337,15 @@ export const ordersRouter = createRouter({
         token: z.string(),
         id: z.number().int(),
         status: orderStatusEnum,
+        /** POURQUOI la commande meurt. Le bouton ✅/❌ de Telegram la
+         * demandait déjà (voir cancelReasonKeyboard) ; le tableau de bord,
+         * lui, annulait en silence. Une annulation sur deux partait donc
+         * sans raison, et sur du paiement à la livraison l'annulation EST
+         * le coût principal — neuf sur soixante-trois le mois dernier.
+         * Facultative : une annulation sans raison reste possible, mieux
+         * vaut une commande correctement fermée qu'un administrateur
+         * bloqué. */
+        cancelReason: z.enum(CANCEL_REASON_CODES).optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -339,7 +354,15 @@ export const ordersRouter = createRouter({
       // n'a rien à voir entre « en préparation » et « prête ».
       const avant = await getOrderById(input.id);
       if (!avant) return null;
-      return transitionOrderStatus(input.id, input.status, avant.status);
+      const order = await transitionOrderStatus(input.id, input.status, avant.status);
+      // APRÈS la transition, et seulement si elle a eu lieu : `order` est
+      // nul quand quelqu'un d'autre a tranché entre-temps, et poser une
+      // raison d'annulation sur une commande qui vient de passer « prête »
+      // serait pire que de n'en poser aucune.
+      if (order && input.status === "annulee" && input.cancelReason) {
+        await setCancelReason(input.id, input.cancelReason);
+      }
+      return order;
     }),
 
   /** Marquer une commande encaissée, ou revenir en arrière.

@@ -128,7 +128,10 @@ export default function ProductOrderCard({
           <button
             type="button"
             onClick={() => onAdd(weight)}
-            className="mt-3 flex min-h-11 w-full items-center justify-center gap-x-2 rounded-full border border-ink/20 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60"
+            // flex-wrap + py-2 : « أضف 2.5 كغ — 100 د.ت » dépassait la
+            // pastille et se coupait sous 390 px, sur la seule cible qui
+            // compte. Il passe à la ligne au lieu d'être tronqué.
+            className="mt-3 flex min-h-11 w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border border-ink/20 px-3 py-2 text-[12px] font-semibold text-ink transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60"
           >
             <span className="whitespace-nowrap">
               {isAr ? 'أضف' : 'Ajouter'} {formatWeight(weight, lang)}
@@ -138,7 +141,12 @@ export default function ProductOrderCard({
           </button>
         ) : (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-          <span className="whitespace-nowrap font-display text-lg text-accent">{formatPriceDT(price, lang)}</span>
+          {/* LE TOTAL DE LA LIGNE, pas le prix d'un exemplaire. À trois
+              paquets, la carte affichait le prix d'UN seul juste à côté du
+              « 3 » : la cliente lisait un montant que son panier ne
+              confirmait pas, et devait faire la multiplication elle-même
+              pour savoir ce qu'elle allait payer. */}
+          <span className="whitespace-nowrap font-display text-lg text-accent">{formatPriceDT(qty * price, lang)}</span>
           {(
             <div className="flex items-center gap-1.5" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${displayName} ${formatWeight(weight, lang)}`}>
               <button type="button" aria-label={isAr ? `إنقاص ${displayName}` : `Retirer un ${displayName}`} onClick={() => onSetQty(weight, qty - 1)} className={stepperBtnCls}>

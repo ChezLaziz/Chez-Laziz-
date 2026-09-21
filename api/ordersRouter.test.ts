@@ -10,6 +10,7 @@ const getOrderById = vi.fn();
 const updatePaymentStatus = vi.fn();
 const markMetaPurchaseReported = vi.fn(async () => true);
 const unmarkMetaPurchaseReported = vi.fn(async () => undefined);
+const setCancelReason = vi.fn(async () => undefined);
 // VRAI par défaut : la valeur de retour décide désormais si la réservation
 // « signalé à Meta » est gardée ou rendue. Un mock qui renvoie undefined
 // ferait démarquer toutes les commandes des tests, en silence.
@@ -26,6 +27,7 @@ vi.mock("./queries/orders", () => ({
   getOrderById,
   markMetaPurchaseReported,
   unmarkMetaPurchaseReported,
+  setCancelReason,
 }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
 vi.mock("./lib/email", () => ({ notifyAdminNewOrder: vi.fn(async () => undefined) }));
@@ -485,6 +487,46 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
     );
     await caller.setStatus({ token: "t", id: 42, status: "terminee" });
     expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
+  });
+
+  it("enregistre POURQUOI la commande meurt quand l'annulation vient du tableau de bord", async () => {
+    // Le bouton ❌ de Telegram demandait déjà la raison ; le tableau de bord
+    // annulait en silence. Une annulation sur deux partait donc sans raison,
+    // et sur du paiement à la livraison l'annulation EST le coût principal.
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "annulee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "annulee", cancelReason: "trop_cher" });
+    expect(setCancelReason).toHaveBeenCalledWith(42, "trop_cher");
+  });
+
+  it("n'écrit aucune raison si la transition n'a pas eu lieu", async () => {
+    // Quelqu'un d'autre a tranché entre-temps : poser « الثمن غالي » sur une
+    // commande qui vient de passer « prête » serait pire que rien.
+    updateOrderStatus.mockResolvedValue(null);
+    await caller.setStatus({ token: "t", id: 42, status: "annulee", cancelReason: "trop_cher" });
+    expect(setCancelReason).not.toHaveBeenCalled();
+  });
+
+  it("n'écrit aucune raison sur un statut qui n'est pas une annulation", async () => {
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "terminee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "terminee" });
+    expect(setCancelReason).not.toHaveBeenCalled();
+  });
+
+  it("refuse une raison inventée", async () => {
+    await expect(
+      caller.setStatus({
+        token: "t",
+        id: 42,
+        status: "annulee",
+        ...({ cancelReason: "parce que" } as object),
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("laisse annuler sans raison — mieux vaut une commande fermée qu'un admin bloqué", async () => {
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "annulee" }));
+    await caller.setStatus({ token: "t", id: 42, status: "annulee" });
+    expect(setCancelReason).not.toHaveBeenCalled();
   });
 
   it("garde la réservation quand Meta a bien reçu l'achat", async () => {
