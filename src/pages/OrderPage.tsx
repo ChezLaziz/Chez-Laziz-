@@ -495,11 +495,28 @@ export default function OrderPage() {
     return () => clearTimeout(t)
   }, [governorate])
   const listeTropLente = !!governorate && govTropLent === governorate
+  /** « Je ne trouve pas ma délégation » — la porte de sortie du seul champ
+   * obligatoire à vocabulaire fermé.
+   *
+   * La liste s'affiche en ALPHABET LATIN, triée à la française
+   * (contracts/delegations.ts), y compris sur la page arabe — celle que la
+   * publicité paie. Une cliente qui ne reconnaît pas le nom de sa
+   * délégation écrit en latin n'avait aucun geste possible : le champ est
+   * obligatoire, et firstMissing la renvoyait indéfiniment dessus. Le
+   * serveur, lui, accepte depuis toujours une ville écrite à la main
+   * (delegationExternalId est optionnel) et sait la rapprocher ensuite.
+   *
+   * UN ÉTAT À PART, JAMAIS UNE <option> DANS LA MÊME LISTE : une valeur
+   * spéciale serait effacée par delegationConnue au prochain rendu, et
+   * saveDraft l'écrirait dans la mémoire du client. Remis à zéro dès que le
+   * gouvernorat change — la liste suivante mérite sa chance. */
+  const [govSaisieLibre, setGovSaisieLibre] = useState<string | null>(null)
+  const saisieLibreDemandee = !!governorate && govSaisieLibre === governorate
   const listUnavailable =
     !!governorate &&
     ((!delegationsQuery.isLoading && (delegationsQuery.isError || delegations.length === 0)) ||
       (delegationsQuery.isLoading && listeTropLente))
-  const useDelegationList = !listUnavailable
+  const useDelegationList = !listUnavailable && !saisieLibreDemandee
   const [address, setAddress] = useState(remembered?.address ?? '')
   const [note, setNote] = useState('')
   // Un seul moyen de paiement : plus rien à choisir, plus rien à téléverser.
@@ -2088,6 +2105,29 @@ export default function OrderPage() {
                           className={inputCls}
                         />
                       )}
+                      {/* LA PORTE DE SORTIE. La liste est en alphabet latin,
+                          même en arabe : une cliente qui ne reconnaît pas le
+                          nom de sa délégation restait bloquée sur le seul
+                          champ obligatoire à vocabulaire fermé. Le serveur
+                          accepte une ville écrite à la main et la rapproche
+                          ensuite. Discrète : elle ne doit pas détourner
+                          celles qui trouvent très bien leur délégation. */}
+                      {useDelegationList && !!governorate && !delegationsQuery.isLoading && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGovSaisieLibre(governorate)
+                            // La délégation choisie ne veut plus rien dire :
+                            // on repart d'une ville vide, à écrire.
+                            setDelegationId('')
+                            setCity('')
+                            saveDraft({ delegationId: '', city: '' })
+                          }}
+                          className="mt-1.5 text-xs font-light text-[#faf6f3]/60 underline underline-offset-2 transition-colors hover:text-[#faf6f3]"
+                        >
+                          {isAr ? 'ما لقيتش معتمديتي — نكتبها بيدي' : 'Je ne trouve pas ma délégation — l’écrire à la main'}
+                        </button>
+                      )}
                       {hintFor('f-city')}
                     </div>
                     <div>
@@ -2140,7 +2180,13 @@ export default function OrderPage() {
                     <span className="font-display text-2xl text-[#b8912e]">{formatPriceDT(total, lang)}</span>
                   </div>
                   {/* Jamais grisé, sauf pendant l'envoi : voir firstMissing. */}
-                  <div id="cl-submit" ref={attachSubmit} className="mt-5">
+                  {/* scroll-mt : après un refus du serveur, on ramène la
+                      cliente ici (voir scrollToId('cl-submit')). Sans marge
+                      de défilement, l'ancre se colle en haut de l'écran et
+                      le message d'erreur, qui est JUSTE EN DESSOUS du
+                      bouton, reste hors de vue — elle ne sait pas ce qu'on
+                      lui reproche. */}
+                  <div id="cl-submit" ref={attachSubmit} className="mt-5 scroll-mt-20 md:scroll-mt-24">
                     {/* Le montant et le mode de paiement sont DANS le bouton :
                         c'est la dernière chose que le client lit avant
                         d'appuyer, et c'est là que la question « combien, et

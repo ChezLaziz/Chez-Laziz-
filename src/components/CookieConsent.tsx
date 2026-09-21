@@ -39,7 +39,14 @@ export default function CookieConsent() {
       return
     }
     const ro = new ResizeObserver(([entry]) => {
-      document.documentElement.style.setProperty(HEIGHT_VAR, `${entry.contentRect.height}px`)
+      // LA BOÎTE DE BORDURE, pas la boîte de contenu. `contentRect` exclut
+      // le padding et la bordure du bandeau : la variable annonçait 44 px
+      // pour 65 px réels, et la barre flottante « Commander » se plaçait
+      // 21 px trop bas — son bord passait sous le bandeau, là où le pouce
+      // arrive. Le repli couvre Safari avant 15.4, qui n'expose pas
+      // borderBoxSize.
+      const hauteur = entry.borderBoxSize?.[0]?.blockSize ?? el.getBoundingClientRect().height
+      document.documentElement.style.setProperty(HEIGHT_VAR, `${hauteur}px`)
     })
     ro.observe(el)
     return () => {
