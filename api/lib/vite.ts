@@ -4,6 +4,13 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import fs from "fs";
 import path from "path";
 import { isKnownPublicPath } from "@contracts/routes";
+import {
+  ORDER_PREVIEW_AR,
+  ORDER_PREVIEW_FR,
+  previewUrl,
+  socialPreviewFor,
+  type SocialPreview,
+} from "@contracts/socialPreview";
 
 type App = Hono<{ Bindings: HttpBindings }>;
 
@@ -31,26 +38,59 @@ type App = Hono<{ Bindings: HttpBindings }>;
  * s'affiche vraiment. */
 const PRELOAD_HERO = /\s*<link rel="preload" as="image"[^>]*>/g;
 
-/** L'adresse que ce HTML déclare être — écrite en dur sur l'accueil.
+/** Ce que le HTML brut déclare être — écrit en dur pour l'accueil français.
  *
- * index.html est servi tel quel pour toutes les routes, y compris /commande.
- * Le robot d'aperçu de WhatsApp et de Facebook n'exécute PAS le JavaScript :
- * il lit ce HTML brut. Quand le patron colle le lien de sa page de commande
- * dans un groupe, l'aperçu annonçait donc l'accueil, et og:url renvoyait
- * carrément Facebook vers l'accueil — le clic n'arrivait jamais sur la page
- * qui vend. On réécrit les deux adresses pour la page réellement servie ;
- * useSEO les corrige déjà côté navigateur, mais trop tard pour un robot. */
+ * Les robots d'aperçu de WhatsApp et de Facebook n'exécutent PAS le
+ * JavaScript : ils lisent ce HTML, identique pour toutes les routes. Le lien
+ * de la page de commande collé dans un groupe s'annonçait donc comme
+ * l'accueil, et og:url y renvoyait carrément le clic. useSEO corrige tout
+ * cela côté navigateur — trop tard pour un robot. Voir
+ * contracts/socialPreview.ts, qui tient les mêmes chaînes pour les deux côtés.
+ *
+ * PAR ROUTE, et pas une seule fois pour les deux : les publicités pointent
+ * vers /ar/commande, qui annonçait l'adresse de la page FRANÇAISE. */
 const OG_URL = /(<meta property="og:url" content=")[^"]*(")/;
 const CANONICAL = /(<link rel="canonical" href=")[^"]*(")/;
+const OG_TITLE = /(<meta property="og:title" content=")[^"]*(")/;
+const OG_DESCRIPTION = /(<meta property="og:description" content=")[^"]*(")/;
+const OG_LOCALE = /(<meta property="og:locale" content=")[^"]*(")/;
+const TWITTER_TITLE = /(<meta name="twitter:title" content=")[^"]*(")/;
+const TWITTER_DESCRIPTION = /(<meta name="twitter:description" content=")[^"]*(")/;
+const META_DESCRIPTION = /(<meta name="description" content=")[^"]*(")/;
+const TITRE = /(<title>)[^<]*(<\/title>)/;
+
+/** Une valeur qui part dans un attribut HTML. Les textes viennent de nous,
+ * pas d'un client — mais une apostrophe typographique ou une esperluette
+ * mal échappée casserait la balise en silence, et un aperçu cassé ne se
+ * remarque que quand un client se plaint. */
+function echapperHtml(valeur: string): string {
+  return valeur
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function appliquerApercu(html: string, apercu: SocialPreview): string {
+  const url = echapperHtml(previewUrl(apercu));
+  const titre = echapperHtml(apercu.title);
+  const description = echapperHtml(apercu.description);
+  return html
+    .replace(OG_URL, `$1${url}$2`)
+    .replace(CANONICAL, `$1${url}$2`)
+    .replace(OG_TITLE, `$1${titre}$2`)
+    .replace(TWITTER_TITLE, `$1${titre}$2`)
+    .replace(OG_DESCRIPTION, `$1${description}$2`)
+    .replace(TWITTER_DESCRIPTION, `$1${description}$2`)
+    .replace(META_DESCRIPTION, `$1${description}$2`)
+    .replace(OG_LOCALE, `$1${apercu.locale}$2`)
+    .replace(TITRE, `$1${echapperHtml(apercu.title)}$2`);
+}
 
 const ORDER_CHUNK = /^OrderPage-.*\.js$/;
 
 function estAccueil(pathname: string): boolean {
   return pathname === "/" || pathname === "/ar" || pathname === "/ar/";
-}
-
-function estCommande(pathname: string): boolean {
-  return pathname === "/commande" || pathname === "/ar/commande";
 }
 
 /** Le fichier de code de la page de commande, tel que Vite l'a nommé.
@@ -68,24 +108,29 @@ export function chunkCommande(distPath: string): string | null {
 
 export function spaFallback(indexHtml: string, chunkOrderPage?: string | null) {
   const sansHero = indexHtml.replace(PRELOAD_HERO, "");
-  // DÉRIVÉ DE sansHero, jamais de indexHtml : /commande ne doit pas
-  // retrouver le préchargement de la photo d'accueil qu'on vient d'ôter.
+  // DÉRIVÉ DE sansHero, jamais de indexHtml : les pages de commande ne
+  // doivent pas retrouver le préchargement de la photo d'accueil.
   //
   // Le navigateur ne découvre le code de la page de commande qu'après avoir
   // téléchargé ET exécuté le bundle principal (le découpage est un import()
   // dans src/App.tsx) : un aller-retour de plus avant le premier prix, sur
   // la seule page que la publicité paie. `crossorigin` est obligatoire —
   // l'entrée en porte un, et sans lui le navigateur télécharge deux fois.
-  const commande = (chunkOrderPage
+  const avecChunk = chunkOrderPage
     ? sansHero.replace("</head>", `<link rel="modulepreload" crossorigin href="${chunkOrderPage}"></head>`)
-    : sansHero
-  )
-    .replace(OG_URL, "$1https://chezlaziz.com/commande$2")
-    .replace(CANONICAL, "$1https://chezlaziz.com/commande$2");
+    : sansHero;
+  // Une variante PAR page d'aperçu, calculée une fois au démarrage.
+  const apercus = new Map<string, string>();
+  for (const apercu of [ORDER_PREVIEW_FR, ORDER_PREVIEW_AR]) {
+    apercus.set(apercu.path, appliquerApercu(avecChunk, apercu));
+  }
 
   return (c: Context) => {
     const pathname = new URL(c.req.url).pathname;
-    const html = estAccueil(pathname) ? indexHtml : estCommande(pathname) ? commande : sansHero;
+    const apercu = socialPreviewFor(pathname);
+    const html = estAccueil(pathname)
+      ? indexHtml
+      : (apercu && apercus.get(apercu.path)) ?? sansHero;
     // Sans directive explicite, certains navigateurs/proxys peuvent mettre en
     // cache ce HTML et continuer à référencer d'anciens bundles hashés après
     // un déploiement — on force donc une revalidation systématique.
