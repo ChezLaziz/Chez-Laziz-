@@ -14,6 +14,7 @@ const unmarkMetaPurchaseReported = vi.fn(async () => undefined);
 // « signalé à Meta » est gardée ou rendue. Un mock qui renvoie undefined
 // ferait démarquer toutes les commandes des tests, en silence.
 const sendMetaPurchaseEvent = vi.fn(async () => true);
+const sendMetaLeadEvent = vi.fn(async () => true);
 
 vi.mock("./queries/products", () => ({ listAvailableProducts }));
 vi.mock("./queries/orders", () => ({
@@ -34,7 +35,7 @@ vi.mock("./lib/metaConversionsApi", async () => {
   const actual = await vi.importActual<typeof import("./lib/metaConversionsApi")>(
     "./lib/metaConversionsApi",
   );
-  return { ...actual, sendMetaPurchaseEvent };
+  return { ...actual, sendMetaPurchaseEvent, sendMetaLeadEvent };
 });
 
 const { ordersRouter } = await import("./ordersRouter");
@@ -109,6 +110,37 @@ describe("orders.create — server-side price recalculation", () => {
     expect(createOrder).toHaveBeenCalledWith(
       expect.objectContaining({ subtotalMillimes: 16000, totalMillimes: 24000 }),
     );
+  });
+
+  it("dit « Lead » à Meta DEPUIS LE SERVEUR, avec le même identifiant que le navigateur", async () => {
+    // Le Pixel ne se charge qu'après « Accepter » : sept visiteuses sur dix
+    // n'acceptent jamais, et leur Lead de navigateur n'existe pas. Sans cet
+    // envoi serveur, Meta ne verrait qu'une commande sur trois — sous le
+    // seuil des 50 conversions hebdomadaires dont il a besoin pour
+    // apprendre. Le même event_id que src/pages/OrderPage.tsx laisse Meta
+    // reconnaître les deux envois comme un seul.
+    await caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 2 }] });
+    expect(sendMetaLeadEvent).toHaveBeenCalledTimes(1);
+    const envoye = (sendMetaLeadEvent.mock.calls as unknown as [Record<string, unknown>][]).at(-1)![0];
+    expect(envoye.orderId).toBe(42);
+    // 2 × 8 DT de makroudh — PAS les 8 DT de livraison.
+    expect(envoye.subtotalMillimes).toBe(16000);
+    expect(envoye.contentIds).toEqual(["1"]);
+    expect(envoye.quantities).toEqual([2]);
+  });
+
+  it("ne redit pas « Lead » quand la clé d'idempotence rejoue une commande déjà enregistrée", async () => {
+    // Double appui, reprise réseau : la commande existe déjà, elle a déjà
+    // sonné et déjà été dite à Meta. Un second Lead ferait croire à deux
+    // demandes — exactement le défaut qu'on a corrigé sur Telegram.
+    createOrder.mockResolvedValueOnce({ id: 42, rejouee: true as const });
+    await caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 1 }] });
+    expect(sendMetaLeadEvent).not.toHaveBeenCalled();
+  });
+
+  it("n'envoie JAMAIS « Purchase » à la création — personne n'a encore payé", async () => {
+    await caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 1 }] });
+    expect(sendMetaPurchaseEvent).not.toHaveBeenCalled();
   });
 
   it("rejects an order for a product that isn't in the available catalog", async () => {

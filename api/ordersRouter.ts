@@ -16,7 +16,8 @@ import type { OrderItem } from "./queries/orders";
 import { listAvailableProducts } from "./queries/products";
 import { notifyAdminNewOrder } from "./lib/email";
 import { notifyAdminNewOrderTelegram } from "./lib/telegram";
-import { maybeReportMetaPurchase, transitionOrderStatus } from "./lib/orderTransition";
+import { maybeReportMetaPurchase, metaContentIds, transitionOrderStatus } from "./lib/orderTransition";
+import { sendMetaLeadEvent } from "./lib/metaConversionsApi";
 import { applyKitchenRelease, refreshKitchenBoard } from "./lib/telegramKitchen";
 import { parseKitchenItems } from "./queries/kitchen";
 import { currentKitchenLines } from "./queries/kitchen";
@@ -272,16 +273,47 @@ export const ordersRouter = createRouter({
       // Notifications : sans attendre, et sans jamais faire échouer la
       // commande si un envoi échoue (voir api/lib/email.ts et
       // api/lib/telegram.ts). Telegram sonne sur le téléphone dans la
-      // seconde ; l'e-mail reste la trace écrite. Le Meta
-      // Conversions API n'est PAS déclenché ici : une commande qui vient
-      // d'être créée n'est ni confirmée ni payée — voir maybeReportMetaPurchase,
-      // appelée seulement depuis setStatus/setPaymentStatus.
+      // seconde ; l'e-mail reste la trace écrite. « Purchase » n'est PAS
+      // déclenché ici : une commande qui vient d'être créée n'est ni
+      // confirmée ni payée — voir maybeReportMetaPurchase, appelée
+      // seulement depuis setStatus/setPaymentStatus.
       // `rejouee` : la clé d'idempotence a retrouvé une commande déjà
       // enregistrée (double appui, reprise réseau). Elle a déjà sonné une
       // fois ; la notifier de nouveau ferait croire à deux commandes.
       if (order && !("rejouee" in order && order.rejouee)) {
         void notifyAdminNewOrder(order);
         void notifyAdminNewOrderTelegram(order);
+        // « Lead » — une demande ferme, pas un achat — part d'ICI, du
+        // serveur, en plus du navigateur.
+        //
+        // Le Pixel ne se charge qu'après « Accepter » : sur trente jours,
+        // 9 631 clics payés n'ont produit que 2 900 vues de page. Sept
+        // visiteuses sur dix ne consentent jamais, et leur Lead de
+        // navigateur n'existe pas. Optimiser la campagne sur ce signal
+        // amputé des deux tiers la laisserait sous le seuil des cinquante
+        // conversions hebdomadaires dont Meta a besoin pour apprendre.
+        //
+        // Même event_id que le navigateur (`lead-order-<id>`) : Meta
+        // reconnaît les deux envois comme un seul événement. La garde
+        // `rejouee` ci-dessus empêche déjà un second envoi sur un double
+        // appui, et la déduplication de Meta couvre le reste.
+        void sendMetaLeadEvent({
+          orderId: order.id,
+          phone: order.phone,
+          // Hors livraison, comme partout ailleurs dans l'entonnoir.
+          subtotalMillimes: order.subtotalMillimes,
+          contentIds: metaContentIds(items).filter(Boolean),
+          quantities: items.filter((i) => metaContentIds([i])[0]).map((i) => i.qty),
+          customerName: order.customerName,
+          city: order.city,
+          governorate: order.governorate,
+          signals: {
+            fbc: order.metaFbc,
+            fbp: order.metaFbp,
+            clientIp: order.metaClientIp,
+            clientUserAgent: order.metaClientUserAgent,
+          },
+        });
       }
       return order;
     }),
