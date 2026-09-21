@@ -163,15 +163,46 @@ function matchFields(ev: MetaPurchaseEvent): Record<string, string[]> {
  * ne saurait pas qu'il doit rendre la réservation, et une panne réseau de
  * trois secondes effacerait la vente des yeux de Meta pour toujours. */
 export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<boolean> {
+  return envoyer("Purchase", `order-${ev.orderId}`, ev);
+}
+
+/** « Lead » — la commande vient d'être ACCEPTÉE par le serveur — envoyé
+ * depuis le serveur, EN PLUS du navigateur.
+ *
+ * LE PIXEL NE SE CHARGE QU'APRÈS « Accepter » (voir src/hooks/useTrackVisit.ts).
+ * Sur trente jours, la publicité a payé 9 631 clics et le Pixel n'a compté
+ * que 2 900 vues de page : sept visiteuses sur dix n'acceptent jamais la
+ * bannière, et AUCUN de leurs événements de navigateur n'existe pour Meta.
+ * Un Lead qui ne vit que dans le navigateur ne rapporterait donc qu'environ
+ * une commande sur trois — très en dessous des cinquante par semaine dont
+ * Meta a besoin pour sortir de sa phase d'apprentissage. Optimiser une
+ * campagne sur un signal amputé des deux tiers, c'est lui apprendre le
+ * contraire de ce qu'on veut.
+ *
+ * Le serveur, lui, connaît CHAQUE commande. Il envoie donc le même
+ * événement, avec le MÊME event_id que le navigateur
+ * (`lead-order-<id>`, voir src/pages/OrderPage.tsx) : Meta reconnaît les
+ * deux comme un seul et ne compte jamais deux fois.
+ *
+ * Le consentement reste respecté à la lettre : sans fbc ni fbp, il ne part
+ * que le téléphone haché et le pays — exactement comme pour Purchase. */
+export async function sendMetaLeadEvent(ev: MetaPurchaseEvent): Promise<boolean> {
+  return envoyer("Lead", `lead-order-${ev.orderId}`, ev);
+}
+
+async function envoyer(
+  eventName: "Purchase" | "Lead",
+  eventId: string,
+  ev: MetaPurchaseEvent,
+): Promise<boolean> {
   if (!isMetaConversionsApiConfigured()) {
-    console.log(`[meta-capi] non configuré — commande #${ev.orderId} non envoyée à Meta`);
+    console.log(`[meta-capi] non configuré — ${eventName} #${ev.orderId} non envoyé à Meta`);
     return false;
   }
-  const eventId = `order-${ev.orderId}`;
   const body = {
     data: [
       {
-        event_name: "Purchase",
+        event_name: eventName,
         event_time: Math.floor(Date.now() / 1000),
         event_id: eventId,
         event_source_url: ev.sourceUrl ?? "https://chezlaziz.com/commande",
@@ -223,13 +254,13 @@ export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<bool
       },
     );
     if (!res.ok) {
-      console.error(`[meta-capi] échec (${res.status}) pour la commande #${ev.orderId}: ${await res.text()}`);
+      console.error(`[meta-capi] échec (${res.status}) — ${eventName} #${ev.orderId}: ${await res.text()}`);
       return false;
     }
-    console.log(`[meta-capi] Purchase envoyé pour la commande #${ev.orderId} (event_id=${eventId})`);
+    console.log(`[meta-capi] ${eventName} envoyé pour la commande #${ev.orderId} (event_id=${eventId})`);
     return true;
   } catch (err) {
-    console.error(`[meta-capi] erreur réseau pour la commande #${ev.orderId}:`, err);
+    console.error(`[meta-capi] erreur réseau — ${eventName} #${ev.orderId}:`, err);
     return false;
   }
 }
