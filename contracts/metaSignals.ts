@@ -29,6 +29,40 @@ export type MetaUserSignals = {
   clientUserAgent?: string;
 };
 
+/** Les mêmes signaux, nommés comme les COLONNES de la commande.
+ *
+ * LE BOGUE QUE CETTE FONCTION EXISTE POUR EMPÊCHER. metaUserSignals rend
+ * `fbc`/`fbp`/`clientIp`/`clientUserAgent` ; la table des commandes, elle,
+ * s'appelle `metaFbc`/`metaFbp`/`metaClientIp`/`metaClientUserAgent`. Le
+ * routeur étalait l'un dans l'autre — `...signals` — et les quatre valeurs
+ * tombaient dans le vide à chaque commande. TypeScript ne voyait rien : les
+ * quatre colonnes sont facultatives, et un étalement ne déclenche pas le
+ * contrôle des propriétés en trop.
+ *
+ * Résultat, mesuré dans le compte : ZÉRO commande portait fbc ou fbp, et
+ * Meta n'a attribué AUCUN achat à une publicité en trente jours, alors
+ * qu'il avait bien reçu soixante-deux achats côté serveur. Sans fbc — le
+ * cookie qui porte le clic publicitaire — Meta reçoit la vente mais ne sait
+ * pas de quelle annonce elle vient. Le budget était optimisé à l'aveugle.
+ *
+ * Une seule fonction nommée fait la traduction, et un test verrouille les
+ * quatre noms. Ne jamais étaler MetaUserSignals directement dans une
+ * commande. */
+export function metaSignalsForOrder(signals: MetaUserSignals | null | undefined): {
+  metaFbc?: string;
+  metaFbp?: string;
+  metaClientIp?: string;
+  metaClientUserAgent?: string;
+} {
+  if (!signals) return {};
+  return {
+    ...(signals.fbc ? { metaFbc: signals.fbc } : {}),
+    ...(signals.fbp ? { metaFbp: signals.fbp } : {}),
+    ...(signals.clientIp ? { metaClientIp: signals.clientIp } : {}),
+    ...(signals.clientUserAgent ? { metaClientUserAgent: signals.clientUserAgent } : {}),
+  };
+}
+
 const MAX_FBC = 255;
 const MAX_FBP = 100;
 const MAX_UA = 400;

@@ -65,6 +65,20 @@ const CATALOG_COMPLET = [
 const ctx = { req: new Request("http://localhost"), resHeaders: new Headers() };
 const caller = ordersRouter.createCaller(ctx);
 
+/** Une cliente venue d'une publicité : le Pixel a posé ses deux cookies. */
+function callerAvecCookiesMeta() {
+  return ordersRouter.createCaller({
+    req: new Request("http://localhost", {
+      headers: {
+        cookie: "_fbp=fb.1.1726900000.1234567890; _fbc=fb.1.1726900000.IwAR_abc",
+        "x-forwarded-for": "197.15.1.1, 10.0.0.1",
+        "user-agent": "Mozilla/5.0 (iPhone)",
+      },
+    }),
+    resHeaders: new Headers(),
+  });
+}
+
 const baseInput = {
   customerName: "Amine",
   phone: "23691039",
@@ -112,6 +126,47 @@ describe("orders.create — server-side price recalculation", () => {
     expect(createOrder).toHaveBeenCalledWith(
       expect.objectContaining({ subtotalMillimes: 16000, totalMillimes: 24000 }),
     );
+  });
+
+  it("ENREGISTRE les cookies publicitaires sur la commande — le lien entre l'annonce et la vente", async () => {
+    // LE BOGUE QUI A COÛTÉ TRENTE JOURS D'ATTRIBUTION. Le routeur étalait
+    // `...signals` dans createOrder, mais le contrat nomme ses champs
+    // fbc/fbp et la table les nomme metaFbc/metaFbp. Les quatre valeurs
+    // tombaient dans le vide à chaque commande, sans erreur : les colonnes
+    // sont facultatives et un étalement ne déclenche pas le contrôle des
+    // propriétés en trop. Zéro commande a jamais porté fbc, et Meta n'a
+    // attribué AUCUN achat à une publicité en trente jours — alors qu'il
+    // avait bien reçu soixante-deux achats côté serveur. Sans fbc, Meta
+    // reçoit la vente mais ignore de quelle annonce elle vient.
+    await callerAvecCookiesMeta().create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 1 }] });
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metaFbc: "fb.1.1726900000.IwAR_abc",
+        metaFbp: "fb.1.1726900000.1234567890",
+        metaClientIp: "197.15.1.1",
+        metaClientUserAgent: "Mozilla/5.0 (iPhone)",
+      }),
+    );
+  });
+
+  it("et les fait suivre jusqu'à « Lead » — sinon Meta ne sait pas quelle annonce a vendu", async () => {
+    createOrder.mockImplementation(async (data: unknown) => ({ id: 42, ...(data as object) }));
+    await callerAvecCookiesMeta().create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 1 }] });
+    const envoye = (sendMetaLeadEvent.mock.calls as unknown as [Record<string, unknown>][]).at(-1)![0];
+    expect(envoye.signals).toEqual(
+      expect.objectContaining({
+        fbc: "fb.1.1726900000.IwAR_abc",
+        fbp: "fb.1.1726900000.1234567890",
+      }),
+    );
+  });
+
+  it("sans cookies — cliente qui a refusé — aucune de ces quatre colonnes n'est posée", async () => {
+    await caller.create({ ...baseInput, items: [{ productId: 1, weightKg: 1, qty: 1 }] });
+    const ecrit = (createOrder.mock.calls as unknown as [Record<string, unknown>][]).at(-1)![0];
+    for (const col of ["metaFbc", "metaFbp", "metaClientIp", "metaClientUserAgent"]) {
+      expect(ecrit).not.toHaveProperty(col);
+    }
   });
 
   it("dit « Lead » à Meta DEPUIS LE SERVEUR, avec le même identifiant que le navigateur", async () => {
