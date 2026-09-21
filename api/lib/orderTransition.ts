@@ -54,6 +54,9 @@ export async function maybeReportMetaPurchase(order: {
   metaFbp?: string | null;
   metaClientIp?: string | null;
   metaClientUserAgent?: string | null;
+  /** L'heure de la commande : c'est elle qui suit le clic publicitaire,
+   * pas la livraison. Voir eventTimeSeconds. */
+  createdAt?: Date | null;
 }): Promise<void> {
   if (!shouldReportMetaPurchase(order)) return;
   if (!(await markMetaPurchaseReported(order.id))) return;
@@ -89,6 +92,9 @@ export async function maybeReportMetaPurchase(order: {
     customerName: order.customerName,
     city: order.city,
     governorate: order.governorate,
+    // Le colis part le lendemain, mais la vente date de la commande : sans
+    // cela, Meta ne rapprocherait plus la vente du clic qui l'a causée.
+    orderedAt: order.createdAt,
   })
     // Toujours sans await : un aller-retour vers Meta, sans délai maximum,
     // sur le chemin du bouton ✅ de Telegram et du tableau de bord ferait
