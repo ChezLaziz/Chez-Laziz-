@@ -391,6 +391,9 @@ function makeOrder(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: 42,
     phone: "23691039",
+    // 2 × 8 DT de makroudh + 8 DT de livraison : c'est le SOUS-total que
+    // Meta doit recevoir, pas le total.
+    subtotalMillimes: 16000,
     totalMillimes: 24000,
     items: JSON.stringify([
       { kind: "product", productId: 1, name: "Makroudh aux Dattes", weightKg: 1, qty: 2, unitPriceMillimes: 8000 },
@@ -419,8 +422,22 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
     await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
     expect(markMetaPurchaseReported).toHaveBeenCalledWith(42);
     expect(sendMetaPurchaseEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ orderId: 42, phone: "23691039", totalMillimes: 24000, contentIds: ["1"] }),
+      expect.objectContaining({ orderId: 42, phone: "23691039", contentIds: ["1"] }),
     );
+  });
+
+  it("envoie la valeur HORS livraison — les 8 DT du livreur ne sont pas du chiffre d'affaires", async () => {
+    // Les compter gonflait le ROAS rapporté par Meta (24 au lieu de 16, soit
+    // +50 % sur ce panier) et faussait l'enchère à la valeur. C'est aussi la
+    // base qu'utilisent AddToCart, InitiateCheckout et Lead côté navigateur.
+    updateOrderStatus.mockResolvedValue(makeOrder({ status: "en_preparation" }));
+    await caller.setStatus({ token: "t", id: 42, status: "en_preparation" });
+    const appels = sendMetaPurchaseEvent.mock.calls as unknown as [
+      { subtotalMillimes: number },
+    ][];
+    const envoye = appels.at(-1)![0];
+    expect(envoye.subtotalMillimes).toBe(16000);
+    expect(envoye).not.toHaveProperty("totalMillimes");
   });
 
   it("n'envoie rien si la commande est annulée directement", async () => {

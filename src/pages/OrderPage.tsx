@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { ORDER_PREVIEW_AR, ORDER_PREVIEW_FR } from '@contracts/socialPreview'
 import { trpc } from '@/providers/trpc'
 import { detectDevice, getAttribution } from '@/lib/attribution'
 import { useCart, type CustomLine } from '@/providers/cart'
@@ -301,23 +302,17 @@ let recuDejaAffiche = false
 export default function OrderPage() {
   const lang = useLang()
   const isAr = lang === 'ar'
-  useSEO(
-    isAr
-      ? {
-          title: 'اطلبوا — Chez Laziz | مقروض بالوزن، حزم جاهزة وحزمة على المقاس',
-          description:
-            'اطلبوا مقروض Chez Laziz: بالوزن (500 غ إلى 2.5 كغ)، حزم لعزيز الملكية والفاخرة والشهية والكلاسيكية، أو حزمة على مقاسكم (4 × 500 غ). توصيل في جميع أنحاء تونس خلال 24 ساعة، الدفع نقدًا عند التسليم.',
-          path: '/ar/commande',
-          breadcrumb: 'اطلبوا',
-        }
-      : {
-          title: 'Commander — Chez Laziz | Makroudh au poids, packs et pack sur mesure',
-          description:
-            'Commandez vos makroudh Chez Laziz : à la carte (500 g à 2,5 kg), packs Laziz VIP, Premium, Délice, Classique ou pack sur mesure (4 × 500 g). Livraison partout en Tunisie sous 24h, paiement en espèces à la livraison.',
-          path: '/commande',
-          breadcrumb: 'Commander',
-        },
-  )
+  // Titre, description et chemin viennent de contracts/socialPreview.ts —
+  // les mêmes chaînes que le serveur écrit dans le HTML brut pour les robots
+  // d'aperçu de WhatsApp et de Facebook. Deux copies finiraient par diverger,
+  // et personne ne regarde jamais un aperçu depuis le site.
+  const apercu = isAr ? ORDER_PREVIEW_AR : ORDER_PREVIEW_FR
+  useSEO({
+    title: apercu.title,
+    description: apercu.description,
+    path: apercu.path,
+    breadcrumb: isAr ? 'اطلبوا' : 'Commander',
+  })
   const { data: products, isLoading, isError: catalogError } = trpc.products.list.useQuery()
   const createOrder = trpc.orders.create.useMutation()
   const sendMessage = trpc.contact.send.useMutation()
@@ -992,8 +987,15 @@ export default function OrderPage() {
     if (checkoutStartedRef.current || items.length === 0) return
     checkoutStartedRef.current = true
     track('begin_checkout', { value: total / 1000, items: analyticsItems() })
+    // HORS LIVRAISON, comme AddToCart juste avant et comme Lead juste après.
+    // InitiateCheckout envoyait le total livraison COMPRISE : sur un panier
+    // à un seul article de 8 DT, Meta voyait 8 puis 16, et croyait le panier
+    // doublé entre deux gestes qui n'ont rien ajouté. Les 8 DT de livraison
+    // ne sont pas du chiffre d'affaires — ils partent au livreur, et le
+    // tableau de bord les exclut déjà. Les inclure gonfle le ROAS d'un quart
+    // sur un petit panier et fausse l'enchère à la valeur.
     trackMeta('InitiateCheckout', {
-      value: total / 1000,
+      value: subtotal / 1000,
       contents: metaContents(),
     })
   }
@@ -1085,6 +1087,11 @@ export default function OrderPage() {
           // Même règle que pour l'écran : le montant écrit au client est
           // celui que le serveur a enregistré.
           const totalReel = order?.totalMillimes ?? total
+          // Hors livraison : la valeur que Meta doit apprendre (voir
+          // InitiateCheckout plus haut). Le serveur l'enregistre, on ne la
+          // déduit pas — le jour où les frais changent, une soustraction
+          // rapporterait un chiffre que la facture ne confirme pas.
+          const sousTotalReel = order?.subtotalMillimes ?? subtotal
           const text = isAr
             ? `مرحبًا Chez Laziz! الطلب رقم ${order?.id ?? ''} — ${name.trim()} :\n${snapshot
                 .map((l) => `• ${l.label}${l.contents.length ? ` : ${l.contents.join(', ')}` : ''}`)
@@ -1118,9 +1125,13 @@ export default function OrderPage() {
           // pour qu'un rechargement ou un double envoi ne le compte pas deux
           // fois. Ce n'est pas un achat et ça ne prétend pas l'être.
           if (order?.id) {
+            // Le SOUS-total du serveur : même base que AddToCart et
+            // InitiateCheckout, et même base que Purchase côté serveur.
+            // `subtotalMillimes` est ce que le serveur a réellement
+            // enregistré, jamais une soustraction faite ici.
             trackMeta(
               'Lead',
-              { value: totalReel / 1000, contents: metaContents() },
+              { value: sousTotalReel / 1000, contents: metaContents() },
               `lead-order-${order.id}`,
             )
           }

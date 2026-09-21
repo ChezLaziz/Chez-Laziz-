@@ -68,8 +68,15 @@ describe("SPA fallback (production) — URL inconnues", () => {
 // d'en-tête, l'adresse déclarée, et le préchargement de la photo d'accueil.
 const HTML_PROD = [
   "<!doctype html><html><head>",
+  "<title>Chez Laziz — عند لعزيز · Makroudh de Kairouan</title>",
+  '<meta name="description" content="Pâtisserie artisanale à Kairouan." />',
   '<link rel="canonical" href="https://chezlaziz.com/" />',
+  '<meta property="og:title" content="Chez Laziz — عند لعزيز · Makroudh de Kairouan" />',
+  '<meta property="og:description" content="Pâtisserie artisanale à Kairouan." />',
   '<meta property="og:url" content="https://chezlaziz.com/" />',
+  '<meta property="og:locale" content="fr_FR" />',
+  '<meta name="twitter:title" content="Chez Laziz — عند لعزيز · Makroudh de Kairouan" />',
+  '<meta name="twitter:description" content="Pâtisserie artisanale à Kairouan." />',
   '<link rel="preload" as="image" href="/images/hero-mobile.webp" />',
   "</head><body><div id=\"root\"></div></body></html>",
 ].join("");
@@ -101,15 +108,36 @@ describe("SPA fallback — la page que la publicité paie", () => {
     expect(await (await app.request("/")).text()).toContain('rel="preload" as="image"');
   });
 
-  it("annonce la bonne adresse aux robots d'aperçu WhatsApp/Facebook", async () => {
+  it("annonce CHACUNE sa propre adresse aux robots d'aperçu WhatsApp/Facebook", async () => {
+    // Les publicités pointent vers /ar/commande : elle annonçait l'adresse
+    // de la page FRANÇAISE, et Facebook y renvoyait le clic.
     const app = servir(HTML_PROD, null);
     for (const chemin of ["/commande", "/ar/commande"]) {
       const html = await (await app.request(chemin)).text();
-      expect(html, chemin).toContain('<meta property="og:url" content="https://chezlaziz.com/commande" />');
-      expect(html, chemin).toContain('<link rel="canonical" href="https://chezlaziz.com/commande" />');
+      expect(html, chemin).toContain(`<meta property="og:url" content="https://chezlaziz.com${chemin}" />`);
+      expect(html, chemin).toContain(`<link rel="canonical" href="https://chezlaziz.com${chemin}" />`);
     }
     // Ailleurs, rien ne change : useSEO corrige côté navigateur.
     expect(await (await app.request("/")).text()).toContain('content="https://chezlaziz.com/"');
+  });
+
+  it("donne à chaque page de commande son propre titre, sa description et sa langue", async () => {
+    const app = servir(HTML_PROD, null);
+    const fr = await (await app.request("/commande")).text();
+    expect(fr).toContain("<title>Commander — Chez Laziz");
+    expect(fr).toContain('<meta property="og:locale" content="fr_FR" />');
+    expect(fr).toContain("paiement en espèces à la livraison.\" />");
+
+    const ar = await (await app.request("/ar/commande")).text();
+    expect(ar).toContain("<title>اطلبوا — Chez Laziz");
+    expect(ar).toContain('<meta property="og:locale" content="ar_TN" />');
+    expect(ar).toContain('<meta property="og:description" content="اطلبوا مقروض Chez Laziz');
+    // twitter: doit suivre og:, sinon l'aperçu diffère selon le réseau.
+    expect(ar).toContain('<meta name="twitter:title" content="اطلبوا — Chez Laziz');
+
+    // L'accueil garde les siens.
+    const accueil = await (await app.request("/")).text();
+    expect(accueil).toContain("<title>Chez Laziz — عند لعزيز · Makroudh de Kairouan</title>");
   });
 
   it("sert quand même la page si le nom du fichier de code est introuvable", async () => {

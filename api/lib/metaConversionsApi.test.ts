@@ -102,7 +102,7 @@ describe("sendMetaPurchaseEvent", () => {
     await sendMetaPurchaseEvent({
       orderId: 1,
       phone: "23691039",
-      totalMillimes: 69900,
+      subtotalMillimes: 69900,
       contentIds: ["pack:vip"],
     });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe("sendMetaPurchaseEvent", () => {
     await sendMetaPurchaseEvent({
       orderId: 42,
       phone: "23691039",
-      totalMillimes: 69900,
+      subtotalMillimes: 69900,
       contentIds: ["pack:vip"],
     });
 
@@ -147,7 +147,7 @@ describe("sendMetaPurchaseEvent", () => {
     await sendMetaPurchaseEvent({
       orderId: 42,
       phone: "23691039",
-      totalMillimes: 69900,
+      subtotalMillimes: 69900,
       contentIds: ["pack:vip"],
       signals: {
         fbc: "fb.1.1719500000000.IwAR0abcdef",
@@ -177,7 +177,7 @@ describe("sendMetaPurchaseEvent", () => {
     await sendMetaPurchaseEvent({
       orderId: 43,
       phone: "23691039",
-      totalMillimes: 1000,
+      subtotalMillimes: 1000,
       contentIds: [],
       signals: { fbc: null, fbp: null, clientIp: null, clientUserAgent: null },
     });
@@ -198,7 +198,7 @@ describe("sendMetaPurchaseEvent", () => {
     // Ne lève jamais, ET dit que ça n'est pas passé : c'est sur cette réponse
     // que l'appelant rend la réservation « signalé à Meta ».
     await expect(
-      sendMetaPurchaseEvent({ orderId: 7, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
+      sendMetaPurchaseEvent({ orderId: 7, phone: "23691039", subtotalMillimes: 1000, contentIds: [] }),
     ).resolves.toBe(false);
   });
 
@@ -207,7 +207,7 @@ describe("sendMetaPurchaseEvent", () => {
     process.env.META_CONVERSIONS_API_TOKEN = "secret-token";
     vi.stubGlobal("fetch", vi.fn(async () => new Response("bad token", { status: 401 })));
     await expect(
-      sendMetaPurchaseEvent({ orderId: 8, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
+      sendMetaPurchaseEvent({ orderId: 8, phone: "23691039", subtotalMillimes: 1000, contentIds: [] }),
     ).resolves.toBe(false);
   });
 
@@ -216,12 +216,12 @@ describe("sendMetaPurchaseEvent", () => {
     process.env.META_CONVERSIONS_API_TOKEN = "secret-token";
     vi.stubGlobal("fetch", vi.fn(async () => new Response('{"events_received":1}', { status: 200 })));
     await expect(
-      sendMetaPurchaseEvent({ orderId: 9, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
+      sendMetaPurchaseEvent({ orderId: 9, phone: "23691039", subtotalMillimes: 1000, contentIds: [] }),
     ).resolves.toBe(true);
 
     delete process.env.META_CONVERSIONS_API_TOKEN;
     await expect(
-      sendMetaPurchaseEvent({ orderId: 10, phone: "23691039", totalMillimes: 1000, contentIds: [] }),
+      sendMetaPurchaseEvent({ orderId: 10, phone: "23691039", subtotalMillimes: 1000, contentIds: [] }),
     ).resolves.toBe(false);
   });
 });
@@ -246,7 +246,7 @@ describe("correspondance avancée — ce que Meta reconnaît, ou pas", () => {
     await sendMetaPurchaseEvent({
       orderId: 42,
       phone: "52865521",
-      totalMillimes: 50000,
+      subtotalMillimes: 50000,
       contentIds: ["3", "5"],
       quantities: [1, 2],
       customerName: "Nada Merai",
@@ -278,7 +278,7 @@ describe("correspondance avancée — ce que Meta reconnaît, ou pas", () => {
     process.env.META_CONVERSIONS_API_TOKEN = "tok";
     const fetchMock = vi.fn(async () => ({ ok: true, text: async () => "" }));
     vi.stubGlobal("fetch", fetchMock);
-    await sendMetaPurchaseEvent({ orderId: 1, phone: "23691039", totalMillimes: 8000, contentIds: [] });
+    await sendMetaPurchaseEvent({ orderId: 1, phone: "23691039", subtotalMillimes: 8000, contentIds: [] });
     const ud = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body).data[0].user_data;
     expect(ud.fn).toBeUndefined();
     expect(ud.ln).toBeUndefined();
@@ -292,7 +292,7 @@ describe("correspondance avancée — ce que Meta reconnaît, ou pas", () => {
     process.env.META_TEST_EVENT_CODE = " TEST123 ";
     const fetchMock = vi.fn(async () => ({ ok: true, text: async () => "" }));
     vi.stubGlobal("fetch", fetchMock);
-    await sendMetaPurchaseEvent({ orderId: 1, phone: "23691039", totalMillimes: 8000, contentIds: ["1"] });
+    await sendMetaPurchaseEvent({ orderId: 1, phone: "23691039", subtotalMillimes: 8000, contentIds: ["1"] });
     expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body).test_event_code).toBe("TEST123");
   });
 });
@@ -304,7 +304,7 @@ describe("consentement — ce que Meta reçoit quand le client a refusé les coo
   const commande = {
     orderId: 7,
     phone: "23691039",
-    totalMillimes: 30000,
+    subtotalMillimes: 30000,
     contentIds: ["1"],
     customerName: "Amina Hamdi",
     city: "La Marsa",

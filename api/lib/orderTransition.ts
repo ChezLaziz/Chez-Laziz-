@@ -41,7 +41,8 @@ export function metaContentIds(items: OrderItem[]): string[] {
 export async function maybeReportMetaPurchase(order: {
   id: number;
   phone: string;
-  totalMillimes: number;
+  /** Hors livraison — voir l'appel à sendMetaPurchaseEvent plus bas. */
+  subtotalMillimes: number;
   items: string;
   paymentMethod: "cod" | "d17";
   status: "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
@@ -71,7 +72,15 @@ export async function maybeReportMetaPurchase(order: {
     },
     orderId: order.id,
     phone: order.phone,
-    totalMillimes: order.totalMillimes,
+    // LE SOUS-TOTAL, PAS LE TOTAL. Les 8 DT de livraison ne sont pas du
+    // chiffre d'affaires : ils partent au livreur, et le tableau de bord les
+    // exclut déjà. Les compter dans la valeur de l'achat gonflait le ROAS
+    // que Meta rapporte — d'un quart sur un panier à 30 DT — et faussait
+    // l'enchère à la valeur, qui croyait un petit panier plus rentable
+    // qu'il ne l'est. C'est aussi la même base que AddToCart,
+    // InitiateCheckout et Lead côté navigateur : sans quoi l'entonnoir
+    // change d'unité en cours de route.
+    subtotalMillimes: order.subtotalMillimes,
     // Une ligne sans référence rendait une chaîne VIDE, qui partait telle
     // quelle dans content_ids : Meta la signalait comme référence invalide
     // sur chaque commande contenant une vieille ligne sans `kind`.

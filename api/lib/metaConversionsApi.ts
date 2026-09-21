@@ -95,7 +95,11 @@ export function splitName(fullName: string): { fn: string; ln: string } {
 export type MetaPurchaseEvent = {
   orderId: number;
   phone: string;
-  totalMillimes: number;
+  /** La valeur de la vente, HORS frais de livraison : ceux-ci partent au
+   * livreur et ne sont pas du chiffre d'affaires. Même base que AddToCart,
+   * InitiateCheckout et Lead côté navigateur — un entonnoir qui change
+   * d'unité en cours de route n'apprend rien de juste à Meta. */
+  subtotalMillimes: number;
   contentIds: string[];
   /** Quantité par référence, dans le même ordre que contentIds. Absent =
    * une unité chacune. */
@@ -193,7 +197,7 @@ export async function sendMetaPurchaseEvent(ev: MetaPurchaseEvent): Promise<bool
         },
         custom_data: {
           currency: "TND",
-          value: ev.totalMillimes / 1000,
+          value: ev.subtotalMillimes / 1000,
           content_type: "product",
           content_ids: ev.contentIds,
           contents: ev.contentIds.map((id, i) => ({ id, quantity: ev.quantities?.[i] ?? 1 })),
