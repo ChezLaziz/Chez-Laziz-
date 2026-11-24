@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, Skeleton } from '../ui/State'
 import { useOverview } from '../useOverview'
 import type { DashboardPeriod } from '../shell/period'
 import { MIN_ORDERS_FOR_SIGNALS, buildSignals } from '@contracts/signals'
+import { cancelReasonFr } from '@contracts/cancelReasons'
 
 const dayLabel = (iso: string) =>
   new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
@@ -40,6 +41,7 @@ function LoadingBoard() {
   return (
     <div className="space-y-4">
       <Skeleton className="h-[236px] rounded-xl xl:h-[124px]" />
+      <Skeleton className="h-[132px] rounded-xl" />
       <div className="grid gap-4 lg:grid-cols-3">
         <Skeleton className="h-[330px] rounded-xl lg:col-span-2" />
         <Skeleton className="h-[330px] rounded-xl" />
@@ -129,6 +131,25 @@ export default function OverviewPage({
   const returning = data.customerMetrics.returningCustomers
   const units = data.unitsSold.value
 
+  /* ---- Raisons d'annulation ----
+   * La raison est choisie au moment d'annuler, sur Telegram ou dans le
+   * carnet de commandes. Ici on la compte — voir computeCancellations. */
+  const canc = data.cancellations
+  const sansRaison = canc.cancelled - canc.withReason
+  const cancelRows: BarRow[] = canc.rows.map((r) => ({
+    key: r.code ?? '__non_notee',
+    label: r.code === null ? 'Raison non notée' : (cancelReasonFr(r.code) ?? r.code),
+    share: r.share,
+    display: pct(r.share),
+    // Une raison à zéro garde sa ligne, sans « 0 cmd · 0 DT » à lire.
+    note: r.orders === 0 ? undefined : `${r.orders.toLocaleString('fr-FR')} cmd · ${moneyDT(r.lostRevenueMillimes)} DT`,
+    muted: r.code === null,
+  }))
+  // Même seuil que les variations du haut de page : sous dix commandes, un
+  // taux d'annulation « d'avant » ne veut rien dire.
+  const annulationsComparables =
+    canc.placed >= MIN_ORDERS_FOR_SIGNALS && canc.previous.placed >= MIN_ORDERS_FOR_SIGNALS
+
   const productRows: BarRow[] = data.topProducts.slice(0, 5).map((p) => ({
     key: p.key,
     label: p.name,
@@ -177,6 +198,38 @@ export default function OverviewPage({
           rapport à la période précédente de même durée.
         </p>
       </div>
+
+      {/* LES SIGNAUX D'ABORD : ce qu'il faut regarder, avant les graphiques
+          qui le montrent. Uniquement calculés à partir des chiffres de la
+          page, chacun avec sa preuve — voir contracts/signals.ts. Sur toute
+          la largeur, en colonnes : trois phrases côte à côte se lisent
+          d'un regard, empilées dans un tiers d'écran elles se méritaient. */}
+      <Card title="À surveiller">
+        {signals.length === 0 ? (
+          <p className="text-[13px] leading-relaxed text-ink/50">
+            Pas encore assez de données pour dégager un signal fiable sur cette période.
+          </p>
+        ) : (
+          <ul
+            className={`grid gap-x-8 gap-y-3 ${signals.length >= 2 ? 'md:grid-cols-2' : ''} ${
+              signals.length >= 3 ? 'xl:grid-cols-3' : ''
+            }`}
+          >
+            {signals.map((s) => (
+              <li key={s.id} className="flex gap-2.5">
+                <span
+                  className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{
+                    backgroundColor:
+                      s.tone === 'good' ? DASH.green : s.tone === 'bad' ? DASH.red : DASH.gold,
+                  }}
+                />
+                <p className="text-[13px] leading-relaxed text-ink/75">{s.text}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card
@@ -361,28 +414,47 @@ export default function OverviewPage({
           )}
         </Card>
 
-        {/* Signaux : uniquement calculés à partir des chiffres ci-dessus,
-            chacun accompagné de sa preuve. Voir signals.ts. */}
-        <Card title="À surveiller">
-          {signals.length === 0 ? (
-            <p className="text-[13px] leading-relaxed text-ink/50">
-              Pas encore assez de données pour dégager un signal fiable sur cette période.
-            </p>
+        {/* Juste sous « Statut des commandes », qui donne le taux
+            d'annulation : la carte du dessus dit combien, celle-ci dit
+            pourquoi. La raison est choisie au moment d'annuler ; ici on la
+            compte — voir computeCancellations. */}
+        <Card
+          title="Raisons d'annulation"
+          // Le dénominateur, écrit : « 42 % » tout seul se lirait comme 42 %
+          // des commandes, pas 42 % des annulations.
+          hint={
+            canc.cancelled > 0
+              ? `Sur ${canc.cancelled} commande${canc.cancelled > 1 ? 's' : ''} annulée${canc.cancelled > 1 ? 's' : ''} de la période.`
+              : undefined
+          }
+          action={
+            canc.cancelled > 0 ? <LinkButton onClick={() => onGoToOrders('annulee')}>Les voir</LinkButton> : undefined
+          }
+        >
+          {canc.cancelled === 0 ? (
+            <EmptyState label="Aucune commande annulée sur cette période." />
           ) : (
-            <ul className="space-y-3">
-              {signals.map((s) => (
-                <li key={s.id} className="flex gap-2.5">
-                  <span
-                    className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{
-                      backgroundColor:
-                        s.tone === 'good' ? DASH.green : s.tone === 'bad' ? DASH.red : DASH.gold,
-                    }}
-                  />
-                  <p className="text-[13px] leading-relaxed text-ink/75">{s.text}</p>
-                </li>
-              ))}
-            </ul>
+            <>
+              <BarList rows={cancelRows} />
+              {(sansRaison > 0 || annulationsComparables) && (
+                <div className="mt-3.5 space-y-1.5 border-t border-[#efebe6] pt-3 text-[12px] leading-snug text-ink/50">
+                  {sansRaison > 0 && (
+                    <p>
+                      {sansRaison === canc.cancelled
+                        ? 'Aucune annulation ne porte de raison.'
+                        : `${sansRaison} annulation${sansRaison > 1 ? 's' : ''} sur ${canc.cancelled} sans raison.`}{' '}
+                      Elle se choisit au moment d'annuler, sur Telegram ou dans le carnet de commandes.
+                    </p>
+                  )}
+                  {annulationsComparables && (
+                    <p>
+                      Période précédente : {canc.previous.cancelled} annulée{canc.previous.cancelled > 1 ? 's' : ''} sur{' '}
+                      {canc.previous.placed} commandes ({pct(canc.previous.rate)}), contre {pct(canc.rate)} maintenant.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </Card>
       </div>

@@ -49,6 +49,9 @@ export type AnalyticsOrder = {
    * « Accepter ». Un simple oui/non : la valeur des cookies ne quitte pas la
    * base. Absent sur les lectures qui n'en ont pas besoin. */
   pixelSeen?: boolean;
+  /** Pourquoi la commande a été annulée — un code de
+   * contracts/cancelReasons.ts, ou null quand personne ne l'a noté. */
+  cancelReason?: string | null;
   createdAt: Date;
 };
 
