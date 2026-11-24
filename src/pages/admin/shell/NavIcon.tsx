@@ -31,6 +31,14 @@ function paths(id: NavId) {
           <path d="M8.5 12.5h7M8.5 16h4.5" strokeLinecap="round" />
         </>
       )
+    case 'suivi':
+      // Une bulle avec une coche : on demande, la cliente répond.
+      return (
+        <>
+          <path d="M4 5.5h16v10.5H9.5L5.5 19.5V16H4z" strokeLinejoin="round" />
+          <path d="M8.8 10.8l2.2 2.2 4.2-4.4" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )
     case 'catalogue':
       // Cabas : le catalogue et ses prix, côté vente.
       return (

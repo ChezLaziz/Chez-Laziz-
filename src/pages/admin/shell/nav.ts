@@ -24,7 +24,14 @@
  * Elles reviendront le jour où la donnée existera — git les garde. Une
  * page vide coûte plus qu'elle n'apporte : elle fait douter des pleines. */
 
-export type NavId = 'apercu' | 'commandes' | 'catalogue' | 'messages' | 'contenu' | 'parametres'
+export type NavId =
+  | 'apercu'
+  | 'commandes'
+  | 'suivi'
+  | 'catalogue'
+  | 'messages'
+  | 'contenu'
+  | 'parametres'
 
 export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] }[] = [
   {
@@ -35,6 +42,12 @@ export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] 
     group: 'Gestion',
     items: [
       { id: 'commandes', label: 'Commandes' },
+      // Une septième page, et ce n'est pas l'ancienne « Clients » qui
+      // revient : pas de statistiques de fidélité, une liste courte de colis
+      // livrés dont personne n'a pris de nouvelles. Vide, elle ne veut pas
+      // dire « aucune donnée » mais « tout le monde a eu son message » —
+      // voir contracts/suiviLivraison.ts.
+      { id: 'suivi', label: 'Suivi des colis' },
       { id: 'catalogue', label: 'Produits' },
       { id: 'messages', label: 'Messages' },
       { id: 'contenu', label: 'Contenu du site' },
