@@ -9,6 +9,7 @@ import {
   CARRIER_KEYS,
   amountToCollectMillimes,
   buildCsv,
+  buildJetpackCsv,
   fullAddress,
   hasCompleteWeight,
   packageContents,
@@ -460,8 +461,12 @@ function ShipmentBar({
   }
 
   const downloadCsv = () => {
-    const forCarrier = carrier === 'tpe' ? delegationFor : () => null
-    const blob = new Blob([buildCsv(orders, forCarrier)], { type: 'text/csv;charset=utf-8' })
+    // Jetpack a son propre gabarit d'import : on lui donne LE SIEN, pas
+    // l'export générique (qui ne s'importait pas). TPE garde l'export générique
+    // avec la délégation. Même fichier que la page Jetpack dédiée.
+    const content =
+      carrier === 'jetpack' ? buildJetpackCsv(orders) : buildCsv(orders, delegationFor)
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

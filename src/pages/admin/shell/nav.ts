@@ -28,6 +28,7 @@ export type NavId =
   | 'apercu'
   | 'commandes'
   | 'suivi'
+  | 'jetpack'
   | 'offres'
   | 'catalogue'
   | 'messages'
@@ -49,6 +50,12 @@ export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] 
       // dire « aucune donnée » mais « tout le monde a eu son message » —
       // voir contracts/suiviLivraison.ts.
       { id: 'suivi', label: 'Suivi des colis' },
+      // La seule page qui gagne sa place après l'audit « six pages » : remettre
+      // les commandes à Jetpack. Leur plateforme n'ouvre aucun accès marchand
+      // (voir contracts/carriers.ts) ; leur import CSV est la seule voie réelle,
+      // et l'export générique ne s'y importait pas — colonnes à nous, pas au
+      // gabarit de Jetpack. Ici on coche et on télécharge au FORMAT de Jetpack.
+      { id: 'jetpack', label: 'Jetpack' },
       // Les clientes qui ont demandé, en commandant, à recevoir les offres
       // sur WhatsApp — et elles seules. Voir contracts/offres.ts.
       { id: 'offres', label: 'Offres WhatsApp' },

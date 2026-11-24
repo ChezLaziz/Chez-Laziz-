@@ -79,5 +79,13 @@ function paths(id: NavId) {
           />
         </>
       )
+    case 'jetpack':
+      // Un avion en papier : on prépare un envoi et on le remet au transporteur.
+      return (
+        <>
+          <path d="M21 4 3 10.5l6.2 2.3L11.5 20l3.2-4.6L21 4Z" strokeLinejoin="round" />
+          <path d="m9.2 12.8 5.5-4.2" strokeLinecap="round" />
+        </>
+      )
   }
 }

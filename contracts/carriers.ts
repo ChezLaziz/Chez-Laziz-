@@ -236,3 +236,75 @@ export function buildCsv(
   ];
   return `\uFEFF${lines.join("\r\n")}\r\n`;
 }
+
+/* ------------------------- Export Jetpack (import direct) ------------------------- */
+
+/** Les colonnes EXACTES que l'importeur CSV de Jetpack attend.
+ *
+ * Jetpack tourne sur ShippingLog ; sa page \u00AB Importer CSV \u00BB
+ * (jetpack.tn/expediteur) lit un gabarit fig\u00E9 \u2014 cet ordre, ces noms, point.
+ * On recopie leur mod\u00E8le au caract\u00E8re pr\u00E8s, \u00AB gouvernerat \u00BB (leur
+ * orthographe) comprise : un fichier aux colonnes \u00C0 NOUS ne s'importe pas,
+ * il faut parler LE LEUR. Relev\u00E9 sur leur mod\u00E8le d'import le 24 novembre 2026 ;
+ * les m\u00EAmes noms de champs servent leur API marchand (api.jetpack.tn/docs).
+ *
+ * `buildCsv` reste l'export g\u00E9n\u00E9rique/comptable ; celui-ci ne sert qu'\u00E0 une
+ * chose : un fichier qui tombe directement dans l'import de Jetpack sans
+ * qu'on remappe une seule colonne \u00E0 la main. */
+export const JETPACK_COLUMNS = [
+  "destinataire_nom",
+  "adresse",
+  "ville",
+  "gouvernerat",
+  "telephone",
+  "telephone2",
+  "nombre_de_colis",
+  "prix",
+  "designation",
+] as const;
+
+export function jetpackRow(
+  o: ShippableOrder,
+): Record<(typeof JETPACK_COLUMNS)[number], string> {
+  const collect = amountToCollectMillimes(o);
+  return {
+    destinataire_nom: o.customerName.trim(),
+    adresse: o.address.trim(),
+    ville: o.city.trim(),
+    gouvernerat: o.governorate.trim(),
+    // Huit chiffres, indicatif et espaces retir\u00E9s : c'est ce que Jetpack
+    // attend. Sur un num\u00E9ro illisible on garde la saisie brute plut\u00F4t que de
+    // vider la case \u2014 un humain au d\u00E9p\u00F4t la rattrapera, une case vide se perd.
+    telephone: carrierPhone(o.phone) ?? o.phone.trim(),
+    telephone2: "",
+    // Un colis par commande : l'admin ne mesure pas de d\u00E9coupe en plusieurs
+    // colis, et \u00AB 1 \u00BB est la v\u00E9rit\u00E9 par d\u00E9faut, pas une estimation.
+    nombre_de_colis: "1",
+    // CE QUE LE LIVREUR ENCAISSE \u2014 pas la valeur du colis. Une commande d\u00E9j\u00E0
+    // pay\u00E9e part \u00E0 \u00AB 0.000 \u00BB : lui envoyer le total la ferait payer deux fois
+    // (voir amountToCollectMillimes). Dinars \u00E0 3 d\u00E9cimales, comme leur API.
+    prix: (collect / 1000).toFixed(3),
+    designation: packageContents(o.items) || "Colis",
+  };
+}
+
+/** Fichier CSV au format d'import de Jetpack.
+ *
+ * Deux \u00E9carts VOULUS par rapport \u00E0 `buildCsv` / `toCsv`, parce que le lecteur
+ * n'est pas le m\u00EAme :
+ *   - PAS de BOM. Ces octets-l\u00E0 sont lus par l'importeur de Jetpack (PHP),
+ *     pas par Excel. Un BOM coll\u00E9 devant \u00AB destinataire_nom \u00BB et leur ent\u00EAte
+ *     ne se reconna\u00EEt plus \u2014 le fichier entier est refus\u00E9.
+ *   - S\u00E9parateur \u00AB ; \u00BB et fins de ligne CRLF, comme leur mod\u00E8le.
+ * L'\u00E9chappement CSV (csvCell) reste indispensable : une adresse tunisienne
+ * contient presque toujours une virgule, et souvent un point-virgule. */
+export function buildJetpackCsv(orders: ShippableOrder[]): string {
+  const lines = [
+    JETPACK_COLUMNS.join(";"),
+    ...orders.map((o) => {
+      const row = jetpackRow(o);
+      return JETPACK_COLUMNS.map((c) => csvCell(row[c])).join(";");
+    }),
+  ];
+  return `${lines.join("\r\n")}\r\n`;
+}
