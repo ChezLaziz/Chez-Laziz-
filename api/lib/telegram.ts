@@ -255,11 +255,15 @@ export async function editMessage(
   return (await modifier(repli)) !== null;
 }
 
-export async function deleteMessage(messageId: number): Promise<void> {
-  await tgCall("deleteMessage", {
+/** Supprime un message du groupe. Rend FAUX quand Telegram refuse — et il
+ * refuse dès qu'un message a plus de quarante-huit heures : l'appelant doit
+ * alors s'en occuper autrement, sinon le vieux message reste là, intact. */
+export async function deleteMessage(messageId: number): Promise<boolean> {
+  const res = await tgCall("deleteMessage", {
     chat_id: chatId(),
     message_id: messageId,
   });
+  return res !== null;
 }
 
 /** Épingle le tableau du matbakh : il reste accessible en haut de la
@@ -270,6 +274,15 @@ export async function pinMessage(messageId: number): Promise<void> {
     chat_id: chatId(),
     message_id: messageId,
     disable_notification: true,
+  });
+}
+
+/** Désépingle UN message — celui qu'on n'a pas pu supprimer et qui ne doit
+ * plus trôner en haut du groupe. */
+export async function unpinMessage(messageId: number): Promise<void> {
+  await tgCall("unpinChatMessage", {
+    chat_id: chatId(),
+    message_id: messageId,
   });
 }
 

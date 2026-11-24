@@ -12,7 +12,7 @@
 import { getOrderById, setCancelReason } from "../queries/orders";
 import { isCancelReason } from "@contracts/cancelReasons";
 import { transitionOrderStatus } from "./orderTransition";
-import { applyKitchenAck, applyKitchenUndo } from "./telegramKitchen";
+import { applyKitchenDone, applyKitchenUndo } from "./telegramKitchen";
 import {
   answerCallback,
   chatId,
@@ -158,7 +158,9 @@ function orderId(data: string, prefixe: string): number | null {
 async function dispatch(q: CallbackQuery): Promise<string> {
   const data = q.data ?? "";
   if (data === "k:undo") return applyKitchenUndo();
-  if (data.startsWith("k:")) return applyKitchenAck(data.slice(2));
+  // Le message d'où vient l'appui part avec : un vieux tableau resté plus
+  // haut dans le groupe porte des boutons qui ne veulent plus rien dire.
+  if (data.startsWith("k:")) return applyKitchenDone(data, q.message?.message_id);
 
   if (data.startsWith("o:ok:")) {
     const id = orderId(data, "o:ok:");

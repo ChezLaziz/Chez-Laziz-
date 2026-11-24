@@ -39,6 +39,7 @@
 
 import { tunisianLocalPhone } from "./phone";
 import { prenomPourSaluer } from "./prenom";
+import { tunisDayKey } from "./tunisDay";
 
 /** Livrée depuis au moins deux jours : le temps d'avoir ouvert la boîte. */
 export const SUIVI_MIN_DAYS = 2;
@@ -95,11 +96,9 @@ export type SuiviList = {
   dailyBatch: number;
 };
 
-/** Jour civil à Tunis (UTC+1, sans heure d'été) : « aujourd'hui » pour la
- * personne qui envoie les messages, pas pour le serveur. */
-export function tunisDayKey(d: Date): string {
-  return new Date(d.getTime() + 60 * 60 * 1000).toISOString().slice(0, 10);
-}
+// « Aujourd'hui » est celui de la personne qui envoie les messages : voir
+// contracts/tunisDay.ts. Réexporté ici pour ceux qui l'importaient déjà.
+export { tunisDayKey };
 
 /** Le message. Trois lignes, en tunisien, et aucune ne demande rien d'autre
  * que des nouvelles du colis — voir « VENDRE » plus haut.
