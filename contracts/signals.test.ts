@@ -227,3 +227,56 @@ describe('buildSignals — chaque signal porte sa preuve', () => {
     expect(signals.find((x) => x.id === 'returning-value')).toBeUndefined()
   })
 })
+
+describe('buildSignals — une publicité qui tourne sans étiquette', () => {
+  const ads = (recentUntaggedMetaVisits: number, recentTaggedVisits: number) => ({
+    ads: { recentUntaggedMetaVisits, recentTaggedVisits },
+  })
+
+  it('le dit avec les deux nombres, et dit depuis quand', () => {
+    const signals = buildSignals(overview(ads(412, 388)))
+    expect(signals).toHaveLength(1)
+    expect(signals[0]!.id).toBe('ads-untagged')
+    expect(signals[0]!.tone).toBe('bad')
+    expect(signals[0]!.text).toContain('Depuis hier, 412 visites')
+    expect(signals[0]!.text).toContain('contre 388 avec')
+  })
+
+  it("parle le jour du lancement, avant même dix commandes", () => {
+    // Le seuil de volume ferait taire ce signal au moment précis où il
+    // sert : la publicité amène du monde, les commandes n'ont pas suivi.
+    const signals = buildSignals(overview({ orders: trend(2, 0), ...ads(300, 0) }))
+    expect(signals.map((s) => s.id)).toEqual(['ads-untagged'])
+  })
+
+  it('voit une publicité sans étiquette même quand une autre, étiquetée, prend le gros du budget', () => {
+    // Deux publicités, une sur quatre des visites sans étiquette.
+    expect(buildSignals(overview(ads(455, 1327)))).toHaveLength(1)
+  })
+
+  it('se tait sur le fond de visites que le site reçoit toujours', () => {
+    // Une publication de la page, un lien partagé : quelques dizaines par jour.
+    expect(buildSignals(overview(ads(149, 0)))).toEqual([])
+    expect(buildSignals(overview(ads(60, 20)))).toEqual([])
+  })
+
+  it('se tait quand ce fond est noyé dans les visites étiquetées', () => {
+    // 150 à côté de 3 000 : une visite Meta sur vingt, rien ne tourne à nu.
+    expect(buildSignals(overview(ads(150, 3000)))).toEqual([])
+    // Une sur dix, c'est la limite.
+    expect(buildSignals(overview(ads(150, 1351)))).toEqual([])
+    expect(buildSignals(overview(ads(150, 1350)))).toHaveLength(1)
+  })
+
+  it("se tait quand les visites ne sont pas comptées", () => {
+    expect(buildSignals(overview())).toEqual([])
+    expect(buildSignals(overview(ads(0, 0)))).toEqual([])
+  })
+
+  it("s'ajoute aux autres signaux sans les remplacer", () => {
+    const signals = buildSignals(
+      overview({ revenueMillimes: trend(150000, 100000), ...ads(500, 100) }),
+    )
+    expect(signals.map((s) => s.id)).toEqual(['ads-untagged', 'revenue'])
+  })
+})

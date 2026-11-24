@@ -42,6 +42,13 @@ export type SignalInput = {
   cancellations?: {
     rows: readonly { code: string | null; orders: number }[];
   };
+  /** Les visites par publicité, quand elles sont comptées — voir
+   * contracts/arrivees.ts. Facultatif : les règles s'en passent. */
+  ads?: {
+    /** Hier et aujourd'hui, quelle que soit la période affichée. */
+    recentTaggedVisits: number;
+    recentUntaggedMetaVisits: number;
+  };
 };
 
 type Trend = { value: number; previous: number; changePercent: number | null };
@@ -63,6 +70,18 @@ type Trend = { value: number; previous: number; changePercent: number | null };
 export const MIN_ORDERS_FOR_SIGNALS = 10
 const MIN_CHANGE = 12 // %
 
+/** Visites venues de Meta SANS étiquette de publicité, depuis hier, à
+ * partir desquelles on le dit. Le site en reçoit toujours un peu — une
+ * publication de la page, un lien partagé dans une conversation : quelques
+ * dizaines par jour. Cent cinquante en deux jours ET une visite Meta sur
+ * dix, ce n'est plus ce fond de bruit : quelque chose de payé tourne sans
+ * étiquette (voir contracts/arrivees.ts : ni la nôtre, ni celle que Meta
+ * ajoute d'habitude de lui-même). La part compte autant que le nombre : à
+ * côté de trois mille visites étiquetées, cent cinquante ne sont que le
+ * fond. */
+export const UNTAGGED_META_MIN_VISITS = 150
+export const UNTAGGED_META_MIN_SHARE = 0.1
+
 export type Signal = {
   id: string
   tone: 'good' | 'bad' | 'neutral'
@@ -71,6 +90,24 @@ export type Signal = {
 
 export function buildSignals(d: SignalInput): Signal[] {
   const signals: Signal[] = []
+
+  // AVANT le seuil de volume, exprès. Ce signal ne compare pas deux
+  // périodes : il constate un trou de mesure, sur hier et aujourd'hui. Et il
+  // sert surtout le premier jour d'une publicité, quand elle amène déjà du
+  // monde et pas encore dix commandes — le seuil l'aurait fait taire au
+  // moment précis où il compte.
+  const sansEtiquette = d.ads?.recentUntaggedMetaVisits ?? 0
+  const etiquetees = d.ads?.recentTaggedVisits ?? 0
+  if (
+    sansEtiquette >= UNTAGGED_META_MIN_VISITS &&
+    sansEtiquette >= UNTAGGED_META_MIN_SHARE * (sansEtiquette + etiquetees)
+  ) {
+    signals.push({
+      id: 'ads-untagged',
+      tone: 'bad',
+      text: `Depuis hier, ${sansEtiquette.toLocaleString('fr-FR')} visites sont arrivées de Facebook ou d'Instagram sans étiquette de publicité, contre ${etiquetees.toLocaleString('fr-FR')} avec. Si elles viennent d'une publicité ou d'une publication boostée, ses commandes ne lui sont pas attribuées : vérifier ses paramètres d'URL.`,
+    })
+  }
 
   // Sous ce volume, aucune variation n'est interprétable.
   if (d.orders.value < MIN_ORDERS_FOR_SIGNALS || d.orders.previous < MIN_ORDERS_FOR_SIGNALS) return signals

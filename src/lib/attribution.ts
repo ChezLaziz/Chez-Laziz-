@@ -15,6 +15,8 @@
  * l'onglet, jamais transmis à un tiers. Ne sert qu'à rattacher une commande
  * à son origine. */
 
+import { etiquettePropre } from '@contracts/etiquette'
+
 const KEY = 'laziz_attribution'
 
 /** Sources connues. Tout le reste devient `autre` : la valeur vient d'une
@@ -53,10 +55,11 @@ function normalizeSource(raw: string | null): AcquisitionSource | null {
 }
 
 /** Coupe et nettoie une étiquette libre (campagne, créative).
- * Bornée en longueur : elle vient de l'URL, donc de l'extérieur. */
+ * Elle vient de l'URL, donc de l'extérieur : bornée en longueur et
+ * débarrassée de ce qui ferait refuser la commande par la base — voir
+ * etiquettePropre, que le serveur applique lui aussi. */
 function cleanLabel(raw: string | null): string | undefined {
-  if (!raw) return undefined
-  const v = raw.trim().slice(0, 120)
+  const v = etiquettePropre(raw)
   return v === '' ? undefined : v
 }
 
@@ -76,10 +79,21 @@ function fromReferrer(): AcquisitionSource | null {
   return 'autre'
 }
 
-/** À appeler à chaque navigation. N'écrit qu'une fois par session. */
-export function captureAttribution(): void {
+/** Ce que le serveur compte pour la première page d'une session — voir
+ * contracts/arrivees.ts. Deux faits sur le LIEN, aucun sur la personne. */
+export type ArriveeVue = { pub?: string; meta: boolean }
+
+/** À appeler à chaque navigation. N'écrit qu'une fois par session.
+ *
+ * Rend l'arrivée à compter la SEULE fois où elle vient d'être enregistrée,
+ * `null` ensuite : c'est ce qui fait qu'une visite n'est comptée qu'une
+ * fois, quel que soit le nombre de pages vues derrière. Sans stockage
+ * (navigation privée stricte), rien n'est rendu : l'origine de la commande
+ * est perdue elle aussi, et compter la visite sans pouvoir compter la
+ * commande fausserait le rapport entre les deux. */
+export function captureAttribution(): ArriveeVue | null {
   try {
-    if (sessionStorage.getItem(KEY)) return // premier contact déjà enregistré
+    if (sessionStorage.getItem(KEY)) return null // premier contact déjà enregistré
 
     const params = new URLSearchParams(window.location.search)
     const utmSource = normalizeSource(params.get('utm_source'))
@@ -94,9 +108,13 @@ export function captureAttribution(): void {
     if (campaign) attribution.campaign = campaign
     if (content) attribution.content = content
     sessionStorage.setItem(KEY, JSON.stringify(attribution))
+    // `fbclid` : Meta l'ajoute à tous ses liens, étiquetés ou non. On n'en
+    // garde que la présence — jamais la valeur.
+    return { ...(content ? { pub: content } : {}), meta: params.has('fbclid') }
   } catch {
     // Navigation privée ou stockage bloqué : l'attribution est perdue, la
     // commande passe quand même. Jamais bloquant.
+    return null
   }
 }
 
