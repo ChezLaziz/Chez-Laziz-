@@ -350,6 +350,20 @@ app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 export default app;
 
 if (env.isProduction) {
+  // UNE PROMESSE REJETÉE NE DOIT PAS ÉTEINDRE LA BOUTIQUE. Les notifications
+  // partent sans être attendues (`void`, voir orders.create) : si l'une
+  // d'elles lève là où personne ne l'attrape, Node arrête le processus par
+  // défaut. C'est arrivé à portée de n'importe qui — un nom de cliente coupé
+  // au milieu d'un emoji suffisait (voir contracts/demiCaracteres.ts) : le
+  // site tombait, la cliente voyait une erreur, et rien ne sonnait.
+  //
+  // Chaque cause connue est corrigée à sa source. Ce filet est pour la
+  // suivante : on l'écrit en toutes lettres dans le journal, et on continue
+  // de prendre les commandes.
+  process.on("unhandledRejection", (raison) => {
+    console.error("[serveur] promesse rejetée sans gardien (le serveur continue) :", raison);
+  });
+
   const { serve } = await import("@hono/node-server");
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);

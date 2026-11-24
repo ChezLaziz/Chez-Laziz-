@@ -23,6 +23,7 @@ import { formatDinars, formatWeight } from "@contracts/shop";
 import { escapeTelegramHtml } from "@contracts/kitchenBoard";
 import { CANCEL_REASONS, cancelReasonAr } from "@contracts/cancelReasons";
 import { orderConfirmWhatsAppUrl, type ConfirmableOrder } from "@contracts/orderConfirmWhatsApp";
+import { sansDemiCaracteres } from "@contracts/demiCaracteres";
 
 export type NotifiableOrder = {
   id: number;
@@ -186,7 +187,9 @@ export async function tgCall<T = unknown>(
  * survit toujours. */
 export function couperPourTelegram(texte: string): string {
   if (texte.length <= LIMITE_TELEGRAM) return texte;
-  return `${texte.slice(0, LIMITE_TELEGRAM - 2)}\n…`;
+  // La coupe peut tomber au milieu d'un emoji : Telegram refuserait le
+  // message entier pour une moitié de caractère. Voir demiCaracteres.ts.
+  return `${sansDemiCaracteres(texte.slice(0, LIMITE_TELEGRAM - 2))}\n…`;
 }
 
 /** Le même clavier, sans ses boutons-liens — ou `null` s'il n'en portait
@@ -355,7 +358,7 @@ export function buildNewOrderTelegramMessage(order: NotifiableOrder): string {
   // On coupe dans la liste des articles, jamais dans l'en-tête : mieux vaut
   // une commande tronquée qui sonne qu'un message perdu.
   const fin = `\n…\n\n${ADMIN_URL}`;
-  return corps.slice(0, LIMITE_TELEGRAM - fin.length) + fin;
+  return sansDemiCaracteres(corps.slice(0, LIMITE_TELEGRAM - fin.length)) + fin;
 }
 
 /** Le bouton qui ouvre WhatsApp sur le client, message de confirmation déjà
@@ -363,7 +366,18 @@ export function buildNewOrderTelegramMessage(order: NotifiableOrder): string {
  * pas exploitable. Voir contracts/orderConfirmWhatsApp.ts : presque une
  * annulation sur deux est un client qui n'a pas décroché. */
 function boutonWhatsApp(order: ConfirmableOrder | undefined, text: string): InlineButton[][] {
-  const url = order ? orderConfirmWhatsAppUrl(order) : null;
+  // CE BOUTON EST UN PLUS, JAMAIS UNE CONDITION. Il se fabrique avec le nom
+  // tapé par la cliente, et un nom qui faisait lever le lien emportait le
+  // clavier, donc la notification, donc le serveur (une promesse rejetée
+  // que personne n'attendait). La cause est corrigée dans
+  // contracts/prenom.ts ; ici on s'assure que la prochaine, quelle qu'elle
+  // soit, ne coûtera que le bouton : la commande sonne quand même.
+  let url: string | null = null;
+  try {
+    url = order ? orderConfirmWhatsAppUrl(order) : null;
+  } catch (err) {
+    console.error(`[telegram] bouton WhatsApp impossible pour la commande #${order?.id} :`, err);
+  }
   return url ? [[{ text, url }]] : [];
 }
 
@@ -467,15 +481,25 @@ export async function notifyAdminNewMessageTelegram(m: {
   if (envoye) console.log("[telegram] message du site notifié");
 }
 
-/** Envoie la notification de nouvelle commande ; ne lève jamais. */
+/** Envoie la notification de nouvelle commande ; ne lève jamais.
+ *
+ * « Jamais » était faux : le texte et le clavier se construisent AVANT
+ * l'envoi, hors de la garde de sendMessage, avec ce que la cliente a tapé.
+ * Appelée sans être attendue (`void`, voir orders.create), la moindre
+ * exception devenait une promesse rejetée sans gardien — et Node arrête le
+ * processus sur celles-là. Une commande pouvait donc éteindre le site. */
 export async function notifyAdminNewOrderTelegram(order: NotifiableOrder): Promise<void> {
   if (!isTelegramConfigured()) {
     console.log(`[telegram] non configuré — commande #${order.id} non notifiée`);
     return;
   }
-  const envoye = await sendMessage(
-    buildNewOrderTelegramMessage(order),
-    newOrderKeyboard(order.id, order),
-  );
-  if (envoye) console.log(`[telegram] commande #${order.id} notifiée`);
+  try {
+    const envoye = await sendMessage(
+      buildNewOrderTelegramMessage(order),
+      newOrderKeyboard(order.id, order),
+    );
+    if (envoye) console.log(`[telegram] commande #${order.id} notifiée`);
+  } catch (err) {
+    console.error(`[telegram] commande #${order.id} NON notifiée :`, err);
+  }
 }

@@ -69,6 +69,13 @@ describe("suiviWhatsAppUrl", () => {
     expect(decodeURIComponent(url.split("?text=")[1]!)).toBe(suiviMessage(""));
   });
 
+  it("se fabrique quel que soit le nom tapé dans le formulaire", () => {
+    // Un nom d'un seul tenant coupé au milieu d'un emoji faisait lever
+    // encodeURIComponent : la liste entière tombait avec ce lien.
+    expect(() => suiviWhatsAppUrl("20123456", "Amina" + "😀".repeat(15))).not.toThrow();
+    expect(suiviWhatsAppUrl("20123456", "Amina" + "😀".repeat(15))).toMatch(/^https:\/\/wa\.me\/21620123456\?text=/);
+  });
+
   it("pas de lien pour un numéro inexploitable", () => {
     expect(suiviWhatsAppUrl("123", "Amina")).toBeNull();
     expect(suiviWhatsAppUrl("", "Amina")).toBeNull();

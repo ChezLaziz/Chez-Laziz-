@@ -10,6 +10,8 @@
  * choque personne ; un prénom faux, si. On ne cherche pas à deviner le bon
  * mot plus loin dans le champ — l'ordre nom/prénom n'est pas fiable. */
 
+import { sansDemiCaracteres } from "./demiCaracteres";
+
 const TITRES_ET_PARTICULES = new Set([
   // Titres
   "m", "mr", "mme", "mlle", "madame", "monsieur", "mademoiselle", "dr", "docteur",
@@ -25,5 +27,8 @@ export function prenomPourSaluer(customerName: string): string {
   if (!/\p{L}/u.test(mot)) return "";
   const cle = mot.toLowerCase().replace(/[.,:;]+$/, "");
   if (TITRES_ET_PARTICULES.has(cle)) return "";
-  return mot.slice(0, 24);
+  // La coupe peut tomber au milieu d'un emoji : la moitié qui reste ferait
+  // lever encodeURIComponent, et avec lui le lien WhatsApp tout entier.
+  // Voir demiCaracteres.ts.
+  return sansDemiCaracteres(mot.slice(0, 24));
 }

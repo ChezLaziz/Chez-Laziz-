@@ -31,6 +31,15 @@ describe("orderConfirmMessage — ce que le client lit", () => {
 });
 
 describe("orderConfirmWhatsAppUrl — vers le client, jamais vers un inconnu", () => {
+  it("se fabrique quel que soit le nom tapé : sans lui, la commande ne sonne pas sur Telegram", () => {
+    // Le clavier de la notification appelle cette fonction. Un nom d'un seul
+    // tenant coupé au milieu d'un emoji faisait lever encodeURIComponent, et
+    // la notification de CETTE commande ne partait pas.
+    const piege = { ...commande, customerName: "Amina" + "😀".repeat(15) };
+    expect(() => orderConfirmWhatsAppUrl(piege)).not.toThrow();
+    expect(orderConfirmWhatsAppUrl(piege)).toMatch(/^https:\/\/wa\.me\/21623691039\?text=/);
+  });
+
   it("ouvre le numéro tunisien complet, quel que soit le format saisi", () => {
     for (const phone of ["23691039", "23 691 039", "+216 23 691 039", "0021623691039"]) {
       expect(orderConfirmWhatsAppUrl({ ...commande, phone })).toMatch(/^https:\/\/wa\.me\/21623691039\?text=/);
