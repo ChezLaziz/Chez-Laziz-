@@ -70,6 +70,31 @@ export function whatsAppOrderMessage(
   ].join("\n");
 }
 
+/** Le message par lequel le CLIENT confirme lui-même la commande qu'il vient
+ * de passer, depuis l'écran « Merci ».
+ *
+ * POURQUOI. Une commande n'est préparée qu'après un appel de confirmation,
+ * et presque une annulation sur deux (38 sur 81) est un client qui n'a pas
+ * décroché. Les commandes passées la nuit sont les plus touchées : 24 %
+ * d'annulations entre minuit et six heures, contre 12 à 19 % le reste de la
+ * journée — l'appel arrive le lendemain, à quelqu'un qui n'y pense plus.
+ * Or à l'instant où il lit « Merci », ce client est là, téléphone en main,
+ * décidé. Lui laisser confirmer tout de suite, par un message qu'il n'a
+ * qu'à envoyer, c'est prendre la confirmation au seul moment où elle ne
+ * coûte rien.
+ *
+ * Le numéro de commande suffit à la boutique pour retrouver la commande :
+ * ni nom, ni adresse, ni téléphone dans le lien. Le montant est rappelé
+ * pour que le client confirme en sachant ce qu'il paiera à la porte. */
+export function whatsAppConfirmMessage(
+  order: { id: number; totalMillimes: number },
+  lang: "fr" | "ar",
+): string {
+  return lang === "ar"
+    ? `السلام عليكم، نأكّد الطلبية رقم ${order.id} ✅\nالمجموع : ${dt(order.totalMillimes)} د.ت، الدفع عند التوصيل.`
+    : `Bonjour, je confirme ma commande n°${order.id} ✅\nTotal : ${dt(order.totalMillimes)} DT, paiement à la livraison.`;
+}
+
 /** Lien wa.me prêt à ouvrir, message compris.
  *
  * `encodeURIComponent` et non `encodeURI` : sans lui, les retours à la ligne

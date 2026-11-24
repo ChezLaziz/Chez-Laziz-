@@ -61,6 +61,10 @@ export function track(
     // hors du site. Sans cet événement, cette porte serait invisible dans la
     // mesure alors qu'elle produit de vraies ventes.
     | 'contact_whatsapp'
+    // Le client confirme lui-même sa commande sur WhatsApp depuis l'écran
+    // « Merci ». Compté à part de `contact_whatsapp` : ici la commande
+    // existe déjà, ce n'est pas un départ du tunnel.
+    | 'confirm_whatsapp'
     | 'begin_checkout'
     | 'add_payment_info'
     | 'purchase',

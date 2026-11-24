@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { whatsAppOrderMessage, whatsAppOrderUrl } from "./whatsappOrder";
+import { whatsAppConfirmMessage, whatsAppOrderMessage, whatsAppOrderUrl } from "./whatsappOrder";
 
 const PANIER = [
   { label: "1 kg Makroudh Laziz aux Dattes", contents: [], totalMillimes: 8000 },
@@ -74,5 +74,46 @@ describe("whatsAppOrderUrl", () => {
   it("survit aux caractères arabes", () => {
     const url = whatsAppOrderUrl("21623691039", "المجموع : 36 د.ت");
     expect(decodeURIComponent(url.split("?text=")[1]!)).toBe("المجموع : 36 د.ت");
+  });
+});
+
+describe("whatsAppConfirmMessage — le client confirme lui-même, depuis l'écran « Merci »", () => {
+  const commande = { id: 485, totalMillimes: 33000 };
+
+  it("en français : le numéro de commande, le montant à payer, et rien d'autre", () => {
+    expect(whatsAppConfirmMessage(commande, "fr")).toBe(
+      "Bonjour, je confirme ma commande n°485 ✅\nTotal : 33 DT, paiement à la livraison.",
+    );
+  });
+
+  it("en arabe : même contenu, dans la langue où le client a commandé", () => {
+    const m = whatsAppConfirmMessage(commande, "ar");
+    expect(m).toContain("نأكّد الطلبية رقم 485");
+    expect(m).toContain("33 د.ت");
+    expect(m).toContain("الدفع عند التوصيل");
+  });
+
+  it("garde les millimes : le client confirme le montant qu'il paiera vraiment", () => {
+    expect(whatsAppConfirmMessage({ id: 1, totalMillimes: 20500 }, "fr")).toContain("20,5 DT");
+  });
+
+  // Le lien part vers un service tiers : il ne doit porter que ce que la
+  // boutique a besoin de lire. Le numéro de commande suffit à retrouver le
+  // reste dans le carnet.
+  it("ne porte aucune donnée personnelle : la fonction ne reçoit ni nom, ni téléphone, ni adresse", () => {
+    const avecDuBruit = { ...commande, customerName: "Amina Hamdi", phone: "20123456", address: "12 rue des Jasmins" };
+    for (const lang of ["fr", "ar"] as const) {
+      const m = whatsAppConfirmMessage(avecDuBruit, lang);
+      expect(m).not.toContain("Amina");
+      expect(m).not.toContain("20123456");
+      expect(m).not.toContain("Jasmins");
+    }
+  });
+
+  it("le lien s'ouvre sur le numéro de la boutique, message entier", () => {
+    const m = whatsAppConfirmMessage(commande, "ar");
+    const url = whatsAppOrderUrl("21623691039", m);
+    expect(url.startsWith("https://wa.me/21623691039?text=")).toBe(true);
+    expect(decodeURIComponent(url.split("?text=")[1]!)).toBe(m);
   });
 });
