@@ -6,7 +6,7 @@ import { detectDevice, getAttribution } from '@/lib/attribution'
 import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
 import { PHONE_DISPLAY, PHONE_TEL, MESSENGER_URL, WHATSAPP_DIGITS } from '@/lib/shop'
-import { whatsAppOrderMessage, whatsAppOrderUrl } from '@contracts/whatsappOrder'
+import { whatsAppConfirmMessage, whatsAppOrderMessage, whatsAppOrderUrl } from '@contracts/whatsappOrder'
 import { orderErrorMessage } from '@contracts/orderErrors'
 import { unresolvableLines } from '@contracts/cartPruning'
 import { orderIdempotencyKey } from '@contracts/orderKey'
@@ -205,9 +205,9 @@ function scrollToId(id: string) {
 /** Logo WhatsApp, tracé à la main : la marque est reconnue à sa forme, un
  * simple « W » ne la remplace pas. Monochrome, il prend la couleur du
  * bouton qui le contient. */
-function WhatsAppIcon() {
+function WhatsAppIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="shrink-0">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="shrink-0">
       <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.2 8.2 0 0 1 5.82 2.42 8.18 8.18 0 0 1 2.41 5.82c0 4.54-3.69 8.23-8.23 8.23Zm4.52-6.16c-.25-.13-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.14.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.13-.56-1.35-.77-1.84-.2-.49-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.02 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.14-1.18-.06-.11-.22-.17-.47-.29Z" />
     </svg>
   )
@@ -1281,6 +1281,37 @@ export default function OrderPage() {
               'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'
             )}
           </p>
+
+          {/* LA CONFIRMATION, SANS ATTENDRE L'APPEL. La phrase du dessus
+              promet un appel ; presque une annulation sur deux est cet appel
+              resté sans réponse. Ici le client est encore là, décidé : un
+              message déjà écrit, qu'il n'a qu'à envoyer, et la boutique a sa
+              confirmation — voir whatsAppConfirmMessage.
+              Placé AVANT le récapitulatif : sur un téléphone, c'est la seule
+              action visible sans faire défiler. Rien d'obligatoire — la
+              phrase du dessus reste vraie, on appelle quand même. */}
+          {placed.id > 0 && (
+            <div className="mt-8 w-full max-w-md">
+              <a
+                href={whatsAppOrderUrl(
+                  WHATSAPP_DIGITS,
+                  whatsAppConfirmMessage({ id: placed.id, totalMillimes: placed.recap.totalMillimes }, lang),
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track('confirm_whatsapp', { transaction_id: String(placed.id) })}
+                className="flex min-h-14 w-full items-center justify-center gap-3 rounded-full bg-[#0F7F43] px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition-transform duration-300 hover:scale-[1.03]"
+              >
+                <WhatsAppIcon size={20} />
+                {isAr ? 'أكّدوا طلبكم على واتساب' : 'Confirmer sur WhatsApp'}
+              </a>
+              <p className="mt-3 text-[13px] font-light leading-relaxed text-ink/60">
+                {isAr
+                  ? 'لا تريدون انتظار اتصالنا؟ رسالة واحدة تكفي.'
+                  : "Pas envie d'attendre notre appel ? Un message suffit."}
+              </p>
+            </div>
+          )}
 
           <div className={`mt-10 w-full rounded-2xl border border-sand/70 bg-white p-6 shadow-sm ${isAr ? 'text-right' : 'text-left'}`}>
             <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-accent">{isAr ? 'ملخص الطلب' : 'Récapitulatif'}</p>
