@@ -151,7 +151,7 @@ export default function Header() {
               className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors duration-300 ${
                 scrolled
                   ? 'border-gold text-accent hover:bg-gold hover:text-on-gold'
-                  : 'border-[#faf6f3]/70 text-[#faf6f3] hover:bg-paper hover:text-ink'
+                  : 'border-[#faf6f3]/70 text-[#faf6f3] hover:bg-[#faf6f3] hover:text-[#2e2a27]'
               }`}
             >
               {lang === 'ar' ? 'اطلب الآن' : 'Commander'}

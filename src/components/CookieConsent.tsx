@@ -65,7 +65,7 @@ export default function CookieConsent() {
   return (
     <div
       ref={ref}
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-sand/70 bg-paper/97 px-4 pt-2.5 backdrop-blur-sm md:px-10"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-sand/70 bg-paper/95 px-4 pt-2.5 backdrop-blur-sm md:px-10"
       // pb-[env(safe-area-inset-bottom)] : sur iPhone, la barre d'accueil
       // recouvre sinon les boutons du bandeau.
       style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))' }}

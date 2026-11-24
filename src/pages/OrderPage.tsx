@@ -1399,7 +1399,7 @@ export default function OrderPage() {
               }
               setPlaced(null)
             }}
-            className="mt-4 flex w-full items-center justify-center rounded-full border border-accent px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-accent transition-colors hover:bg-accent hover:text-white sm:w-auto"
+            className="mt-4 flex w-full items-center justify-center rounded-full border border-accent px-8 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-accent transition-colors hover:bg-accent hover:text-on-gold sm:w-auto"
           >
             {isAr ? 'اطلبوا مرة أخرى' : 'Passer une nouvelle commande'}
           </button>
@@ -1827,7 +1827,7 @@ export default function OrderPage() {
                     {items.slice(0, 3).map((l) => (
                       <span
                         key={l.key}
-                        className="h-9 w-9 overflow-hidden rounded-full border-2 border-white bg-sand/40"
+                        className="h-9 w-9 overflow-hidden rounded-full border-2 border-surface bg-sand/40"
                       >
                         <ProductImage src={l.imageUrl} alt="" compact />
                       </span>
@@ -2063,7 +2063,7 @@ export default function OrderPage() {
                         }}
                         aria-label={isAr ? 'الولاية' : 'Gouvernorat'}
                         autoComplete="address-level1"
-                        className={`${inputCls} h-[50px] ${governorate ? '' : 'text-ink/35'}`}
+                        className={`${inputCls} h-[50px] ${governorate ? '' : 'text-ink/55'}`}
                       >
                         <option value="" disabled>
                           {isAr ? 'الولاية' : 'Gouvernorat'}
@@ -2099,7 +2099,7 @@ export default function OrderPage() {
                           }}
                           aria-label={isAr ? 'المعتمدية' : 'Délégation'}
                           autoComplete="address-level2"
-                          className={`${inputCls} h-[50px] ${delegationChoisie ? '' : 'text-ink/35'}`}
+                          className={`${inputCls} h-[50px] ${delegationChoisie ? '' : 'text-ink/55'}`}
                         >
                           <option value="" disabled>
                             {!governorate

@@ -19,7 +19,7 @@
          avant que le moindre script du site soit chargé : sans elle, la
          page s'ouvrait sur un éclair blanc. -->
     <script>
-      if (/^\/(admin|atelier)(\/|$)/.test(location.pathname)) document.documentElement.setAttribute('data-theme', 'clair')
+      if (/^\/(admin|atelier)(\/|$)/i.test(location.pathname)) document.documentElement.setAttribute('data-theme', 'clair')
     </script>
     <style>
       html { background: #15110e; }

@@ -11,8 +11,9 @@
  * theme.test.ts échoue. */
 export type Theme = "sombre" | "clair";
 
-/** Les adresses qui restent claires. */
-export const CHEMINS_CLAIRS = /^\/(admin|atelier)(\/|$)/;
+/** Les adresses qui restent claires. Sans tenir compte de la casse : le
+ * routeur ouvre aussi l'administration sur « /Admin ». */
+export const CHEMINS_CLAIRS = /^\/(admin|atelier)(\/|$)/i;
 
 export function themeForPath(pathname: string): Theme {
   return CHEMINS_CLAIRS.test(pathname) ? "clair" : "sombre";

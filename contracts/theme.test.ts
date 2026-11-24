@@ -10,7 +10,7 @@ describe("thème d'une page", () => {
   });
 
   it("l'administration et l'écran de l'atelier restent clairs", () => {
-    for (const chemin of ["/admin", "/admin/", "/atelier", "/atelier/"]) {
+    for (const chemin of ["/admin", "/admin/", "/atelier", "/atelier/", "/Admin", "/ATELIER"]) {
       expect(themeForPath(chemin)).toBe("clair");
     }
   });
