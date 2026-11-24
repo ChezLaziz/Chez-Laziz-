@@ -9,11 +9,14 @@
 // téléphone est une liste qu'on remplit vraiment. « autre » n'existe pas
 // volontairement — il attire tout et n'apprend rien.
 
+// `ar` est ce que l'équipe choisit, sur Telegram comme dans le carnet de
+// commandes. `fr` est le même mot pour le tableau de bord, qui est en
+// français — court, parce qu'il partage sa ligne avec un nombre.
 export const CANCEL_REASONS = [
-  { code: "sans_reponse", ar: "ما جابش تليفون" },
-  { code: "change_avis", ar: "بدّل رايو" },
-  { code: "trop_cher", ar: "الثمن غالي" },
-  { code: "faux_numero", ar: "نمرة غالطة" },
+  { code: "sans_reponse", ar: "ما جابش تليفون", fr: "Ne répond pas" },
+  { code: "change_avis", ar: "بدّل رايو", fr: "A changé d'avis" },
+  { code: "trop_cher", ar: "الثمن غالي", fr: "Trop cher" },
+  { code: "faux_numero", ar: "نمرة غالطة", fr: "Faux numéro" },
 ] as const;
 
 export type CancelReason = (typeof CANCEL_REASONS)[number]["code"];
@@ -26,4 +29,9 @@ export function isCancelReason(value: unknown): value is CancelReason {
  * c'est une annulation d'avant ce champ, et on le dit. */
 export function cancelReasonAr(code: string | null | undefined): string | null {
   return CANCEL_REASONS.find((r) => r.code === code)?.ar ?? null;
+}
+
+/** Le même libellé en français, pour le tableau de bord. */
+export function cancelReasonFr(code: string | null | undefined): string | null {
+  return CANCEL_REASONS.find((r) => r.code === code)?.fr ?? null;
 }

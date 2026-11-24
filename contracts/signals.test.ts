@@ -134,6 +134,84 @@ describe('buildSignals — chaque signal porte sa preuve', () => {
     expect(s.text).toContain('45')
   })
 
+  describe('la première raison d\'annulation', () => {
+    const annulations = (rows: { code: string | null; orders: number }[]) =>
+      buildSignals(
+        overview({
+          delivery: { completed: 30, cancelled: 10, cancellationRate: 0.2, lostRevenueMillimes: 45000 },
+          cancellations: { rows },
+        }),
+      ).find((x) => x.id === 'cancellations')!.text
+
+    it('est nommée, avec son compte, quand elle explique au moins un tiers des annulations', () => {
+      const texte = annulations([
+        { code: 'sans_reponse', orders: 6 },
+        { code: 'change_avis', orders: 3 },
+        { code: 'trop_cher', orders: 0 },
+        { code: 'faux_numero', orders: 1 },
+      ])
+      expect(texte).toContain('Première raison notée : « ne répond pas », 6 sur 10.')
+      // Le chiffre d'avant reste : la raison s'ajoute, elle ne remplace rien.
+      expect(texte).toContain('20%')
+      expect(texte).toContain('45')
+    })
+
+    it('ne dépend pas de l\'ordre des lignes', () => {
+      const texte = annulations([
+        { code: null, orders: 2 },
+        { code: 'trop_cher', orders: 1 },
+        { code: 'faux_numero', orders: 7 },
+      ])
+      expect(texte).toContain('« faux numéro », 7 sur 10')
+    })
+
+    it('se tait sous un tiers des annulations : ce serait une anecdote', () => {
+      const texte = annulations([
+        { code: 'sans_reponse', orders: 3 },
+        { code: 'change_avis', orders: 3 },
+        { code: 'trop_cher', orders: 2 },
+        { code: 'faux_numero', orders: 2 },
+      ])
+      expect(texte).not.toContain('Première raison')
+    })
+
+    it('se tait sous trois commandes, même quand elles pèsent plus du tiers', () => {
+      // Deux annulations sur cinq : 40 %, et pourtant deux commandes ne font
+      // pas une raison. Sur cinq annulations, rien n'est encore lisible.
+      const texte = buildSignals(
+        overview({
+          delivery: { completed: 20, cancelled: 5, cancellationRate: 0.2, lostRevenueMillimes: 45000 },
+          cancellations: {
+            rows: [
+              { code: 'sans_reponse', orders: 2 },
+              { code: 'change_avis', orders: 1 },
+              { code: null, orders: 2 },
+            ],
+          },
+        }),
+      ).find((x) => x.id === 'cancellations')!.text
+      expect(texte).toContain('20%')
+      expect(texte).not.toContain('Première raison')
+    })
+
+    it('« raison non notée » n\'est jamais une raison, même quand c\'est la plus grosse ligne', () => {
+      const texte = annulations([
+        { code: null, orders: 6 },
+        { code: 'change_avis', orders: 4 },
+      ])
+      expect(texte).toContain('« a changé d\'avis », 4 sur 10')
+      expect(texte).not.toContain('non notée')
+    })
+
+    it('se passe des raisons quand la source ne les donne pas', () => {
+      const sans = buildSignals(
+        overview({ delivery: { completed: 30, cancelled: 10, cancellationRate: 0.2, lostRevenueMillimes: 45000 } }),
+      ).find((x) => x.id === 'cancellations')!.text
+      expect(sans).not.toContain('Première raison')
+      expect(sans.endsWith('perdu.')).toBe(true)
+    })
+  })
+
   it('ne compare nouveaux et revenants que si les deux groupes existent', () => {
     const signals = buildSignals(
       overview({

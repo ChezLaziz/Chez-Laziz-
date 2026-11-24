@@ -19,6 +19,7 @@ import { dayKey, daysInPeriod, type Period, type PeriodPair } from "./period";
 import { buildCustomerHistories, computeCustomerMetrics } from "./customers";
 import { computeMargins, type CostsByProductId } from "./margin";
 import { computeAcquisition, computeAdPerformance } from "./acquisition";
+import { computeCancellations } from "./cancellations";
 import {
   attachGrowth,
   computeGovernorateDelivery,
@@ -33,6 +34,7 @@ export * from "./customers";
 export * from "./breakdowns";
 export * from "./margin";
 export * from "./acquisition";
+export * from "./cancellations";
 
 function parseItems(json: string): OrderItem[] {
   try {
@@ -66,6 +68,7 @@ const ANALYTICS_COLUMNS = {
   // Un booléen calculé par la base : le cookie lui-même n'a rien à faire
   // dans l'analytique.
   pixelSeen: sql<boolean>`${orders.metaFbp} IS NOT NULL`,
+  cancelReason: orders.cancelReason,
   createdAt: orders.createdAt,
 } as const;
 
@@ -163,7 +166,9 @@ export type RecentOrder = {
   createdAt: string;
 };
 
-function recentOrders(allOrders: AnalyticsOrder[], limit = 5): RecentOrder[] {
+// Sept, pas cinq : la carte d'à côté (les raisons d'annulation) est plus
+// haute que cinq lignes, et deux commandes de plus valent mieux qu'un blanc.
+function recentOrders(allOrders: AnalyticsOrder[], limit = 7): RecentOrder[] {
   return [...allOrders]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, limit)
@@ -272,6 +277,8 @@ export type OverviewData = {
   /** Publicité par publicité, sur TOUTES les commandes de la période,
    * annulées comprises — voir computeAdPerformance. */
   ads: ReturnType<typeof computeAdPerformance>;
+  /** Pourquoi les commandes ont été annulées — voir computeCancellations. */
+  cancellations: ReturnType<typeof computeCancellations>;
 };
 
 /** Toutes les données de la Vue d'ensemble en UNE passe.
@@ -356,5 +363,6 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     previousMargins: computeMargins(previous, costs),
     acquisition,
     ads: computeAdPerformance(currentAll),
+    cancellations: computeCancellations(currentAll, previousAll),
   };
 }

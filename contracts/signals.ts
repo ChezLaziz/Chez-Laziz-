@@ -1,4 +1,5 @@
 import { formatDinars } from "./shop";
+import { cancelReasonFr } from "./cancelReasons";
 
 const formatTND = formatDinars;
 
@@ -35,6 +36,11 @@ export type SignalInput = {
     cancelled: number;
     cancellationRate: number;
     lostRevenueMillimes: number;
+  };
+  /** Les raisons d'annulation, quand la source les donne — voir
+   * computeCancellations. Facultatif : les règles s'en passent. */
+  cancellations?: {
+    rows: readonly { code: string | null; orders: number }[];
   };
 };
 
@@ -146,10 +152,23 @@ export function buildSignals(d: SignalInput): Signal[] {
 
   // Annulations : coût réel, pas un simple pourcentage.
   if (d.delivery.cancellationRate >= 0.15 && d.delivery.cancelled >= 3) {
+    // Et la première raison, quand elle explique vraiment quelque chose : au
+    // moins trois commandes ET un tiers des annulations. En dessous, « la
+    // première raison » sur deux commandes n'est qu'une anecdote. Une
+    // annulation sans raison notée (code null) n'est pas une raison.
+    let premiere: { code: string | null; orders: number } | null = null
+    for (const r of d.cancellations?.rows ?? []) {
+      if (r.code !== null && (!premiere || r.orders > premiere.orders)) premiere = r
+    }
+    const libelle = premiere ? cancelReasonFr(premiere.code) : null
+    const raison =
+      premiere && libelle && premiere.orders >= 3 && premiere.orders * 3 >= d.delivery.cancelled
+        ? ` Première raison notée : « ${libelle.toLowerCase()} », ${premiere.orders} sur ${d.delivery.cancelled}.`
+        : ''
     signals.push({
       id: 'cancellations',
       tone: 'bad',
-      text: `${(d.delivery.cancellationRate * 100).toFixed(0)}% des commandes ont été annulées (${d.delivery.cancelled} sur la période), soit ${formatTND(d.delivery.lostRevenueMillimes)} DT de chiffre d'affaires perdu.`,
+      text: `${(d.delivery.cancellationRate * 100).toFixed(0)}% des commandes ont été annulées (${d.delivery.cancelled} sur la période), soit ${formatTND(d.delivery.lostRevenueMillimes)} DT de chiffre d'affaires perdu.${raison}`,
     })
   }
 
