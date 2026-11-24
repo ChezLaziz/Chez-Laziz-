@@ -22,6 +22,7 @@ import type { OrderItem } from "../queries/orders";
 import { formatDinars, formatWeight } from "@contracts/shop";
 import { escapeTelegramHtml } from "@contracts/kitchenBoard";
 import { CANCEL_REASONS, cancelReasonAr } from "@contracts/cancelReasons";
+import { orderConfirmWhatsAppUrl, type ConfirmableOrder } from "@contracts/orderConfirmWhatsApp";
 
 export type NotifiableOrder = {
   id: number;
@@ -39,8 +40,13 @@ export type NotifiableOrder = {
   note: string | null;
 };
 
+/** Un bouton fait l'une de deux choses : rappeler le serveur
+ * (`callback_data`) ou ouvrir un lien (`url`). Jamais les deux — Telegram
+ * refuse le clavier entier. */
+export type InlineButton = { text: string; callback_data: string } | { text: string; url: string };
+
 export type InlineKeyboard = {
-  inline_keyboard: { text: string; callback_data: string }[][];
+  inline_keyboard: InlineButton[][];
 };
 
 /** Telegram refuse un message au-delà de 4096 caractères : une commande à
@@ -302,12 +308,25 @@ export function buildNewOrderTelegramMessage(order: NotifiableOrder): string {
   return corps.slice(0, LIMITE_TELEGRAM - fin.length) + fin;
 }
 
-/** Les deux seules décisions possibles sur une commande qui vient d'arriver.
- * `callback_data` reste sous les 64 octets imposés par Telegram. */
-export function newOrderKeyboard(orderId: number): InlineKeyboard {
+/** Le bouton qui ouvre WhatsApp sur le client, message de confirmation déjà
+ * écrit — ou rien, si la commande n'est pas fournie ou si son numéro n'est
+ * pas exploitable. Voir contracts/orderConfirmWhatsApp.ts : presque une
+ * annulation sur deux est un client qui n'a pas décroché. */
+function boutonWhatsApp(order: ConfirmableOrder | undefined, text: string): InlineButton[][] {
+  const url = order ? orderConfirmWhatsAppUrl(order) : null;
+  return url ? [[{ text, url }]] : [];
+}
+
+/** Les deux seules décisions possibles sur une commande qui vient d'arriver,
+ * et entre les deux le moyen de joindre le client autrement qu'en appelant.
+ * `callback_data` reste sous les 64 octets imposés par Telegram.
+ *
+ * `order` est facultatif : sans lui, le clavier d'origine à deux boutons. */
+export function newOrderKeyboard(orderId: number, order?: ConfirmableOrder): InlineKeyboard {
   return {
     inline_keyboard: [
       [{ text: "✅ تأكيد الطلبية", callback_data: `o:ok:${orderId}` }],
+      ...boutonWhatsApp(order, "💬 واتساب للحريف"),
       [{ text: "❌ إلغاء", callback_data: `o:no:${orderId}` }],
     ],
   };
@@ -320,9 +339,15 @@ export function newOrderKeyboard(orderId: number): InlineKeyboard {
  *
  * « رجوع » parce qu'un ❌ touché par erreur doit se rattraper sans avoir rien
  * changé. */
-export function cancelReasonKeyboard(orderId: number): InlineKeyboard {
+export function cancelReasonKeyboard(orderId: number, order?: ConfirmableOrder): InlineKeyboard {
   return {
     inline_keyboard: [
+      // LE DERNIER MOMENT UTILE. Celle qui s'apprête à toucher « ما جابش
+      // تليفون » a le client injoignable sous les yeux : c'est exactement
+      // là qu'un message WhatsApp peut encore sauver la commande. Le bouton
+      // ouvre un lien et ne change rien à la commande — elle reste
+      // « nouvelle » tant qu'aucune raison n'est choisie.
+      ...boutonWhatsApp(order, "💬 جرّب واتساب قبل ما تلغي"),
       ...CANCEL_REASONS.map((r) => [
         { text: r.ar, callback_data: `o:r:${r.code}:${orderId}` },
       ]),
@@ -398,6 +423,9 @@ export async function notifyAdminNewOrderTelegram(order: NotifiableOrder): Promi
     console.log(`[telegram] non configuré — commande #${order.id} non notifiée`);
     return;
   }
-  const envoye = await sendMessage(buildNewOrderTelegramMessage(order), newOrderKeyboard(order.id));
+  const envoye = await sendMessage(
+    buildNewOrderTelegramMessage(order),
+    newOrderKeyboard(order.id, order),
+  );
   if (envoye) console.log(`[telegram] commande #${order.id} notifiée`);
 }

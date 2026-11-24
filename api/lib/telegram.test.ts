@@ -4,9 +4,11 @@ import {
   chatId,
   setChatIdOverride,
   cancelReasonPrompt,
+  cancelReasonKeyboard,
   couperPourTelegram,
   decidedOrderMessage,
   isTelegramConfigured,
+  newOrderKeyboard,
 } from "./telegram";
 
 const commande = {
@@ -170,5 +172,58 @@ describe("chatId — migration d'un groupe vers un supergroupe", () => {
   it("rend une chaîne vide plutôt que « undefined » si rien n'est configuré", () => {
     delete process.env.TELEGRAM_CHAT_ID;
     expect(chatId()).toBe("");
+  });
+});
+
+describe("les claviers d'une commande — joindre le client autrement qu'en appelant", () => {
+  const boutons = (k: { inline_keyboard: unknown[][] }) =>
+    k.inline_keyboard.flat() as { text: string; callback_data?: string; url?: string }[];
+
+  it("sans la commande, le clavier d'origine : ✅ puis ❌, rien d'autre", () => {
+    expect(newOrderKeyboard(42)).toEqual({
+      inline_keyboard: [
+        [{ text: "✅ تأكيد الطلبية", callback_data: "o:ok:42" }],
+        [{ text: "❌ إلغاء", callback_data: "o:no:42" }],
+      ],
+    });
+  });
+
+  it("avec la commande, un bouton WhatsApp ENTRE les deux décisions", () => {
+    const b = boutons(newOrderKeyboard(42, commande));
+    expect(b.map((x) => x.text)).toEqual(["✅ تأكيد الطلبية", "💬 واتساب للحريف", "❌ إلغاء"]);
+    expect(b[1]!.url).toMatch(/^https:\/\/wa\.me\/21655123456\?text=/);
+    // Un bouton ouvre un lien OU rappelle le serveur, jamais les deux :
+    // Telegram refuserait le clavier entier.
+    expect(b[1]).not.toHaveProperty("callback_data");
+    expect(b[0]).not.toHaveProperty("url");
+  });
+
+  it("le message préparé porte le numéro de commande et le montant à payer", () => {
+    const url = boutons(newOrderKeyboard(42, commande))[1]!.url!;
+    const texte = decodeURIComponent(url.split("?text=")[1]!);
+    expect(texte).toContain("رقم 42");
+    expect(texte).toContain("156,8 د.ت");
+  });
+
+  it("au moment d'annuler, WhatsApp est proposé AVANT les raisons, et « رجوع » reste en dernier", () => {
+    const b = boutons(cancelReasonKeyboard(42, commande));
+    expect(b[0]!.text).toBe("💬 جرّب واتساب قبل ما تلغي");
+    expect(b[0]!.url).toMatch(/^https:\/\/wa\.me\/21655123456\?text=/);
+    expect(b.at(-1)).toEqual({ text: "↩️ رجوع", callback_data: "o:back:42" });
+    expect(b.filter((x) => x.callback_data?.startsWith("o:r:"))).toHaveLength(4);
+  });
+
+  it("un numéro inexploitable : pas de bouton WhatsApp, et les décisions restent là", () => {
+    const sansNumero = { ...commande, phone: "12345" };
+    expect(newOrderKeyboard(42, sansNumero)).toEqual(newOrderKeyboard(42));
+    expect(cancelReasonKeyboard(42, sansNumero)).toEqual(cancelReasonKeyboard(42));
+  });
+
+  it("chaque callback_data reste sous les 64 octets de Telegram", () => {
+    for (const k of [newOrderKeyboard(123456789, commande), cancelReasonKeyboard(123456789, commande)]) {
+      for (const x of boutons(k)) {
+        if (x.callback_data) expect(Buffer.byteLength(x.callback_data)).toBeLessThanOrEqual(64);
+      }
+    }
   });
 });

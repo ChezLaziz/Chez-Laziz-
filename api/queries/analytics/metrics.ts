@@ -45,6 +45,10 @@ export type AnalyticsOrder = {
   acquisitionCampaign?: string | null;
   acquisitionContent?: string | null;
   deviceType?: string | null;
+  /** La commande est arrivée avec les cookies du Pixel Meta — donc après
+   * « Accepter ». Un simple oui/non : la valeur des cookies ne quitte pas la
+   * base. Absent sur les lectures qui n'en ont pas besoin. */
+  pixelSeen?: boolean;
   createdAt: Date;
 };
 
