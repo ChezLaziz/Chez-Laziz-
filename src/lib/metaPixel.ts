@@ -9,9 +9,62 @@
 // Le téléphone du client n'est transmis (haché) que côté serveur, voir
 // api/lib/metaConversionsApi.ts.
 
+import { fbcToWrite, rawClickIdFromSearch } from '@contracts/metaClickId'
+
 const PIXEL_ID = (import.meta.env.VITE_META_PIXEL_ID as string | undefined)?.trim()
 
 export const metaPixelEnabled = Boolean(PIXEL_ID)
+
+/** Le clic publicitaire qui a amené cette visite — lu UNE fois, au
+ * chargement de la page, pendant que le fbclid est encore dans l'adresse.
+ *
+ * EN MÉMOIRE SEULEMENT : ni cookie, ni localStorage, ni sessionStorage, et
+ * rien ne part nulle part. La valeur ne sert que dans initMetaPixel, donc
+ * après « Accepter ». Voir contracts/metaClickId.ts pour le pourquoi : sans
+ * elle, une visiteuse qui accepte le bandeau APRÈS avoir quitté la page
+ * d'arrivée commande avec son consentement mais sans le clic qui l'a
+ * amenée. */
+const clicDArrivee: { fbclid: string; vuLe: number } | null = (() => {
+  if (!PIXEL_ID || typeof window === 'undefined') return null
+  try {
+    const fbclid = rawClickIdFromSearch(window.location.search)
+    return fbclid ? { fbclid, vuLe: Date.now() } : null
+  } catch {
+    return null
+  }
+})()
+
+/** Repose `_fbc` si le Pixel n'a plus aucun moyen de le faire lui-même.
+ *
+ * Appelée dans initMetaPixel et nulle part ailleurs : c'est ce qui la place
+ * derrière le consentement. Même cookie que celui du Pixel (même nom, même
+ * domaine, même durée de 90 jours), pour qu'il n'en existe jamais deux. */
+function restaurerClicDArrivee() {
+  if (!clicDArrivee) return
+  try {
+    // Le fbclid est encore dans l'adresse : le Pixel va le lire tout seul.
+    if (rawClickIdFromSearch(window.location.search) === clicDArrivee.fbclid) return
+    const existant =
+      document.cookie
+        .split(';')
+        .map((c) => c.trim())
+        .find((c) => c.startsWith('_fbc='))
+        ?.slice('_fbc='.length) ?? null
+    const valeur = fbcToWrite({
+      fbclid: clicDArrivee.fbclid,
+      firstSeenMs: clicDArrivee.vuLe,
+      existingFbc: existant,
+    })
+    if (!valeur) return
+    const hote = window.location.hostname.replace(/^www\./, '')
+    // Pas d'attribut domain sur localhost ou une adresse IP : le navigateur
+    // refuserait le cookie.
+    const domaine = hote.includes('.') && !/^[\d.]+$/.test(hote) ? `; domain=.${hote}` : ''
+    document.cookie = `_fbc=${valeur}; path=/; max-age=${90 * 24 * 3600}; SameSite=Lax${domaine}`
+  } catch {
+    // Cookies bloqués par le navigateur : rien à restaurer, rien à casser.
+  }
+}
 
 type FbqFn = {
   (...args: unknown[]): void
@@ -76,6 +129,10 @@ export function initMetaPixel() {
     script.src = 'https://connect.facebook.net/en_US/fbevents.js'
     document.head.appendChild(script)
   }
+  // AVANT l'init : fbevents.js lit `_fbc` au moment où il traite la file.
+  // Posé ici, le clic accompagne aussi les événements du navigateur, pas
+  // seulement la commande côté serveur.
+  restaurerClicDArrivee()
   window.fbq('init', PIXEL_ID)
   // APRÈS l'init, jamais avant : un track antérieur serait ignoré par Meta.
   for (const e of enAttente.splice(0)) envoyer(e.event, e.payload, e.eventId)

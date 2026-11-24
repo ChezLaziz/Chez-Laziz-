@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { clientIpFromHeaders, metaSignalsForOrder, metaUserSignals, readCookie } from './metaSignals'
+import {
+  MAX_FBC_STOCKE,
+  clientIpFromHeaders,
+  metaSignalsForOrder,
+  metaUserSignals,
+  readCookie,
+} from './metaSignals'
 
 const FBC = 'fb.1.1719500000000.IwAR0abcdef'
 const FBP = 'fb.1.1719500000000.123456789'
@@ -70,9 +76,20 @@ describe('metaUserSignals', () => {
   })
 
   it('borne les valeurs venues de l’extérieur', () => {
-    const s = metaUserSignals({ cookie: `_fbc=${'x'.repeat(900)}`, userAgent: 'u'.repeat(900) })
-    expect(s?.fbc).toHaveLength(255)
+    const s = metaUserSignals({ cookie: `_fbp=${FBP}`, userAgent: 'u'.repeat(900) })
     expect(s?.clientUserAgent).toHaveLength(400)
+  })
+
+  it('ne COUPE jamais un identifiant de clic : entier, ou rien', () => {
+    // Un fbclid récent dépasse souvent 200 caractères. Tronqué à 255, le
+    // cookie devenait un AUTRE identifiant — Meta ne le reconnaît pas et
+    // le signale « modified fbclid ».
+    const long = `fb.1.1719500000000.${'A'.repeat(400)}`
+    expect(metaUserSignals({ cookie: `_fbc=${long}; _fbp=${FBP}` })?.fbc).toBe(long)
+    // Démesuré : ce n'est plus un identifiant de clic. On jette tout.
+    const absurde = `fb.1.1719500000000.${'A'.repeat(2000)}`
+    expect(metaUserSignals({ cookie: `_fbc=${absurde}; _fbp=${FBP}` })).toEqual({ fbp: FBP })
+    expect(metaUserSignals({ cookie: `_fbc=${absurde}` })).toBeNull()
   })
 })
 
@@ -107,6 +124,16 @@ describe("metaSignalsForOrder — le bogue qui a coûté trente jours d'attribut
 
   it("ne pose que ce qui existe — un champ absent ne devient pas undefined", () => {
     expect(metaSignalsForOrder({ fbp: "fb.1.2.3" })).toEqual({ metaFbp: "fb.1.2.3" });
+  });
+
+  it("n'écrit pas dans la commande un fbc plus large que la colonne — plutôt rien qu'un clic coupé", () => {
+    const tropLong = `fb.1.1726900000000.${"A".repeat(300)}`;
+    expect(tropLong.length).toBeGreaterThan(MAX_FBC_STOCKE);
+    expect(metaSignalsForOrder({ fbc: tropLong, fbp: "fb.1.2.3" })).toEqual({ metaFbp: "fb.1.2.3" });
+    // À la limite exacte, il passe entier.
+    const juste = `fb.1.1726900000000.${"A".repeat(MAX_FBC_STOCKE - 19)}`;
+    expect(juste).toHaveLength(MAX_FBC_STOCKE);
+    expect(metaSignalsForOrder({ fbc: juste }).metaFbc).toBe(juste);
   });
 
   it("rend un objet vide sans consentement, pour être étalé sans risque", () => {

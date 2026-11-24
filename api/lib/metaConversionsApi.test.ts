@@ -24,18 +24,45 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("normalizeTunisianPhone", () => {
-  it("ajoute l'indicatif +216 quand il est absent", () => {
-    expect(normalizeTunisianPhone("23691039")).toBe("+21623691039");
+describe("normalizeTunisianPhone — la forme que Meta hache de son côté", () => {
+  it("ajoute l'indicatif 216 quand il est absent", () => {
+    expect(normalizeTunisianPhone("23691039")).toBe("21623691039");
   });
 
   it("retire le 0 initial avant d'ajouter l'indicatif", () => {
-    expect(normalizeTunisianPhone("023691039")).toBe("+21623691039");
+    expect(normalizeTunisianPhone("023691039")).toBe("21623691039");
   });
 
-  it("conserve l'indicatif déjà présent, avec ou sans + ou espaces", () => {
-    expect(normalizeTunisianPhone("+216 23 691 039")).toBe("+21623691039");
-    expect(normalizeTunisianPhone("216-23-691-039")).toBe("+21623691039");
+  it("conserve l'indicatif déjà présent, avec ou sans +, 00, tirets ou espaces", () => {
+    expect(normalizeTunisianPhone("+216 23 691 039")).toBe("21623691039");
+    expect(normalizeTunisianPhone("216-23-691-039")).toBe("21623691039");
+    expect(normalizeTunisianPhone("00216 23 691 039")).toBe("21623691039");
+  });
+
+  it("JAMAIS de « + » ni d'autre symbole : des chiffres seuls, sinon l'empreinte ne correspond à aucun compte", () => {
+    // Le bogue : « +21623691039 » partait haché tel quel. Meta hache
+    // « 21623691039 ». Deux empreintes sans rapport — le téléphone envoyé
+    // n'a jamais reconnu personne.
+    for (const saisie of ["23691039", "+216 23 691 039", "0021623691039", "(216) 23.691.039", " 23 691 039 "]) {
+      expect(normalizeTunisianPhone(saisie)).toMatch(/^216\d{8}$/);
+    }
+    expect(sha256(normalizeTunisianPhone("+216 23 691 039"))).not.toBe(sha256("+21623691039"));
+  });
+
+  it("un numéro local qui COMMENCE par 216 garde ses huit chiffres et reçoit son indicatif", () => {
+    // « 21 612 345 » est un numéro tunisien valide. L'ancienne règle le
+    // croyait déjà international et envoyait « 21612345 » tout court.
+    expect(normalizeTunisianPhone("21 612 345")).toBe("21621612345");
+    expect(normalizeTunisianPhone("+216 21 612 345")).toBe("21621612345");
+  });
+
+  it("même empreinte que l'exemple publié par Meta pour un numéro normalisé", () => {
+    // Documentation Meta, paramètre `ph` : (650)555-1212 → « 16505551212 »
+    // → e323ec62…ab3176. Si ce test casse, c'est le hachage lui-même qui
+    // ne parle plus la même langue que Meta.
+    expect(sha256("16505551212")).toBe(
+      "e323ec626319ca94ee8bff2e4c87cf613be6ea19919ed1364124e16807ab3176",
+    );
   });
 });
 
@@ -114,8 +141,8 @@ describe("eventTimeSeconds — l'heure que Meta doit rapprocher du clic", () => 
 
 describe("sha256", () => {
   it("est déterministe et sensible à la casse/à l'espacement de l'entrée exacte", () => {
-    expect(sha256("+21623691039")).toBe(sha256("+21623691039"));
-    expect(sha256("+21623691039")).not.toBe(sha256("+21623691038"));
+    expect(sha256("21623691039")).toBe(sha256("21623691039"));
+    expect(sha256("21623691039")).not.toBe(sha256("21623691038"));
   });
 
   it("produit un hash hex de 64 caractères (SHA-256)", () => {
@@ -177,7 +204,7 @@ describe("sendMetaPurchaseEvent", () => {
     expect(body.data[0].event_id).toBe("order-42");
     expect(body.data[0].event_name).toBe("Purchase");
     expect(body.data[0].custom_data.value).toBe(69.9);
-    expect(body.data[0].user_data.ph[0]).toBe(sha256("+21623691039"));
+    expect(body.data[0].user_data.ph[0]).toBe(sha256("21623691039"));
     expect(JSON.stringify(body)).not.toContain("23691039");
   });
 
@@ -309,7 +336,7 @@ describe("correspondance avancée — ce que Meta reconnaît, ou pas", () => {
     expect(ud.ct).toEqual([sha256("jarzouna")]);
     expect(ud.st).toEqual([sha256("bizerte")]);
     expect(ud.country).toEqual([sha256("tn")]);
-    expect(ud.external_id).toEqual([sha256("+21652865521")]);
+    expect(ud.external_id).toEqual([sha256("21652865521")]);
     const brut = JSON.stringify(corps);
     for (const clair of ["Nada", "Merai", "Jarzouna", "Bizerte", "52865521"]) expect(brut).not.toContain(clair);
     // contents + num_items pour le catalogue
@@ -374,7 +401,7 @@ describe("consentement — ce que Meta reçoit quand le client a refusé les coo
     expect(userData.ct).toBeUndefined();
     expect(userData.st).toBeUndefined();
     // Le téléphone reste : il identifie la commande, et la politique le dit.
-    expect(userData.ph[0]).toBe(sha256("+21623691039"));
+    expect(userData.ph[0]).toBe(sha256("21623691039"));
   });
 
   it("avec consentement (fbp posé par le Pixel) : la correspondance complète part", async () => {
