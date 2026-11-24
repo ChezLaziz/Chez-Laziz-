@@ -189,17 +189,47 @@ export function couperPourTelegram(texte: string): string {
   return `${texte.slice(0, LIMITE_TELEGRAM - 2)}\n…`;
 }
 
+/** Le même clavier, sans ses boutons-liens — ou `null` s'il n'en portait
+ * aucun (il n'y a alors rien à retirer, donc rien à retenter).
+ *
+ * LA COMMANDE D'ABORD, LE BOUTON ENSUITE. Un bouton-lien est le seul élément
+ * d'un clavier qui dépend d'une donnée venue du client : son numéro, son
+ * prénom, dans une adresse wa.me. Les boutons de décision, eux, sont des
+ * constantes. Or Telegram ne refuse pas un bouton, il refuse le MESSAGE
+ * ENTIER : une adresse qu'il n'aimerait pas, et la commande ne sonnerait
+ * plus du tout sur le téléphone du patron — pour un bouton facultatif.
+ * Aucun refus de ce genre n'a été observé ; le filet est là parce que le
+ * premier coûterait une commande. */
+export function sansBoutonsLiens(keyboard: InlineKeyboard): InlineKeyboard | null {
+  if (!keyboard.inline_keyboard.some((rangee) => rangee.some((b) => "url" in b))) return null;
+  return {
+    inline_keyboard: keyboard.inline_keyboard
+      .map((rangee) => rangee.filter((b) => !("url" in b)))
+      .filter((rangee) => rangee.length > 0),
+  };
+}
+
 export async function sendMessage(
   text: string,
   keyboard?: InlineKeyboard,
 ): Promise<{ message_id: number } | null> {
-  return tgCall<{ message_id: number }>("sendMessage", {
-    chat_id: chatId(),
-    text: couperPourTelegram(text),
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-    ...(keyboard ? { reply_markup: keyboard } : {}),
-  });
+  const envoyer = (k?: InlineKeyboard) =>
+    tgCall<{ message_id: number }>("sendMessage", {
+      chat_id: chatId(),
+      text: couperPourTelegram(text),
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      ...(k ? { reply_markup: k } : {}),
+    });
+  const res = await envoyer(keyboard);
+  if (res) return res;
+  // Refusé ou perdu : on retente UNE fois sans les boutons-liens — voir
+  // sansBoutonsLiens. Un clavier qui n'en porte pas n'est pas retenté : le
+  // même envoi échouerait de la même façon.
+  const repli = keyboard ? sansBoutonsLiens(keyboard) : null;
+  if (!repli) return null;
+  console.error("[telegram] sendMessage — nouvel essai sans bouton-lien");
+  return envoyer(repli);
 }
 
 export async function editMessage(
@@ -207,15 +237,22 @@ export async function editMessage(
   text: string,
   keyboard?: InlineKeyboard,
 ): Promise<boolean> {
-  const res = await tgCall("editMessageText", {
-    chat_id: chatId(),
-    message_id: messageId,
-    text: couperPourTelegram(text),
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-    reply_markup: keyboard ?? { inline_keyboard: [] },
-  });
-  return res !== null;
+  const modifier = (k?: InlineKeyboard) =>
+    tgCall("editMessageText", {
+      chat_id: chatId(),
+      message_id: messageId,
+      text: couperPourTelegram(text),
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup: k ?? { inline_keyboard: [] },
+    });
+  if ((await modifier(keyboard)) !== null) return true;
+  // Même filet que sendMessage : sans lui, un bouton-lien refusé laisserait
+  // le ❌ sans effet — la question « علاش تلغات ؟ » ne s'afficherait jamais.
+  const repli = keyboard ? sansBoutonsLiens(keyboard) : null;
+  if (!repli) return false;
+  console.error("[telegram] editMessageText — nouvel essai sans bouton-lien");
+  return (await modifier(repli)) !== null;
 }
 
 export async function deleteMessage(messageId: number): Promise<void> {

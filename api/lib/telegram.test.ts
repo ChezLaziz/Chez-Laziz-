@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildNewOrderTelegramMessage,
   chatId,
@@ -7,8 +7,11 @@ import {
   cancelReasonKeyboard,
   couperPourTelegram,
   decidedOrderMessage,
+  editMessage,
   isTelegramConfigured,
   newOrderKeyboard,
+  sansBoutonsLiens,
+  sendMessage,
 } from "./telegram";
 
 const commande = {
@@ -225,5 +228,97 @@ describe("les claviers d'une commande — joindre le client autrement qu'en appe
         if (x.callback_data) expect(Buffer.byteLength(x.callback_data)).toBeLessThanOrEqual(64);
       }
     }
+  });
+});
+
+
+describe("un bouton-lien refusé ne coûte jamais la notification", () => {
+  type Corps = { reply_markup?: { inline_keyboard: Record<string, unknown>[][] } };
+  const porteUnLien = (c: Corps) => JSON.stringify(c.reply_markup ?? {}).includes('"url"');
+
+  /** Un faux Telegram : il note ce qu'on lui envoie, et répond ce que
+   * `repondre` décide pour chaque envoi. */
+  function fauxTelegram(repondre: (corps: Corps, n: number) => { ok: boolean; description?: string }) {
+    const recus: Corps[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const corps = JSON.parse(init.body) as Corps;
+        recus.push(corps);
+        const r = repondre(corps, recus.length);
+        return new Response(JSON.stringify(r.ok ? { ok: true, result: { message_id: 7 } } : r), {
+          status: r.ok ? 200 : 400,
+        });
+      }),
+    );
+    return recus;
+  }
+
+  beforeEach(() => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
+    process.env.TELEGRAM_CHAT_ID = "-100123";
+    setChatIdOverride(null);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.TELEGRAM_CHAT_ID;
+  });
+
+  it("sansBoutonsLiens retire le lien et garde les décisions, dans l'ordre", () => {
+    expect(sansBoutonsLiens(newOrderKeyboard(42, commande))).toEqual(newOrderKeyboard(42));
+    expect(sansBoutonsLiens(cancelReasonKeyboard(42, commande))).toEqual(cancelReasonKeyboard(42));
+  });
+
+  it("sansBoutonsLiens rend null quand il n'y a rien à retirer : pas de second envoi identique", () => {
+    expect(sansBoutonsLiens(newOrderKeyboard(42))).toBeNull();
+  });
+
+  it("Telegram accepte le lien : un seul envoi, bouton compris", async () => {
+    const recus = fauxTelegram(() => ({ ok: true }));
+    expect(await sendMessage("طلبية", newOrderKeyboard(42, commande))).toEqual({ message_id: 7 });
+    expect(recus).toHaveLength(1);
+    expect(porteUnLien(recus[0]!)).toBe(true);
+  });
+
+  // LE CAS POUR LEQUEL LE FILET EXISTE. Telegram ne refuse pas un bouton,
+  // il refuse le message entier : sans second essai, la commande ne sonnait
+  // plus du tout.
+  it("Telegram refuse le lien : la commande sonne quand même, sans le bouton WhatsApp", async () => {
+    const recus = fauxTelegram((c) =>
+      porteUnLien(c) ? { ok: false, description: "Bad Request: BUTTON_URL_INVALID" } : { ok: true },
+    );
+    expect(await sendMessage("طلبية", newOrderKeyboard(42, commande))).toEqual({ message_id: 7 });
+    expect(recus).toHaveLength(2);
+    expect(recus[1]!.reply_markup).toEqual(newOrderKeyboard(42));
+  });
+
+  it("un clavier sans lien refusé n'est pas renvoyé à l'identique", async () => {
+    const recus = fauxTelegram(() => ({ ok: false, description: "Forbidden: bot was kicked" }));
+    expect(await sendMessage("طلبية", newOrderKeyboard(42))).toBeNull();
+    expect(recus).toHaveLength(1);
+  });
+
+  it("même refusé deux fois, on s'arrête : deux envois, pas de boucle", async () => {
+    const recus = fauxTelegram(() => ({ ok: false, description: "Bad Request" }));
+    expect(await sendMessage("طلبية", newOrderKeyboard(42, commande))).toBeNull();
+    expect(recus).toHaveLength(2);
+  });
+
+  it("au moment d'annuler aussi : la question des raisons s'affiche, sans le bouton WhatsApp", async () => {
+    const recus = fauxTelegram((c) =>
+      porteUnLien(c) ? { ok: false, description: "Bad Request: BUTTON_URL_INVALID" } : { ok: true },
+    );
+    expect(await editMessage(7, "علاش تلغات ؟", cancelReasonKeyboard(42, commande))).toBe(true);
+    expect(recus).toHaveLength(2);
+    expect(recus[1]!.reply_markup).toEqual(cancelReasonKeyboard(42));
+  });
+
+  it("une modification acceptée du premier coup n'est envoyée qu'une fois", async () => {
+    const recus = fauxTelegram(() => ({ ok: true }));
+    expect(await editMessage(7, "طلبية", newOrderKeyboard(42, commande))).toBe(true);
+    expect(recus).toHaveLength(1);
   });
 });
