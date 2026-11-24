@@ -102,40 +102,23 @@ describe("shouldReportMetaPurchase — quand une commande devient un « vrai » 
   });
 });
 
-describe("eventTimeSeconds — l'heure que Meta doit rapprocher du clic", () => {
-  const MAINTENANT = Date.UTC(2026, 8, 21, 12, 0, 0);
-  const ilYA = (heures: number) => new Date(MAINTENANT - heures * 3600 * 1000);
+describe("eventTimeSeconds — l'heure que porte un événement", () => {
+  const MAINTENANT = Date.UTC(2026, 10, 25, 12, 0, 0);
 
-  it("rend l'heure de la COMMANDE, pas celle de l'envoi", () => {
-    // Le colis part le lendemain ; la vente, elle, date de la commande —
-    // c'est elle qui suit le clic publicitaire.
-    const commande = ilYA(26);
-    expect(eventTimeSeconds(commande, MAINTENANT)).toBe(Math.floor(commande.getTime() / 1000));
+  it("est l'instant de l'envoi, à la seconde", () => {
+    // Pas l'heure de la commande : daté d'avant-hier, l'achat arrivait
+    // chez Meta avec un à trois jours de retard, et Meta le dit lui-même —
+    // à vingt-quatre heures, attribution et diffusion peuvent en souffrir.
+    expect(eventTimeSeconds(MAINTENANT)).toBe(Math.floor(MAINTENANT / 1000));
   });
 
-  it("retombe sur l'instant présent au-delà de sept jours — la cliente livrée « dans dix jours »", () => {
-    // Meta refuse la REQUÊTE ENTIÈRE si un event_time dépasse sept jours.
-    // La fenêtre d'attribution est de toute façon passée : mieux vaut un
-    // achat compté sans être attribué qu'un envoi rejeté en bloc.
-    expect(eventTimeSeconds(ilYA(10 * 24), MAINTENANT)).toBe(Math.floor(MAINTENANT / 1000));
+  it("arrondit vers le bas : jamais une seconde dans le futur", () => {
+    expect(eventTimeSeconds(MAINTENANT + 999)).toBe(Math.floor(MAINTENANT / 1000));
   });
 
-  it("garde une marge : six jours passent, sept tout juste non", () => {
-    expect(eventTimeSeconds(ilYA(6 * 24), MAINTENANT)).toBeLessThan(Math.floor(MAINTENANT / 1000));
-    expect(eventTimeSeconds(ilYA(7 * 24), MAINTENANT)).toBe(Math.floor(MAINTENANT / 1000));
-  });
-
-  it("ne fabrique jamais une date de complaisance à la limite", () => {
-    // Soit la vraie heure de commande, soit maintenant. Jamais « il y a
-    // six jours et vingt-trois heures » pour se faufiler sous le plafond.
-    const rendu = eventTimeSeconds(ilYA(30 * 24), MAINTENANT);
-    expect(rendu).toBe(Math.floor(MAINTENANT / 1000));
-  });
-
-  it("se protège d'une date absente ou datée du futur", () => {
-    expect(eventTimeSeconds(null, MAINTENANT)).toBe(Math.floor(MAINTENANT / 1000));
-    expect(eventTimeSeconds(undefined, MAINTENANT)).toBe(Math.floor(MAINTENANT / 1000));
-    expect(eventTimeSeconds(ilYA(-5), MAINTENANT)).toBe(Math.floor(MAINTENANT / 1000));
+  it("reste très en deçà des sept jours au-delà desquels Meta refuse la requête entière", () => {
+    const age = Math.floor(MAINTENANT / 1000) - eventTimeSeconds(MAINTENANT);
+    expect(age).toBe(0);
   });
 });
 

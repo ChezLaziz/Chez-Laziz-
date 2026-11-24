@@ -542,13 +542,15 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
     expect(markMetaPurchaseReported).not.toHaveBeenCalled();
   });
 
-  it("transmet l'heure de la COMMANDE, pour que Meta la rapproche du clic", async () => {
+  it("ne transmet PLUS l'heure de la commande : l'achat est daté de sa livraison", async () => {
+    // Antidaté à la commande, il arrivait chez Meta avec un à trois jours
+    // de retard — voir eventTimeSeconds.
     const commande = new Date(Date.now() - 26 * 3600 * 1000);
     updateOrderStatus.mockResolvedValue(makeOrder({ status: "terminee", createdAt: commande }));
     await caller.setStatus({ token: "t", id: 42, status: "terminee" });
-    expect(sendMetaPurchaseEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ orderedAt: commande }),
-    );
+    expect(sendMetaPurchaseEvent).toHaveBeenCalledTimes(1);
+    const envoye = (sendMetaPurchaseEvent.mock.calls as unknown as [Record<string, unknown>][]).at(-1)![0];
+    expect(envoye).not.toHaveProperty("orderedAt");
   });
 
   it("n'envoie rien si la commande est annulée directement", async () => {
