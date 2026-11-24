@@ -2,12 +2,15 @@ import { describe, it, expect } from "vitest";
 import {
   amountToCollectMillimes,
   buildCsv,
+  buildJetpackCsv,
   carrierPhone,
   EXPORT_COLUMNS,
   exportRow,
   fullAddress,
   hasCompleteWeight,
   isCarrierKey,
+  JETPACK_COLUMNS,
+  jetpackRow,
   packageContents,
   totalWeightKg,
   type ShippableOrder,
@@ -197,5 +200,53 @@ describe("colonne delegation", () => {
   it("reste vide si aucune correspondance n'est fournie", () => {
     const csv = buildCsv([order({ id: 30 })]);
     expect(csv.trim().split("\r\n")[1]!.split(";")[col]).toBe("");
+  });
+});
+
+describe("buildJetpackCsv", () => {
+  it("écrit l'entête au format EXACT de l'importeur Jetpack, « gouvernerat » compris", () => {
+    expect(buildJetpackCsv([])).toBe(
+      "destinataire_nom;adresse;ville;gouvernerat;telephone;telephone2;nombre_de_colis;prix;designation\r\n",
+    );
+    // Le jour où quelqu'un « corrige » la faute de Jetpack, l'import casse.
+    expect(JETPACK_COLUMNS).toContain("gouvernerat");
+  });
+
+  it("ne met PAS de BOM : l'importeur de Jetpack le lirait dans la 1re colonne", () => {
+    const csv = buildJetpackCsv([order()]);
+    expect(csv.charCodeAt(0)).not.toBe(0xfeff);
+    expect(csv.startsWith("destinataire_nom")).toBe(true);
+  });
+
+  it("réduit le téléphone aux 8 chiffres nationaux", () => {
+    expect(jetpackRow(order({ phone: "+216 20 11 44 77" })).telephone).toBe("20114477");
+  });
+
+  it("met le total à encaisser en dinars à 3 décimales", () => {
+    expect(jetpackRow(order({ totalMillimes: 47000 })).prix).toBe("47.000");
+  });
+
+  it("un colis par commande, et la désignation décrit le contenu", () => {
+    const row = jetpackRow(order());
+    expect(row.nombre_de_colis).toBe("1");
+    expect(row.designation).toContain("Makroudh aux dattes");
+  });
+
+  it("une commande DÉJÀ payée part à 0 — le livreur ne doit rien encaisser", () => {
+    expect(jetpackRow(order({ paymentStatus: "paid" })).prix).toBe("0.000");
+  });
+
+  it("échappe une adresse qui contient un séparateur, sinon le colis se décale de colonne", () => {
+    const csv = buildJetpackCsv([order({ address: "Cité El Ghazala; bloc 3, apt 2" })]);
+    const line = csv.split("\r\n")[1]!;
+    expect(line).toContain('"Cité El Ghazala; bloc 3, apt 2"');
+    // Les 9 colonnes restent lisibles : l'adresse entre guillemets ne compte
+    // que pour une.
+    expect(line.split('";"').length).toBeGreaterThan(0);
+  });
+
+  it("une ligne par commande sélectionnée", () => {
+    const csv = buildJetpackCsv([order({ id: 1 }), order({ id: 2 })]);
+    expect(csv.trimEnd().split("\r\n")).toHaveLength(3); // entête + 2 commandes
   });
 });

@@ -13,6 +13,7 @@ import { ANALYTICS_PAGES, NAV_GROUPS, type NavId } from './admin/shell/nav'
 import OverviewPage from './admin/pages/OverviewPage'
 import OrdersPage from './admin/pages/OrdersPage'
 import SuiviPage from './admin/pages/SuiviPage'
+import JetpackPage from './admin/pages/JetpackPage'
 import OffresPage from './admin/pages/OffresPage'
 import { useOverview } from './admin/useOverview'
 
@@ -1765,6 +1766,7 @@ export default function AdminPage() {
         <OrdersPage token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
       )}
       {tab === 'suivi' && <SuiviPage token={token} />}
+      {tab === 'jetpack' && <JetpackPage token={token} />}
       {tab === 'offres' && <OffresPage token={token} />}
       {tab === 'catalogue' && <ProductsTab token={token} />}
       {tab === 'messages' && <MessagesTab token={token} />}
