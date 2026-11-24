@@ -35,7 +35,7 @@ export default function PrivacyPage() {
           <h1 className="font-display text-3xl leading-tight md:text-5xl">
             سياسة الخصوصية
           </h1>
-          <p className="mt-4 text-sm text-ink/50">آخر تحديث: سبتمبر 2026</p>
+          <p className="mt-4 text-sm text-ink/50">آخر تحديث: نوفمبر 2026</p>
 
           <div className="mt-10 space-y-8 text-[15px] font-light leading-relaxed text-ink/80">
             <section>
@@ -66,9 +66,10 @@ export default function PrivacyPage() {
             <section>
               <h2 className="mb-2 font-display text-xl text-ink">كيفاش نستعملو هذه المعلومات</h2>
               <p>
-                هذه المعلومات تُستعمل فقط لتحضير طلبيتكم وتوصيلها وتأكيدها، أو للرد على
-                رسالتكم (بالهاتف أو ماسنجر). تُحفظ في قاعدة بياناتنا لمتابعة الطلبيات،
-                وما تُباعش ولا تُشارك مع أي طرف ثالث لأغراض تجارية.
+                هذه المعلومات تُستعمل فقط لتحضير طلبيتكم وتأكيدها وتوصيلها، ولنتأكدو
+                معاكم بعد التوصيل اللي كل شيء وصل مريقل، أو للرد على رسالتكم. ولهذا
+                نجمو نتصلو بيكم بالهاتف أو واتساب أو ماسنجر. تُحفظ في قاعدة بياناتنا
+                لمتابعة الطلبيات، وما تُباعش ولا تُشارك مع أي طرف ثالث لأغراض تجارية.
               </p>
             </section>
 
@@ -152,7 +153,7 @@ export default function PrivacyPage() {
         <h1 className="font-display text-3xl leading-tight md:text-5xl">
           Politique de confidentialité
         </h1>
-        <p className="mt-4 text-sm text-ink/50">Dernière mise à jour : septembre 2026</p>
+        <p className="mt-4 text-sm text-ink/50">Dernière mise à jour : novembre 2026</p>
 
         <div className="mt-10 space-y-8 text-[15px] font-light leading-relaxed text-ink/80">
           <section>
@@ -185,11 +186,13 @@ export default function PrivacyPage() {
           <section>
             <h2 className="mb-2 font-display text-xl text-ink">Comment nous utilisons ces données</h2>
             <p>
-              Ces informations servent uniquement à préparer, livrer et confirmer
-              votre commande, ou à répondre à votre message (par téléphone ou
-              Messenger). Elles sont conservées dans notre base de données pour le
-              suivi des commandes et ne sont ni vendues, ni partagées avec des tiers
-              à des fins commerciales.
+              Ces informations servent uniquement à préparer, confirmer et livrer
+              votre commande, à vérifier avec vous après la livraison que tout est
+              bien arrivé, ou à répondre à votre message. Pour cela nous pouvons
+              vous joindre par téléphone, WhatsApp ou Messenger. Elles sont
+              conservées dans notre base de données pour le suivi des commandes et
+              ne sont ni vendues, ni partagées avec des tiers à des fins
+              commerciales.
             </p>
           </section>
 

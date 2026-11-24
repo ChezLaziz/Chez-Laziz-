@@ -21,6 +21,7 @@
 
 import { formatDinars } from "./shop";
 import { tunisianLocalPhone } from "./phone";
+import { prenomPourSaluer } from "./prenom";
 
 export type ConfirmableOrder = {
   id: number;
@@ -29,16 +30,11 @@ export type ConfirmableOrder = {
   totalMillimes: number;
 };
 
-/** Le prénom, tel que le client l'a écrit — premier mot, borné. Rien si le
- * champ ne contient pas de lettre : on salue alors sans nom plutôt que
- * d'écrire « عسلامة 12345 ». */
-function prenom(customerName: string): string {
-  const mot = customerName.trim().split(/\s+/)[0] ?? "";
-  return /\p{L}/u.test(mot) ? mot.slice(0, 24) : "";
-}
-
 export function orderConfirmMessage(order: ConfirmableOrder): string {
-  const p = prenom(order.customerName);
+  // Rien si le champ commence par un titre, une particule ou un chiffre :
+  // on salue alors sans nom plutôt que d'écrire « عسلامة Mme » ou
+  // « عسلامة 12345 ». Voir contracts/prenom.ts.
+  const p = prenomPourSaluer(order.customerName);
   return [
     `عسلامة${p ? ` ${p}` : ""} 👋 معاك Chez Laziz.`,
     `وصلتنا طلبيتك رقم ${order.id} (${formatDinars(order.totalMillimes)} د.ت، الدفع عند التوصيل).`,
