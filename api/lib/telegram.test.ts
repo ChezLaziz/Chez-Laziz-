@@ -124,6 +124,25 @@ describe("couperPourTelegram", () => {
     expect(coupe.endsWith("\n…")).toBe(true);
   });
 
+  it("ne laisse jamais la moitié d'un emoji au bord de la coupe", () => {
+    // 4093 lettres puis un emoji : la coupe à 4094 tombe en plein milieu.
+    // Telegram refuse un message qui finit sur une moitié de caractère —
+    // et refuser veut dire que rien ne s'affiche.
+    const coupe = couperPourTelegram("x".repeat(4093) + "🎉".repeat(10));
+    expect(coupe).toBe("x".repeat(4093) + "\n…");
+    expect(() => encodeURIComponent(coupe)).not.toThrow();
+    // La commande trop longue, elle, est coupée dans ses articles. Deux noms
+    // de cliente qui diffèrent d'une lettre décalent la coupe d'un cran :
+    // l'une des deux tombe forcément au milieu d'une lune.
+    const lunes = JSON.stringify([{ name: "🌙".repeat(3000), weightKg: 1, qty: 1, unitPriceMillimes: 10000 }]);
+    for (const customerName of ["Sami", "Samia"]) {
+      const coupee = buildNewOrderTelegramMessage({ ...commande, customerName, items: lunes });
+      expect(coupee.length).toBeLessThanOrEqual(4096);
+      expect(() => encodeURIComponent(coupee), customerName).not.toThrow();
+      expect(coupee).toContain("https://chezlaziz.com/admin");
+    }
+  });
+
   it("protège le cas réel : une commande déjà à la limite + la question « علاش »", () => {
     const enorme = buildNewOrderTelegramMessage({
       ...commande,
@@ -214,6 +233,17 @@ describe("les claviers d'une commande — joindre le client autrement qu'en appe
     expect(b[0]!.url).toMatch(/^https:\/\/wa\.me\/21655123456\?text=/);
     expect(b.at(-1)).toEqual({ text: "↩️ رجوع", callback_data: "o:back:42" });
     expect(b.filter((x) => x.callback_data?.startsWith("o:r:"))).toHaveLength(4);
+  });
+
+  it("un nom plein d'emojis ne casse ni le clavier ni le bouton", () => {
+    // Le nom est coupé à vingt-quatre unités pour saluer ; coupé au milieu
+    // d'un emoji, il faisait lever le lien — et la commande ne sonnait pas.
+    const piege = { ...commande, customerName: "Amina" + "😀".repeat(15) };
+    for (const clavier of [newOrderKeyboard(42, piege), cancelReasonKeyboard(42, piege)]) {
+      const lien = boutons(clavier).find((x) => x.url);
+      expect(lien?.url).toMatch(/^https:\/\/wa\.me\/21655123456\?text=/);
+      expect(() => decodeURIComponent(lien!.url!)).not.toThrow();
+    }
   });
 
   it("un numéro inexploitable : pas de bouton WhatsApp, et les décisions restent là", () => {
