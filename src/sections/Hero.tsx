@@ -174,9 +174,9 @@ export default function Hero() {
           className="mb-4 flex items-center gap-4 text-[11px] font-medium uppercase tracking-[0.3em] text-[#faf6f3]/85 md:mb-6 md:text-xs"
           style={{ ...shadow, ...fadeIn(0.15) }}
         >
-          <span className="hidden h-px w-10 bg-[#dec9b8] md:inline-block" />
+          <span className="hidden h-px w-10 bg-sand md:inline-block" />
           {eyebrow}
-          <span className="hidden h-px w-10 bg-[#dec9b8] md:inline-block" />
+          <span className="hidden h-px w-10 bg-sand md:inline-block" />
         </p>
 
         <h1
@@ -216,7 +216,7 @@ export default function Hero() {
         <div className="mt-7 flex w-full max-w-xs flex-col items-center gap-3 md:mt-10 md:max-w-none md:flex-row md:justify-center md:gap-6" style={fadeIn(1.15)}>
           <Link
             to={isAr ? '/ar/commande' : '/commande'}
-            className="gold-cta flex min-h-12 w-full items-center justify-center gap-3 rounded-full px-8 text-sm font-semibold tracking-[0.06em] text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] md:w-auto md:text-xs md:uppercase md:tracking-[0.16em]"
+            className="gold-cta flex min-h-12 w-full items-center justify-center gap-3 rounded-full px-8 text-sm font-semibold tracking-[0.06em] text-on-gold shadow-[0_8px_24px_rgba(0,0,0,0.35)] md:w-auto md:text-xs md:uppercase md:tracking-[0.16em]"
           >
             {isAr ? 'اطلب الآن' : 'Commander maintenant'}
             <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>

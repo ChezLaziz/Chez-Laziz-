@@ -18,7 +18,7 @@ export default function RelatedArticles({ slugs, isAr }: { slugs: readonly strin
           <Link
             key={a.slug}
             to={isAr ? `/ar/journal/${a.slug}` : `/journal/${a.slug}`}
-            className="block rounded-xl border border-sand/70 bg-white p-4 text-sm transition-colors hover:border-[#b8912e]"
+            className="block rounded-xl border border-sand/70 bg-surface p-4 text-sm transition-colors hover:border-gold"
           >
             <span className="font-display leading-snug text-ink">{isAr ? a.titleAr : a.title}</span>
           </Link>

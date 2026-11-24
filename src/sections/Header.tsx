@@ -96,7 +96,7 @@ export default function Header() {
           hidden && !open ? 'header-hidden' : ''
         } ${
           scrolled && !open
-            ? 'border-b border-sand/60 bg-[#faf6f3]/90 backdrop-blur-md'
+            ? 'border-b border-sand/60 bg-paper/90 backdrop-blur-md'
             : 'border-b border-transparent'
         }`}
       >
@@ -141,7 +141,7 @@ export default function Header() {
                 <circle cx="17" cy="20" r="1.4" />
               </svg>
               {count > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#b8912e] text-[10px] font-semibold text-white">
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[10px] font-semibold text-on-gold">
                   {count}
                 </span>
               )}
@@ -150,8 +150,8 @@ export default function Header() {
               to={orderHref(lang)}
               className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors duration-300 ${
                 scrolled
-                  ? 'border-[#b8912e] text-accent hover:bg-[#b8912e] hover:text-white'
-                  : 'border-[#faf6f3]/70 text-[#faf6f3] hover:bg-[#faf6f3] hover:text-ink'
+                  ? 'border-gold text-accent hover:bg-gold hover:text-on-gold'
+                  : 'border-[#faf6f3]/70 text-[#faf6f3] hover:bg-[#faf6f3] hover:text-[#2e2a27]'
               }`}
             >
               {lang === 'ar' ? 'اطلب الآن' : 'Commander'}
@@ -173,7 +173,7 @@ export default function Header() {
                 <circle cx="17" cy="20" r="1.4" />
               </svg>
               {count > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#b8912e] text-[10px] font-semibold text-white">
+                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[10px] font-semibold text-on-gold">
                   {count}
                 </span>
               )}
@@ -209,7 +209,7 @@ export default function Header() {
         aria-modal={open}
         aria-label={lang === 'ar' ? 'قائمة التنقل' : 'Menu de navigation'}
         inert={!open}
-        className={`fixed inset-0 z-40 flex flex-col items-center justify-center gap-8 bg-[#2e2a27] transition-[clip-path] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] md:hidden ${
+        className={`fixed inset-0 z-40 flex flex-col items-center justify-center gap-8 bg-ink-deep transition-[clip-path] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] md:hidden ${
           open ? '[clip-path:inset(0_0_0_0)]' : 'pointer-events-none [clip-path:inset(0_0_100%_0)]'
         }`}
       >
@@ -238,7 +238,7 @@ export default function Header() {
         )}
         <a
           href="tel:+21623691039"
-          className="tap mt-4 rounded-full bg-[#b8912e] px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white"
+          className="tap mt-4 rounded-full bg-gold px-8 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-on-gold"
         >
           {lang === 'ar' ? 'اطلب عبر الهاتف' : 'Commander par téléphone'}
         </a>

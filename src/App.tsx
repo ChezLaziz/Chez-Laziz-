@@ -1,9 +1,10 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect, useLayoutEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router'
 import Home from './pages/Home'
 import { useTrackVisit } from './hooks/useTrackVisit'
 import CookieConsent from './components/CookieConsent'
 import { langFromPathname } from './lib/i18n'
+import { applyTheme, themeForPath } from './lib/theme'
 
 // Chargées à la demande seulement — évite d'alourdir le premier
 // chargement de la page d'accueil (et surtout recharts, utilisé
@@ -51,7 +52,7 @@ const NouvellesSaveursPage = lazy(() => import('./pages/blog/NouvellesSaveursPag
  * « ça charge ». Rien qui ressemble à un contenu qu'on ne tiendra pas. */
 function EcranDAttente() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#faf6f3] px-6">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-paper px-6">
       <img src="/images/logo.webp" alt="" aria-hidden="true" className="h-12 w-12 animate-pulse opacity-70" />
       <div className="h-2 w-40 animate-pulse rounded-full bg-sand/60" />
       <div className="h-2 w-28 animate-pulse rounded-full bg-sand/40" />
@@ -90,12 +91,24 @@ function HtmlLangSync() {
   return null
 }
 
+/** Garde le thème accordé à la page quand on navigue sans recharger — le
+ * lien « Voir le site » de l'administration, par exemple. Avant la peinture
+ * (useLayoutEffect), pour ne pas montrer une image de la boutique en clair. */
+function ThemeSync() {
+  const { pathname } = useLocation()
+  useLayoutEffect(() => {
+    applyTheme(themeForPath(pathname))
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   useTrackVisit()
   return (
     <>
       <ScrollToTop />
       <HtmlLangSync />
+      <ThemeSync />
       <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/ar" element={<Home />} />

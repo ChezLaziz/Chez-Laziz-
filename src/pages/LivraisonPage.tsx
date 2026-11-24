@@ -25,7 +25,7 @@ export default function LivraisonPage() {
         },
   )
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="mx-auto max-w-3xl px-5 py-28 md:px-10 md:py-36">
         <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
@@ -33,7 +33,7 @@ export default function LivraisonPage() {
         </p>
         <h1 className="font-display text-3xl leading-tight md:text-5xl">{isAr ? 'التوصيل' : 'Livraison'}</h1>
 
-        <div className="mt-10 grid grid-cols-3 gap-4 rounded-2xl border border-sand/70 bg-white py-6 text-center shadow-sm">
+        <div className="mt-10 grid grid-cols-3 gap-4 rounded-2xl border border-sand/70 bg-surface py-6 text-center shadow-sm">
           {(
             isAr
               ? [
@@ -48,7 +48,7 @@ export default function LivraisonPage() {
                 ]
           ).map(([n, label]) => (
             <div key={label}>
-              <div className="font-display text-xl text-[#b8912e] md:text-2xl">{n}</div>
+              <div className="chiffres font-medium text-xl text-gold md:text-2xl">{n}</div>
               <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink/50 md:text-[11px]">{label}</div>
             </div>
           ))}

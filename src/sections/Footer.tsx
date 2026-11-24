@@ -214,7 +214,7 @@ function FooterColumn({
   const bilingualPaths: readonly string[] = BILINGUAL_BASE_PATHS
   return (
     <div className={className}>
-      <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">{title}</p>
+      <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-gold">{title}</p>
       {/* space-y-1 et non 3 : chaque lien porte déjà 44 px de zone tactile
           (.tap) ; garder l'ancien espacement doublerait la hauteur du pied de
           page sans rien rendre plus facile à toucher. */}
@@ -223,7 +223,7 @@ function FooterColumn({
           <li key={to}>
             <Link
               to={lang === 'ar' && bilingualPaths.includes(to) ? (to === '/' ? '/ar' : `/ar${to}`) : to}
-              className="tap transition-colors hover:text-[#b8912e]"
+              className="tap transition-colors hover:text-gold"
             >
               {lang === 'ar' ? labelAr : labelFr}
             </Link>
@@ -281,12 +281,12 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                 {/* Voile : uni sur mobile (texte au-dessus de la photo), dégradé
                   gauche → droite sur grand écran pour garder le texte lisible
                   et laisser la photo respirer à droite. */}
-                <div className="absolute inset-0 bg-[#2e2a27]/80 lg:bg-transparent lg:bg-gradient-to-r lg:from-[#2e2a27] lg:via-[#2e2a27]/85 lg:to-[#2e2a27]/25" />
+                <div className="absolute inset-0 bg-ink-deep/80 lg:bg-transparent lg:bg-gradient-to-r lg:from-ink-deep lg:via-ink-deep/85 lg:to-ink-deep/25" />
               </>
             ) : (
               <>
                 <KairouanSkyline className="absolute bottom-0 right-0 hidden h-full w-[46%] lg:block" />
-                <p className="absolute bottom-5 right-6 hidden text-[10px] uppercase tracking-[0.3em] text-[#b8912e]/60 lg:block">
+                <p className="absolute bottom-5 right-6 hidden text-[10px] uppercase tracking-[0.3em] text-gold/60 lg:block">
                   {lang === 'ar' ? 'الجامع الكبير بالقيروان' : 'Grande Mosquée de Kairouan'}
                 </p>
               </>
@@ -295,7 +295,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
 
           <div className="relative mx-auto max-w-7xl px-5 py-20 md:px-10 md:py-24">
             <div className="lg:max-w-[52%]">
-              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
+              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-gold">
                 {lang === 'ar'
                   ? pages?.contactEyebrowAr || DEFAULT_VISIT_EYEBROW_AR
                   : pages?.contactEyebrow || DEFAULT_VISIT_EYEBROW}
@@ -308,7 +308,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
 
               <div className="mt-12 grid gap-10 border-t border-[#faf6f3]/15 pt-10 sm:grid-cols-3">
                 <div>
-                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
                     {lang === 'ar' ? 'العنوان' : 'Adresse'}
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
@@ -325,7 +325,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                 </div>
 
                 <div>
-                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
                     {lang === 'ar' ? 'أوقات العمل' : 'Horaires'}
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
@@ -341,16 +341,16 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                 </div>
 
                 <div>
-                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
                     {lang === 'ar' ? 'للتواصل' : 'Contact'}
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
-                    <a href={PHONE_TEL} className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
+                    <a href={PHONE_TEL} className="tap transition-colors hover:text-gold" dir="ltr">
                       {PHONE_DISPLAY}
                     </a>
                   </p>
                   <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
-                    <a href={`mailto:${EMAIL}`} className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
+                    <a href={`mailto:${EMAIL}`} className="tap transition-colors hover:text-gold" dir="ltr">
                       {EMAIL}
                     </a>
                   </p>
@@ -388,7 +388,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               />
               <span>
                 <span className="block font-display text-2xl tracking-[0.18em]">CHEZ LAZIZ</span>
-                <span className="block font-display text-base text-[#b8912e]" lang="ar" dir="rtl">
+                <span className="block font-display text-base text-gold" lang="ar" dir="rtl">
                   عند لعزيز
                 </span>
               </span>
@@ -397,7 +397,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
               {lang === 'ar' ? data?.taglineAr || DEFAULT_TAGLINE_AR : data?.tagline || DEFAULT_TAGLINE}
             </p>
 
-            <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
+            <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em] text-gold">
               {lang === 'ar' ? 'تابعونا' : 'Suivez-nous'}
             </p>
             <ul className="mt-4 flex flex-wrap items-center gap-3">
@@ -409,7 +409,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                     rel="noreferrer"
                     aria-label={s.name}
                     title={s.name}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-[#faf6f3]/25 text-[#faf6f3]/80 transition-all duration-300 hover:border-[#b8912e] hover:text-[#b8912e]"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-[#faf6f3]/25 text-[#faf6f3]/80 transition-all duration-300 hover:border-gold hover:text-gold"
                   >
                     <Icon name={s.icon} />
                   </a>
@@ -422,7 +422,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
           <FooterColumn title={lang === 'ar' ? 'عن الدار' : 'La Maison'} links={HOUSE_LINKS} lang={lang} className="lg:col-span-3" />
 
           <div className="lg:col-span-3">
-            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#b8912e]">
+            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.3em] text-gold">
               {lang === 'ar' ? 'اطلب معنا' : 'Commander'}
             </p>
             <ul className="space-y-1 text-sm font-light text-[#faf6f3]/75">
@@ -430,7 +430,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                 <a
                   href={PHONE_TEL}
                   dir="ltr"
-                  className="tap gap-2.5 transition-colors hover:text-[#b8912e]"
+                  className="tap gap-2.5 transition-colors hover:text-gold"
                 >
                   <Icon name="Phone" size={16} />
                   {PHONE_DISPLAY}
@@ -441,7 +441,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                   href={MESSENGER_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="tap gap-2.5 transition-colors hover:text-[#b8912e]"
+                  className="tap gap-2.5 transition-colors hover:text-gold"
                 >
                   <Icon name="Messenger" size={16} />
                   Messenger
@@ -451,7 +451,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
                 <a
                   href={`mailto:${EMAIL}`}
                   dir="ltr"
-                  className="tap gap-2.5 transition-colors hover:text-[#b8912e]"
+                  className="tap gap-2.5 transition-colors hover:text-gold"
                 >
                   <Icon name="Mail" size={16} />
                   {EMAIL}
@@ -460,7 +460,7 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
             </ul>
             <Link
               to={lang === 'ar' ? '/ar/commande' : '/commande'}
-              className="gold-cta mt-6 inline-flex items-center justify-center rounded-full bg-[#b8912e] px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#2e2a27] transition-colors hover:bg-[#d4ab3a]"
+              className="gold-cta mt-6 inline-flex items-center justify-center rounded-full bg-gold px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-on-gold transition-colors hover:bg-[#d4ab3a]"
             >
               {lang === 'ar' ? 'اطلب أونلاين' : 'Commander en ligne'}
             </Link>
@@ -475,14 +475,14 @@ export default function Footer({ hideVisit = false }: { hideVisit?: boolean }) {
 
       {/* ── Barre légale ── */}
       <div className="border-t border-[#faf6f3]/10">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-6 text-center text-xs font-light text-[#faf6f3]/45 md:flex-row md:px-10 md:text-left">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-6 text-center text-xs font-light text-[#faf6f3]/55 md:flex-row md:px-10 md:text-left">
           <p>{lang === 'ar' ? DEFAULT_COPYRIGHT_AR : data?.copyright || DEFAULT_COPYRIGHT}</p>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.18em]">
             {LEGAL_LINKS.map(([to, labelFr, labelAr]) => (
               <Link
                 key={to}
                 to={lang === 'ar' && (BILINGUAL_BASE_PATHS as readonly string[]).includes(to) ? `/ar${to}` : to}
-                className="tap transition-colors hover:text-[#b8912e]"
+                className="tap transition-colors hover:text-gold"
               >
                 {lang === 'ar' ? labelAr : labelFr}
               </Link>

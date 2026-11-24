@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
-import { formatTND } from '@/lib/shop'
+import PriceSticker from '@/components/PriceSticker'
 import { track } from '@/lib/analytics'
 import ProductImage from '@/components/ProductImage'
 import { useLang } from '@/lib/i18n'
@@ -71,7 +71,7 @@ export default function Signatures() {
         <div className="mt-12 grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
           {isLoading &&
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-white">
+              <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-surface">
                 <div className="aspect-[4/5] bg-sand/40" />
                 <div className="space-y-2 p-5">
                   <div className="h-4 w-3/4 rounded bg-sand/50" />
@@ -84,21 +84,29 @@ export default function Signatures() {
               key={p.id}
               to={lang === 'ar' ? '/ar/commande' : '/commande'}
               data-reveal
-              className="group flex flex-col overflow-hidden rounded-2xl border border-sand bg-white transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgba(46,42,39,0.25)]"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-sand/60 bg-surface transition-colors duration-300 hover:border-gold/60"
             >
-              <div className="relative aspect-[4/5] overflow-hidden">
-                <ProductImage
-                  src={p.imageUrl}
-                  alt={productName(p, lang)}
-                  className="transition-transform duration-500 group-hover:scale-105"
-                />
+              <div className="relative">
+                <div className="aspect-[4/5] overflow-hidden bg-cream">
+                  <ProductImage
+                    src={p.imageUrl}
+                    alt={productName(p, lang)}
+                    className="transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
                 {productBadge(p, lang) && (
-                  <span className={`absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold text-accent shadow ${lang === 'ar' ? 'tracking-normal' : 'uppercase tracking-[0.14em]'}`}>
+                  <span className={`absolute start-2.5 top-2.5 rounded-full bg-paper/90 px-2.5 py-1 text-[9px] font-semibold text-accent backdrop-blur-sm ${lang === 'ar' ? 'tracking-normal' : 'uppercase tracking-[0.14em]'}`}>
                     {productBadge(p, lang)}
                   </span>
                 )}
+                <PriceSticker
+                  millimes={p.priceMillimes}
+                  lang={lang}
+                  per={lang === 'ar' ? 'الكيلو' : 'le kilo'}
+                  className="absolute -bottom-4 end-2.5 z-10"
+                />
               </div>
-              <div className="flex flex-1 flex-col p-4 md:p-5">
+              <div className="flex flex-1 flex-col p-4 pt-6 md:p-5 md:pt-7">
                 <h3 className="font-display text-base leading-snug md:text-lg">
                   {productName(p, lang)}
                   {p.isExclusiveCreation && (
@@ -108,13 +116,10 @@ export default function Signatures() {
                   )}
                 </h3>
                 {productDescription(p, lang) && (
-                  <p className="mt-1 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
+                  <p dir="auto" className="mt-1 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
                     {productDescription(p, lang)}
                   </p>
                 )}
-                <p className="mt-auto pt-3 font-display text-lg text-accent">
-                  {formatTND(p.priceMillimes)} <span className="text-xs">{lang === 'ar' ? 'د.ت / كغ' : 'DT / kg'}</span>
-                </p>
               </div>
             </Link>
           ))}

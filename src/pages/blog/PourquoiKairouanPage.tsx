@@ -35,7 +35,7 @@ export default function PourquoiKairouanPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -84,7 +84,7 @@ export default function PourquoiKairouanPage() {
 
             <RelatedArticles slugs={META.related} isAr={true} />
 
-            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
               <p className="font-display text-xl text-ink">جرّبوا مقروض القيروان الأصيل، مصنوع باليد كل يوم</p>
               <Link to="/ar/makroudh-kairouan" className="arrow-link mt-4 inline-flex justify-center">
                 اكتشفوا مقروض القيروان
@@ -108,7 +108,7 @@ export default function PourquoiKairouanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -158,7 +158,7 @@ export default function PourquoiKairouanPage() {
 
           <RelatedArticles slugs={META.related} isAr={false} />
 
-          <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+          <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
             <p className="font-display text-xl text-ink">Goûtez le vrai makroudh de Kairouan, fait main chaque jour</p>
             <Link to="/makroudh-kairouan" className="arrow-link mt-4 inline-flex justify-center">
               Découvrir le makroudh de Kairouan

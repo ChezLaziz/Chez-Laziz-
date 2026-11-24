@@ -12,7 +12,19 @@
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#2e2a27" />
+    <meta name="theme-color" content="#15110e" />
+    <!-- Le thème, avant le premier pixel. La boutique est sombre ;
+         l'administration et l'écran de l'atelier restent clairs. Même règle
+         que contracts/theme.ts, écrite ici une seconde fois pour s'appliquer
+         avant que le moindre script du site soit chargé : sans elle, la
+         page s'ouvrait sur un éclair blanc. -->
+    <script>
+      if (/^\/(admin|atelier)(\/|$)/i.test(location.pathname)) document.documentElement.setAttribute('data-theme', 'clair')
+    </script>
+    <style>
+      html { background: #15110e; }
+      html[data-theme='clair'] { background: #faf6f3; }
+    </style>
 
     <!-- Vérification de domaine Meta Business Manager (Facebook/Instagram Ads) -->
     <meta name="facebook-domain-verification" content="gxotie7yujaf12b3yu10rmac84mydt" />

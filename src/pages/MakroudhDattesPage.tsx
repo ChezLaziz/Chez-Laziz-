@@ -49,7 +49,7 @@ export default function MakroudhDattesPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <section className="mx-auto max-w-3xl px-5 py-24 md:px-10 md:py-32">
@@ -111,7 +111,7 @@ export default function MakroudhDattesPage() {
               <p className="font-display text-2xl md:text-3xl">المقروض الحقيقي بالتمر، صناعة يدوية</p>
               <Link
                 to="/ar/commande"
-                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
               >
                 اطلب توّا
               </Link>
@@ -133,7 +133,7 @@ export default function MakroudhDattesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <section className="mx-auto max-w-3xl px-5 py-24 md:px-10 md:py-32">
@@ -172,7 +172,7 @@ export default function MakroudhDattesPage() {
             data-reveal
             dir="rtl"
             lang="ar"
-            className="mt-10 rounded-2xl border border-sand/70 bg-white p-6 text-right text-[15px] font-light leading-relaxed text-ink/75 md:p-8"
+            className="mt-10 rounded-2xl border border-sand/70 bg-surface p-6 text-right text-[15px] font-light leading-relaxed text-ink/75 md:p-8"
           >
             <p>
               المقروض بالتمر هو الشكل الأكثر شهرة من المقروض التونسي — عجينة سميد بزيت الزيتون، محشوة بعجينة
@@ -210,7 +210,7 @@ export default function MakroudhDattesPage() {
             <p className="font-display text-2xl md:text-3xl">Le vrai makroudh aux dattes, fait main</p>
             <Link
               to="/commande"
-              className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+              className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
             >
               Commander maintenant
             </Link>

@@ -35,7 +35,7 @@ export default function QuestCeQueLeMakroudhPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -76,7 +76,7 @@ export default function QuestCeQueLeMakroudhPage() {
               </p>
             </div>
 
-            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
               <p className="font-display text-xl text-ink">اكتشفو مقروضنا، مشكّل باليد في القيروان</p>
               <Link to="/ar/makroudh-tunisien" className="arrow-link mt-4 inline-flex justify-center">
                 اعرفو أكثر على مقروضنا
@@ -102,7 +102,7 @@ export default function QuestCeQueLeMakroudhPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -148,7 +148,7 @@ export default function QuestCeQueLeMakroudhPage() {
             </p>
           </div>
 
-          <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+          <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
             <p className="font-display text-xl text-ink">Découvrez notre makroudh, façonné à la main à Kairouan</p>
             <Link to="/makroudh-tunisien" className="arrow-link mt-4 inline-flex justify-center">
               En savoir plus sur notre makroudh

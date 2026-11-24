@@ -1,3 +1,4 @@
+import PriceSticker from '@/components/PriceSticker'
 import ProductImage from '@/components/ProductImage'
 import { kgLabel, type CatalogProduct } from '@/lib/orderLines'
 import { formatWeight } from '@contracts/shop'
@@ -49,22 +50,33 @@ function ProductPickCard({
       aria-label={`${displayName}, ${formatWeight(PACK_ITEM_WEIGHT_KG, lang)}, ${formatPriceDT(packItemPrice(product.priceMillimes), lang)}${
         selected ? (isAr ? '، مُختار' : ', sélectionné') : ''
       }`}
-      className={`group flex min-w-0 flex-col overflow-hidden whitespace-normal rounded-2xl border bg-white text-start shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60 ${
+      className={`group flex min-w-0 flex-col overflow-hidden whitespace-normal rounded-2xl border bg-surface text-start transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 ${
         selected
-          ? 'border-[#b8912e] ring-2 ring-[#b8912e]/40'
-          : 'border-sand/80 hover:border-[#b8912e]/60 hover:shadow-md'
+          ? 'border-gold ring-2 ring-gold/40'
+          : 'border-sand/60 hover:border-gold/60'
       } disabled:cursor-not-allowed disabled:opacity-45`}
     >
-      <div className="relative aspect-square w-full overflow-hidden bg-sand/30">
-        <ProductImage src={product.imageUrl} alt={displayName} compact />
+      <div className="relative w-full">
+        <div className="aspect-square w-full overflow-hidden bg-cream">
+          <ProductImage src={product.imageUrl} alt={displayName} compact />
+        </div>
         {selected && position !== null && (
-          <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#b8912e] font-display text-sm text-white shadow">
+          <span className="chiffres absolute end-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-gold text-sm font-bold text-on-gold shadow">
             {position}
           </span>
         )}
+        {/* Le prix de la part de 500 g qui entre dans le pack — même
+            étiquette que partout, en petit. */}
+        <PriceSticker
+          millimes={packItemPrice(product.priceMillimes)}
+          lang={lang}
+          per={formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
+          size="sm"
+          className="absolute -bottom-4 end-2.5 z-10"
+        />
       </div>
-      <div className="flex flex-1 flex-col p-3.5 md:p-4">
-        <p className="break-words font-medium leading-snug">
+      <div className="flex flex-1 flex-col p-3.5 pt-6 md:p-4 md:pt-7">
+        <p className="mb-3 break-words text-[15px] font-medium leading-snug">
           {displayName}
           {product.isExclusiveCreation && (
             <sup className="ms-0.5 text-xs font-semibold text-accent" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
@@ -72,19 +84,15 @@ function ProductPickCard({
             </sup>
           )}
         </p>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-ink/50">
-          {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
-        </p>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
-          <span className="whitespace-nowrap font-display text-lg text-accent">{formatPriceDT(packItemPrice(product.priceMillimes), lang)}</span>
-          <span
-            className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors ${
-              selected ? 'bg-[#b8912e] text-white' : 'border border-ink/20 text-ink group-hover:border-[#b8912e] group-hover:text-accent'
-            }`}
-          >
-            {selected ? (isAr ? '✓ مُختار' : '✓ Sélectionné') : isAr ? '+ أضف' : '+ Ajouter'}
-          </span>
-        </div>
+        <span
+          className={`mt-auto flex min-h-10 w-full items-center justify-center rounded-full px-3 text-[12.5px] font-semibold transition-colors ${
+            selected
+              ? 'bg-gold text-on-gold'
+              : 'border border-gold/50 bg-gold/10 text-accent group-hover:bg-gold group-hover:text-on-gold'
+          }`}
+        >
+          {selected ? (isAr ? '✓ مُختار' : '✓ Choisi') : isAr ? '+ أضف' : '+ Ajouter'}
+        </span>
       </div>
     </button>
   )
@@ -139,7 +147,7 @@ export default function CustomPackComposer({
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-ink/70">
               {isAr ? `اختاروا ${CUSTOM_PACK_SIZE} نكهات` : `Choisissez vos ${CUSTOM_PACK_SIZE} saveurs`}
             </p>
-            <p className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-sm" aria-live="polite">
+            <p className="rounded-full border border-sand bg-surface px-3.5 py-1.5 text-sm" aria-live="polite">
               {complete ? (
                 <span className="font-semibold text-accent">{isAr ? 'الحزمة مكتملة ✓' : 'Pack complet ✓'}</span>
               ) : isAr ? (
@@ -157,7 +165,7 @@ export default function CustomPackComposer({
             {Array.from({ length: CUSTOM_PACK_SIZE }).map((_, i) => (
               <li
                 key={i}
-                className={`h-1.5 rounded-full ${i < count ? 'bg-[#b8912e]' : 'bg-sand'}`}
+                className={`h-1.5 rounded-full ${i < count ? 'bg-gold' : 'bg-sand'}`}
                 aria-current={i === count ? 'step' : undefined}
               />
             ))}
@@ -166,7 +174,7 @@ export default function CustomPackComposer({
           {isLoading ? (
             <div className="grid grid-cols-2 gap-4 2xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-white">
+                <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-surface">
                   <div className="aspect-square bg-sand/40" />
                   <div className="space-y-2 p-4">
                     <div className="h-4 w-3/4 rounded bg-sand/50" />
@@ -199,7 +207,7 @@ export default function CustomPackComposer({
         {/* Votre Pack */}
         <div className="min-w-0 lg:col-span-5">
           <div className="rounded-2xl bg-ink-deep p-6 text-[#faf6f3] md:p-8 lg:sticky lg:top-8">
-            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[#b8912e]">{isAr ? CUSTOM_PACK_NAME_AR : CUSTOM_PACK_NAME}</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold">{isAr ? CUSTOM_PACK_NAME_AR : CUSTOM_PACK_NAME}</p>
             <h3 className="mt-2 font-display text-2xl">{isAr ? 'حزمتكم' : 'Votre Pack'}</h3>
             <p className="mt-1 text-sm text-[#faf6f3]/60" aria-live="polite">
               {isAr ? `${count} / ${CUSTOM_PACK_SIZE} مُختارة` : `${count} / ${CUSTOM_PACK_SIZE} sélectionnés`}
@@ -212,12 +220,12 @@ export default function CustomPackComposer({
                   <li
                     key={i}
                     className={`flex min-h-11 items-center gap-3 rounded-lg border px-3.5 py-2 text-[15px] ${
-                      p ? 'border-[#b8912e]/50 bg-[#b8912e]/10' : 'border-dashed border-[#faf6f3]/20 text-[#faf6f3]/40'
+                      p ? 'border-gold/50 bg-gold/10' : 'border-dashed border-[#faf6f3]/20 text-[#faf6f3]/40'
                     }`}
                   >
                     {p ? (
                       <>
-                        <span className="text-[#b8912e]" aria-hidden="true">
+                        <span className="text-gold" aria-hidden="true">
                           ✓
                         </span>
                         <span className="min-w-0 flex-1 truncate">
@@ -225,19 +233,19 @@ export default function CustomPackComposer({
                           {p.isExclusiveCreation && <sup className="text-xs font-semibold text-accent">™</sup>}{' '}
                           <span className="text-[#faf6f3]/55">— {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}</span>
                         </span>
-                        <span className="font-display text-[#b8912e]">{formatPriceDT(packItemPrice(p.priceMillimes), lang)}</span>
+                        <span className="chiffres font-bold text-gold">{formatPriceDT(packItemPrice(p.priceMillimes), lang)}</span>
                         <button
                           type="button"
                           aria-label={isAr ? `إزالة ${productName(p, lang)} من الحزمة` : `Retirer ${productName(p, lang)} du pack`}
                           onClick={() => onRemove(p.id)}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#faf6f3]/50 transition-colors hover:bg-[#faf6f3]/10 hover:text-[#faf6f3]"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#faf6f3]/50 transition-colors hover:bg-white/10 hover:text-[#faf6f3]"
                         >
                           ×
                         </button>
                       </>
                     ) : (
                       <>
-                        <span className="font-display">{i + 1}</span>
+                        <span className="chiffres font-medium">{i + 1}</span>
                         <span>
                           {isAr
                             ? `اختاروا منتجكم ${ordinalsAr[i]}`
@@ -274,7 +282,7 @@ export default function CustomPackComposer({
             <div className="mt-3 flex items-baseline border-t border-[#faf6f3]/15 pt-4">
               <span className="text-sm uppercase tracking-[0.2em]">{isAr ? 'المجموع' : 'Total'}</span>
               <span className="mx-3 flex-1 border-b border-dotted border-[#faf6f3]/25" aria-hidden="true" />
-              <span className="font-display text-2xl text-[#b8912e]" aria-live="polite">
+              <span className="chiffres text-2xl font-bold text-gold" aria-live="polite">
                 {formatPriceDT(total, lang)}
               </span>
             </div>
@@ -283,7 +291,7 @@ export default function CustomPackComposer({
               type="button"
               onClick={onAdd}
               disabled={!complete}
-              className="gold-cta mt-5 h-12 w-full rounded-full text-sm font-semibold uppercase tracking-[0.14em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
+              className="gold-cta mt-5 h-12 w-full rounded-full text-sm font-semibold uppercase tracking-[0.14em] text-on-gold transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#faf6f3]/70 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isAr ? 'أضف إلى السلة' : 'Ajouter au panier'}
             </button>

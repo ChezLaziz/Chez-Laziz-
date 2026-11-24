@@ -35,7 +35,7 @@ export default function PrixMakroudhPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -86,7 +86,7 @@ export default function PrixMakroudhPage() {
 
             <RelatedArticles slugs={META.related} isAr={true} />
 
-            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
               <p className="font-display text-xl text-ink">شوفوا أسعارنا وتشكيلتنا الكاملة</p>
               <Link to="/ar/collection" className="arrow-link mt-4 inline-flex justify-center">
                 شوفو التشكيلة
@@ -110,7 +110,7 @@ export default function PrixMakroudhPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -165,7 +165,7 @@ export default function PrixMakroudhPage() {
 
           <RelatedArticles slugs={META.related} isAr={false} />
 
-          <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+          <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
             <p className="font-display text-xl text-ink">Découvrez nos tarifs et notre collection complète</p>
             <Link to="/collection" className="arrow-link mt-4 inline-flex justify-center">
               Voir la collection

@@ -5,19 +5,31 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Jetons de la charte Chez Laziz. Ils existaient uniquement comme
-        // utilitaires écrits à la main dans index.css (.text-ink, .bg-sand…),
-        // donc toute variante d'opacité — text-ink/50, border-sand/70… —
-        // ne compilait pas et ne produisait aucune règle CSS. Déclarés ici,
-        // les ~190 usages de ces classes dans src/ fonctionnent enfin.
-        // Valeurs identiques aux variables CSS de :root (src/index.css).
-        // "accent" n'est volontairement PAS redéfini : il est déjà mappé sur
-        // hsl(var(--accent)) pour les composants shadcn.
-        ink: "#3c3835",
-        "ink-deep": "#2e2a27",
-        sand: "#dec9b8",
-        cream: "#f5ece5",
-        "muted-warm": "#aeaaa7",
+        // Jetons de la charte Chez Laziz, portés par des variables CSS (voir
+        // :root dans src/index.css) : la boutique est en thème sombre,
+        // l'administration reste claire, et les mêmes classes — text-ink,
+        // border-sand, bg-surface… — prennent la bonne valeur des deux côtés.
+        // « rgb(var(--c-x) / <alpha-value>) » garde les variantes d'opacité
+        // (text-ink/50, border-sand/70…) utilisées partout dans src/.
+        ink: "rgb(var(--c-ink) / <alpha-value>)",
+        "ink-deep": "rgb(var(--c-ink-deep) / <alpha-value>)",
+        sand: "rgb(var(--c-sand) / <alpha-value>)",
+        cream: "rgb(var(--c-cream) / <alpha-value>)",
+        "muted-warm": "rgb(var(--c-muted-warm) / <alpha-value>)",
+        // Fond de page, et fond des cartes et des champs posés dessus.
+        paper: "rgb(var(--c-paper) / <alpha-value>)",
+        surface: "rgb(var(--c-surface) / <alpha-value>)",
+        // L'or de la maison, sa version soutenue, et le texte qu'on pose
+        // dessus.
+        gold: "rgb(var(--c-gold) / <alpha-value>)",
+        "gold-deep": "rgb(var(--c-gold-deep) / <alpha-value>)",
+        "on-gold": "rgb(var(--c-on-gold) / <alpha-value>)",
+        // Texte posé sur un aplat « ink » (bouton inversé).
+        "on-ink": "rgb(var(--c-on-ink) / <alpha-value>)",
+        // Étiquette de prix.
+        sticker: "rgb(var(--c-sticker) / <alpha-value>)",
+        // Vert WhatsApp lisible en TEXTE sur le fond du thème.
+        "wa-text": "rgb(var(--c-wa-text) / <alpha-value>)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -39,9 +51,14 @@ module.exports = {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
+        // « accent » EST l'or de la maison. Il était mappé sur une variable
+        // HSL de shadcn que :root écrasait par une couleur hexadécimale :
+        // text-accent ne tenait que par un utilitaire écrit à la main, et
+        // border-accent, bg-accent ou text-accent/70 ne produisaient aucune
+        // couleur valide.
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "rgb(var(--c-gold) / <alpha-value>)",
+          foreground: "rgb(var(--c-on-gold) / <alpha-value>)",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

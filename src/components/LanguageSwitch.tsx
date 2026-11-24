@@ -35,13 +35,15 @@ export default function LanguageSwitch({ tone, size = 'sm' }: { tone: 'light' | 
     big ? 'min-h-11 px-4 text-sm' : 'min-h-10 px-3 text-[13px]'
   }`
   const flagCls = big ? 'h-4 w-6' : 'h-3.5 w-5'
-  // Sur la photo (tone « dark »), une pastille crème cerclée d'or : elle
-  // se détache de n'importe quel fond, et c'est la seule couleur de marque
-  // de la barre. Sur fond clair, la version sobre.
-  const activeCls = tone === 'light' ? 'bg-ink text-[#faf6f3]' : 'bg-white text-ink shadow-sm'
+  // La langue choisie est une pastille « inversée » : claire sur le fond
+  // sombre de la boutique, sombre sur un fond clair. Elle se lit sans
+  // emprunter l'or, qui reste réservé au bouton de commande. Sur la photo
+  // (tone « dark »), le cadre est plein et cerclé d'or pour se détacher de
+  // n'importe quelle image.
+  const activeCls = 'bg-ink text-on-ink'
   const idleCls = tone === 'light' ? 'text-ink/60' : 'text-ink/65'
   const frameCls =
-    tone === 'light' ? 'border-ink/25 bg-white/60' : 'border-[#b8912e]/70 bg-[#faf6f3]/95'
+    tone === 'light' ? 'border-ink/25 bg-surface/60' : 'border-gold/70 bg-paper/95'
 
   return (
     <div

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ProductImage from '@/components/ProductImage'
+import PriceSticker from '@/components/PriceSticker'
 import type { CatalogProduct } from '@/lib/orderLines'
 import { ALLOWED_WEIGHTS_KG, formatWeight, priceForWeight, type WeightKg } from '@contracts/shop'
 import { formatPriceDT } from '@contracts/packs'
@@ -7,7 +8,7 @@ import { useLang } from '@/lib/i18n'
 import { productBadge, productName, productDescription } from '@contracts/productText'
 
 const stepperBtnCls =
-  'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
+  'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-surface text-xl transition-colors hover:border-gold hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:opacity-30'
 
 /** Carte « à la carte » : un produit, un poids au choix (500 g à 2,5 kg,
  * prix calculé depuis le prix au kilo), une quantité libre. Toutes les
@@ -41,28 +42,43 @@ export default function ProductOrderCard({
 
   return (
     <article
-      className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
-        inCart.length > 0 ? 'border-[#b8912e] ring-1 ring-[#b8912e]/40' : 'border-sand/80'
+      className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-surface ${
+        inCart.length > 0 ? 'border-gold ring-1 ring-gold/40' : 'border-sand/60'
       }`}
       aria-label={`${displayName} — ${formatPriceDT(product.priceMillimes, lang)} ${isAr ? 'للكيلوغرام' : 'le kilo'}`}
     >
-      <div className="relative aspect-square w-full overflow-hidden bg-sand/30">
-        <ProductImage src={product.imageUrl} alt={displayName} compact sizes={sizes} />
+      {/* La photo et, à cheval sur son bord, l'étiquette de prix. L'étiquette
+          est hors du cadre rogné de la photo — sinon elle serait coupée en
+          deux — mais dans la carte. */}
+      <div className="relative">
+        <div className="aspect-square w-full overflow-hidden bg-cream">
+          <ProductImage src={product.imageUrl} alt={displayName} compact sizes={sizes} />
+        </div>
         {badge && (
           // Pas d'interlettrage forcé en arabe : il casse les ligatures.
-          <span className={`absolute left-3 top-3 rounded-full bg-[#faf6f3]/95 px-2.5 py-1 text-[9px] font-semibold text-accent ${isAr ? 'tracking-normal' : 'uppercase tracking-[0.2em]'}`}>
+          <span className={`absolute start-2.5 top-2.5 rounded-full bg-paper/90 px-2.5 py-1 text-[9px] font-semibold text-accent backdrop-blur-sm ${isAr ? 'tracking-normal' : 'uppercase tracking-[0.16em]'}`}>
             {badge}
           </span>
         )}
         {inCart.length > 0 && (
-          <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#b8912e] text-white shadow" aria-hidden="true">
+          <span className="absolute end-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-gold text-on-gold shadow" aria-hidden="true">
             ✓
           </span>
         )}
+        {/* Le prix au kilo, là où l'œil se pose d'abord : sur la photo. Il
+            était une ligne grise sous la description, la moins lisible de la
+            carte, alors que c'est la première question de quiconque arrive
+            d'une publicité. */}
+        <PriceSticker
+          millimes={product.priceMillimes}
+          lang={lang}
+          per={isAr ? 'الكيلو' : 'le kilo'}
+          className="absolute -bottom-4 end-2.5 z-10"
+        />
       </div>
 
-      <div className="flex flex-1 flex-col p-3.5 md:p-4">
-        <p className="break-words font-medium leading-snug">
+      <div className="flex flex-1 flex-col p-3.5 pt-6 md:p-4 md:pt-7">
+        <p className="break-words text-[15px] font-medium leading-snug">
           {displayName}
           {product.isExclusiveCreation && (
             <sup className="ms-0.5 text-xs font-semibold text-accent" title={isAr ? 'اسم حصري لعند لعزيز' : 'Création exclusive Chez Laziz'}>
@@ -71,7 +87,10 @@ export default function ProductOrderCard({
           )}
         </p>
         {displayDescription && (
-          <p className="mt-1 line-clamp-2 text-xs font-light leading-relaxed text-ink/55">{displayDescription}</p>
+          // dir="auto" : une description saisie en arabe sur la page
+          // française (ou l'inverse) se lit dans son propre sens, ponctuation
+          // comprise, au lieu d'avoir ses guillemets renvoyés du mauvais côté.
+          <p dir="auto" className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink/60">{displayDescription}</p>
         )}
         {/* Huit produits sur seize sont des créations de la maison, et cela
             ne se voyait qu'à un « ™ » minuscule collé au nom. C'est la
@@ -83,20 +102,12 @@ export default function ProductOrderCard({
             {isAr ? 'إبداع دار لعزيز' : 'Création Chez Laziz'}
           </p>
         )}
-        {/* Le prix au kilo est une RÉFÉRENCE, pas le prix payé : il reste
-            discret pour ne pas concurrencer le prix du poids choisi, plus bas,
-            en doré. Mais il se lisait comme une mention légale — minuscule,
-            en capitales espacées. Sans casse forcée ni interlettrage, il
-            redevient un prix. */}
-        <p className="mt-1.5 text-xs text-ink/60">
-          {formatPriceDT(product.priceMillimes, lang)} {isAr ? '/ كغ' : '/ kg'}
-        </p>
 
         {/* Pas d'étiquette « Poids » au-dessus : le menu affiche déjà
             « 1 kg — 40 DT ». Un mot en moins est un mot de moins à lire, et
             c'est le silence qui fait la tenue d'une page, pas l'abondance.
             Le lecteur d'écran, lui, garde son intitulé complet. */}
-        <label className="mt-3 block">
+        <label className="relative mt-auto block pt-3">
           <span className="sr-only">{isAr ? 'الوزن' : 'Poids'}</span>
           <select
             value={weight}
@@ -109,14 +120,31 @@ export default function ProductOrderCard({
             // l'écran. (Interdire le zoom dans le viewport corrigerait l'effet
             // en supprimant aussi le zoom manuel, dont les clientes se servent
             // pour lire : on règle la cause.)
-            className="h-11 w-full rounded-lg border border-sand bg-white px-3 text-base text-ink outline-none focus:border-[#b8912e] focus:ring-2 focus:ring-[#b8912e]/25"
+            //
+            // appearance-none + chevron dessiné : la flèche native prenait
+            // 24 px dans une carte de 147, et « 2,5 kg — 30 DT » s'affichait
+            // « 2,5 kg — 30 I ». Avec un point médian à la place du tiret et
+            // une flèche plus fine, le poids et son prix tiennent en entier.
+            className="h-11 w-full appearance-none rounded-lg border border-sand bg-paper pe-7 ps-2.5 text-base text-ink outline-none focus:border-gold focus:ring-2 focus:ring-gold/25"
           >
             {ALLOWED_WEIGHTS_KG.map((w) => (
               <option key={w} value={w}>
-                {formatWeight(w, lang)} — {formatPriceDT(priceForWeight(product.priceMillimes, w), lang)}
+                {formatWeight(w, lang)} · {formatPriceDT(priceForWeight(product.priceMillimes, w), lang)}
               </option>
             ))}
           </select>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-[15px] end-2.5 text-accent"
+          >
+            <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </label>
 
         {/* Avant le premier ajout : UN bouton, sur toute la largeur, qui dit
@@ -131,28 +159,27 @@ export default function ProductOrderCard({
             // flex-wrap + py-2 : « أضف 2.5 كغ — 100 د.ت » dépassait la
             // pastille et se coupait sous 390 px, sur la seule cible qui
             // compte. Il passe à la ligne au lieu d'être tronqué.
-            className="mt-3 flex min-h-11 w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border border-ink/20 px-3 py-2 text-[12px] font-semibold text-ink transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60"
+            className="mt-2.5 flex min-h-11 w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-full border border-gold/50 bg-gold/10 px-2 py-2 text-[12.5px] font-semibold text-accent transition-colors hover:bg-gold hover:text-on-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 active:bg-gold active:text-on-gold"
           >
             <span className="whitespace-nowrap">
               {isAr ? 'أضف' : 'Ajouter'} {formatWeight(weight, lang)}
             </span>
-            <span aria-hidden="true" className="text-ink/30">—</span>
-            <span className="whitespace-nowrap font-display text-base text-accent">{formatPriceDT(price, lang)}</span>
+            <span className="chiffres whitespace-nowrap text-[13.5px] font-bold">{formatPriceDT(price, lang)}</span>
           </button>
         ) : (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-2.5">
           {/* LE TOTAL DE LA LIGNE, pas le prix d'un exemplaire. À trois
               paquets, la carte affichait le prix d'UN seul juste à côté du
               « 3 » : la cliente lisait un montant que son panier ne
               confirmait pas, et devait faire la multiplication elle-même
               pour savoir ce qu'elle allait payer. */}
-          <span className="whitespace-nowrap font-display text-lg text-accent">{formatPriceDT(qty * price, lang)}</span>
+          <span className="chiffres whitespace-nowrap text-lg font-bold text-accent">{formatPriceDT(qty * price, lang)}</span>
           {(
             <div className="flex items-center gap-1.5" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${displayName} ${formatWeight(weight, lang)}`}>
               <button type="button" aria-label={isAr ? `إنقاص ${displayName}` : `Retirer un ${displayName}`} onClick={() => onSetQty(weight, qty - 1)} className={stepperBtnCls}>
                 −
               </button>
-              <span className="w-7 text-center font-display text-lg" aria-live="polite">
+              <span className="chiffres w-7 text-center text-lg font-semibold" aria-live="polite">
                 {qty}
               </span>
               <button type="button" aria-label={isAr ? `زيادة ${displayName}` : `Ajouter un ${displayName}`} onClick={() => onSetQty(weight, qty + 1)} className={stepperBtnCls}>
