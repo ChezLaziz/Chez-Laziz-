@@ -247,8 +247,8 @@ export type AdPerformance = {
   taggedVisits: number;
   untaggedVisits: number;
   /** Visites venues de Meta sans étiquette de publicité : une publicité ou
-   * une publication boostée qui tourne sans ses paramètres d'URL se voit
-   * ici dès sa première heure, bien avant sa première commande. */
+   * une publication boostée qui tourne sans étiquette se voit ici dès sa
+   * première heure, bien avant sa première commande. */
   untaggedMetaVisits: number;
   /** Hier et aujourd'hui seulement — voir AdArrivals. */
   recentTaggedVisits: number;

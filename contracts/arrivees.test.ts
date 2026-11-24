@@ -36,7 +36,8 @@ describe("arrivées — compter une arrivée", () => {
 
   it("compte à part une arrivée de Meta qui n'a pas d'étiquette", () => {
     // Le cas du jour d'un lancement : la publicité tourne, le lien porte le
-    // fbclid de Meta, mais personne n'a mis les paramètres d'URL.
+    // fbclid de Meta, mais aucune étiquette — ni la nôtre, ni celle que Meta
+    // ajoute d'habitude de lui-même.
     const j = jour({ meta: true }, { meta: true }, {}, { meta: false });
     expect(j.sans).toBe(4);
     expect(j.metaSans).toBe(2);

@@ -75,8 +75,10 @@ const MIN_CHANGE = 12 // %
  * publication de la page, un lien partagé dans une conversation : quelques
  * dizaines par jour. Cent cinquante en deux jours ET une visite Meta sur
  * dix, ce n'est plus ce fond de bruit : quelque chose de payé tourne sans
- * ses paramètres d'URL. La part compte autant que le nombre : à côté de
- * trois mille visites étiquetées, cent cinquante ne sont que le fond. */
+ * étiquette (voir contracts/arrivees.ts : ni la nôtre, ni celle que Meta
+ * ajoute d'habitude de lui-même). La part compte autant que le nombre : à
+ * côté de trois mille visites étiquetées, cent cinquante ne sont que le
+ * fond. */
 export const UNTAGGED_META_MIN_VISITS = 150
 export const UNTAGGED_META_MIN_SHARE = 0.1
 
@@ -103,7 +105,7 @@ export function buildSignals(d: SignalInput): Signal[] {
     signals.push({
       id: 'ads-untagged',
       tone: 'bad',
-      text: `Depuis hier, ${sansEtiquette.toLocaleString('fr-FR')} visites sont arrivées de Facebook ou d'Instagram sans étiquette de publicité, contre ${etiquetees.toLocaleString('fr-FR')} avec. Si une publicité ou une publication boostée tourne sans ses paramètres d'URL, ses commandes ne lui sont pas attribuées.`,
+      text: `Depuis hier, ${sansEtiquette.toLocaleString('fr-FR')} visites sont arrivées de Facebook ou d'Instagram sans étiquette de publicité, contre ${etiquetees.toLocaleString('fr-FR')} avec. Si elles viennent d'une publicité ou d'une publication boostée, ses commandes ne lui sont pas attribuées : vérifier ses paramètres d'URL.`,
     })
   }
 

@@ -10,11 +10,20 @@
  * Gestionnaire de publicités (heure du Pacifique, dirhams) et l'admin (heure
  * de Tunis, dinars).
  *
- * Deuxième service rendu, le jour d'un lancement : une publicité publiée
- * SANS ses paramètres d'URL n'apparaît nulle part dans le tableau — ses
- * commandes tombent dans « sans étiquette », et on ne l'apprend qu'après des
- * heures de dépense. Ses visites, elles, arrivent dès la première minute :
- * elles portent le `fbclid` que Meta ajoute à tous ses liens, mais pas
+ * D'OÙ VIENT L'ÉTIQUETTE — à savoir avant de toucher à quoi que ce soit ici.
+ * Jusqu'en novembre 2026, AUCUNE publicité de la boutique ne portait de
+ * paramètres d'URL : le champ était vide, et c'est Meta qui ajoutait de
+ * lui-même `utm_source`, `utm_campaign` et `utm_content` (l'identifiant de
+ * la publicité) au lien. Tout le tableau « Publicités » reposait là-dessus
+ * sans que personne l'ait décidé. Meta écrit qu'il « peut » le faire, pas
+ * qu'il le fera toujours ; les publicités créées depuis portent donc les
+ * mêmes valeurs en toutes lettres dans leur champ « Paramètres de l'URL ».
+ *
+ * Deuxième service rendu, donc : le jour où une publicité arrive SANS
+ * étiquette — ni la nôtre, ni celle de Meta — ses commandes tombent dans
+ * « sans étiquette », et on ne l'apprendrait qu'après des heures de
+ * dépense. Ses visites, elles, arrivent dès la première minute : elles
+ * portent le `fbclid` que Meta met sur tous ses liens, mais pas
  * d'étiquette. On les compte à part.
  *
  * CE QUI EST COMPTÉ. Une « arrivée » : la première page d'une session
@@ -49,7 +58,7 @@ export type JourArrivees = {
   /** Arrivées sans étiquette de publicité, toutes origines confondues. */
   sans: number;
   /** … dont celles venues de Meta. C'est LE chiffre du jour d'un
-   * lancement : s'il grimpe, une publicité tourne sans ses paramètres. */
+   * lancement : s'il grimpe, une publicité tourne sans étiquette. */
   metaSans: number;
   /** Arrivées étiquetées qu'on n'a pas rangées (voir les deux plafonds).
    * Gardées en nombre pour que le total reste le total. */
