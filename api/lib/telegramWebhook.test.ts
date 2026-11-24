@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getOrderById = vi.fn();
 const transitionOrderStatus = vi.fn();
-const applyKitchenAck = vi.fn(async () => "✅ تسجّل");
+const applyKitchenDone = vi.fn(async () => "✅ تسجّل");
 const applyKitchenUndo = vi.fn(async () => "↩️ رجّعناه");
 const answerCallback = vi.fn(async () => undefined);
 const editMessage = vi.fn<(messageId: number, text: string, keyboard?: unknown) => Promise<boolean>>();
@@ -10,7 +10,7 @@ const editMessage = vi.fn<(messageId: number, text: string, keyboard?: unknown) 
 const setCancelReason = vi.fn(async () => undefined);
 vi.mock("../queries/orders", () => ({ getOrderById, setCancelReason }));
 vi.mock("./orderTransition", () => ({ transitionOrderStatus }));
-vi.mock("./telegramKitchen", () => ({ applyKitchenAck, applyKitchenUndo }));
+vi.mock("./telegramKitchen", () => ({ applyKitchenDone, applyKitchenUndo }));
 vi.mock("./telegram", async () => {
   const actual = await vi.importActual<typeof import("./telegram")>("./telegram");
   return { ...actual, answerCallback, editMessage };
@@ -19,6 +19,7 @@ vi.mock("./telegram", async () => {
 const { handleTelegramUpdate } = await import("./telegramWebhook");
 
 const CHAT = "-1001234567890";
+const MESSAGE_ID = 77;
 
 const commande = (status: string, cancelReason: string | null = null) => ({
   id: 42,
@@ -43,7 +44,7 @@ const appui = (data: string, chatId: string | number = CHAT) => ({
     id: "cb1",
     data,
     from: { first_name: "Slim" },
-    message: { message_id: 77, chat: { id: chatId } },
+    message: { message_id: MESSAGE_ID, chat: { id: chatId } },
   },
 });
 
@@ -144,15 +145,22 @@ describe("handleTelegramUpdate", () => {
     expect(answerCallback).toHaveBeenCalledWith("cb1", "الطلبية ما ثماش");
   });
 
-  it("« تم » acquitte le type demandé", async () => {
-    await handleTelegramUpdate(appui("k:p5"));
-    expect(applyKitchenAck).toHaveBeenCalledWith("p5");
+  it("« تم » part vers la cuisine avec le bouton entier ET le message d'où il vient", async () => {
+    await handleTelegramUpdate(appui("k:d:2026-11-24:0a1b2c3d"));
+    expect(applyKitchenDone).toHaveBeenCalledWith("k:d:2026-11-24:0a1b2c3d", MESSAGE_ID);
   });
 
-  it("« رجوع » défait, et n'est pas confondu avec un type", async () => {
+  // Les tableaux d'avant le jour-par-jour portaient un bouton par parfum.
+  // Ils arrivent ici aussi : c'est la cuisine qui décide quoi en faire.
+  it("un bouton d'un ancien tableau (« k:p5 ») arrive lui aussi à la cuisine", async () => {
+    await handleTelegramUpdate(appui("k:p5"));
+    expect(applyKitchenDone).toHaveBeenCalledWith("k:p5", MESSAGE_ID);
+  });
+
+  it("« رجوع » défait, et n'est pas confondu avec un jour", async () => {
     await handleTelegramUpdate(appui("k:undo"));
     expect(applyKitchenUndo).toHaveBeenCalled();
-    expect(applyKitchenAck).not.toHaveBeenCalled();
+    expect(applyKitchenDone).not.toHaveBeenCalled();
   });
 
   it("répond quand même sur une donnée inconnue — sinon le bouton tourne sans fin", async () => {

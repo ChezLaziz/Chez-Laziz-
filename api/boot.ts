@@ -18,7 +18,7 @@ import { cancelReasonAr } from "@contracts/cancelReasons";
 import { telegramWebhookSecret } from "./lib/telegram";
 import { setupTelegram } from "./lib/telegramSetup";
 import { handleTelegramUpdate } from "./lib/telegramWebhook";
-import { ensureKitchenBaseline } from "./lib/telegramKitchen";
+import { refreshKitchenBoard } from "./lib/telegramKitchen";
 import { startReminderScheduler } from "./lib/telegramReminders";
 import { startBackupScheduler } from "./lib/backupSchedule";
 import { startR2HealthScheduler } from "./lib/r2Health";
@@ -359,9 +359,13 @@ if (env.isProduction) {
     console.log(`Server running on http://localhost:${port}/`);
     // Déclaré à chaque démarrage, et idempotent côté Telegram : poser les
     // deux variables d'environnement suffit, il n'y a rien à faire à la main.
-    void setupTelegram();
-    // Avant la première commande, jamais après : voir ensureKitchenBaseline.
-    void ensureKitchenBaseline();
+    //
+    // PUIS le tableau épinglé du matbakh, remis d'accord avec les commandes.
+    // À chaque redémarrage il est corrigé sur place, sans bruit. La seule
+    // fois où il est renvoyé (et sonne), c'est le jour où le mot
+    // d'explication de sa nouvelle règle vient de partir : il doit se lire
+    // juste en dessous.
+    void setupTelegram().then((noteEnvoyee) => refreshKitchenBoard(noteEnvoyee));
     startReminderScheduler();
     // Indépendant de Telegram : une base non sauvegardée est un risque même
     // sans notification (voir api/lib/backupSchedule.ts).

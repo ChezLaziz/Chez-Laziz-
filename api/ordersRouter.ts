@@ -20,9 +20,8 @@ import { notifyAdminNewOrder } from "./lib/email";
 import { notifyAdminNewOrderTelegram } from "./lib/telegram";
 import { maybeReportMetaPurchase, metaContentIds, transitionOrderStatus } from "./lib/orderTransition";
 import { sendMetaLeadEvent } from "./lib/metaConversionsApi";
-import { applyKitchenRelease, refreshKitchenBoard } from "./lib/telegramKitchen";
-import { parseKitchenItems } from "./queries/kitchen";
-import { currentKitchenLines } from "./queries/kitchen";
+import { refreshKitchenBoardSoon } from "./lib/telegramKitchen";
+import { currentKitchenBoard } from "./queries/kitchen";
 import { getLastOrderId, listOrdersAwaitingCall } from "./queries/reminders";
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
@@ -438,7 +437,7 @@ export const ordersRouter = createRouter({
         getLastOrderId(),
         // Seuil à zéro : l'écran montre la file réelle, pas seulement le retard.
         listOrdersAwaitingCall(new Date(), 0),
-        currentKitchenLines(),
+        currentKitchenBoard(),
       ]);
       return { lastOrderId, attente, cuisine: cuisine.lines };
     }),
@@ -447,14 +446,12 @@ export const ordersRouter = createRouter({
     .input(z.object({ token: z.string(), id: z.number().int() }))
     .mutation(async ({ input }) => {
       await assertAdmin(input.token);
-      // Supprimer une commande CONFIRMÉE retire du poids au matbakh : sans ce
-      // rafraîchissement, le cuisinier préparerait une commande effacée.
+      // Supprimer une commande EN PRÉPARATION retire du poids au matbakh :
+      // sans ce rafraîchissement, le cuisinier préparerait une commande
+      // effacée.
       const avant = await getOrderById(input.id);
       await deleteOrder(input.id);
-      if (avant && avant.status !== "nouvelle" && avant.status !== "annulee") {
-        await applyKitchenRelease(parseKitchenItems(avant.items));
-        void refreshKitchenBoard(false);
-      }
+      if (avant?.status === "en_preparation") refreshKitchenBoardSoon();
       return { ok: true };
     }),
 });

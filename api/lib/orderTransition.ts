@@ -8,8 +8,7 @@ import type { OrderItem } from "../queries/orders";
 import { markMetaPurchaseReported, unmarkMetaPurchaseReported, updateOrderStatus } from "../queries/orders";
 import { sendMetaPurchaseEvent, shouldReportMetaPurchase } from "./metaConversionsApi";
 import { metaContentId } from "@contracts/metaContentId";
-import { applyKitchenRelease, refreshKitchenBoard } from "./telegramKitchen";
-import { parseKitchenItems } from "../queries/kitchen";
+import { refreshKitchenBoard, refreshKitchenBoardSoon } from "./telegramKitchen";
 
 export type OrderStatus = "nouvelle" | "en_preparation" | "prete" | "terminee" | "annulee";
 
@@ -104,26 +103,30 @@ export async function maybeReportMetaPurchase(order: {
     .catch(() => {});
 }
 
-/** Une commande qui compte pour la cuisine : confirmée par un humain et pas
- * annulée. Exactement le même seuil que celui qui déclenche Meta — c'est le
- * même fait réel : quelqu'un a appelé le client et la commande est vraie. */
-function compteEnCuisine(status: OrderStatus): boolean {
-  return status !== "nouvelle" && status !== "annulee";
+/** Une commande qui pèse sur la cuisine : confirmée par un humain, et pas
+ * encore sortie. « En préparation » et rien d'autre — une commande prête,
+ * livrée ou annulée n'a plus rien à faire cuire (voir
+ * contracts/kitchenBoard.ts, et ce qu'il en a coûté de compter aussi les
+ * commandes livrées). */
+export function enCuisine(status: OrderStatus): boolean {
+  return status === "en_preparation";
 }
 
 /** Change le statut d'une commande et en tire toutes les conséquences :
  * l'achat signalé à Meta, et le tableau du matbakh remis à jour — mais
- * seulement si le poids à préparer a réellement changé. Passer de
- * « en préparation » à « prête » ne recuit rien et ne doit pas sonner. */
+ * seulement si la commande ENTRE en cuisine ou en SORT.
+ *
+ * Il SONNE quand elle entre, tout de suite : c'est du travail en plus. Quand
+ * elle sort — prête, livrée, annulée — il se corrige sur place, sans bruit,
+ * et quelques secondes plus tard : les sorties arrivent par lots (voir
+ * refreshKitchenBoardSoon). */
 export async function transitionOrderStatus(id: number, status: OrderStatus, avant: OrderStatus) {
   // null = la commande n'est plus dans l'état `avant` (quelqu'un d'autre a
   // tranché entre-temps) ou n'existe pas : rien n'a été écrit.
   const order = await updateOrderStatus(id, status, avant);
   if (!order) return null;
   await maybeReportMetaPurchase(order);
-  if (compteEnCuisine(avant) && !compteEnCuisine(status)) {
-    await applyKitchenRelease(parseKitchenItems(order.items));
-  }
-  if (compteEnCuisine(avant) !== compteEnCuisine(status)) void refreshKitchenBoard(true);
+  if (enCuisine(status) && !enCuisine(avant)) void refreshKitchenBoard(true);
+  if (enCuisine(avant) && !enCuisine(status)) refreshKitchenBoardSoon();
   return order;
 }
