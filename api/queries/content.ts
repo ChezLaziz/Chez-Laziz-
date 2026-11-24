@@ -1,5 +1,12 @@
+import { inArray, like } from "drizzle-orm";
 import { getDb } from "./connection";
 import { settings } from "@db/schema";
+
+// CHAQUE LECTURE NE RAMÈNE QUE SES CLÉS. `settings` range aussi des
+// registres qui grossissent avec la boutique (les accords pour les offres,
+// les clientes contactées après livraison). Un `findMany()` sans filtre les
+// ramenait tous, en entier, à chaque visite du site — pour n'en garder que
+// sept champs de pied de page.
 
 const FOOTER_KEYS = {
   tagline: "footer_tagline",
@@ -27,7 +34,7 @@ export const FOOTER_DEFAULTS = {
 export type FooterContent = typeof FOOTER_DEFAULTS;
 
 export async function getFooterContent(): Promise<FooterContent> {
-  const rows = await getDb().query.settings.findMany();
+  const rows = await getDb().query.settings.findMany({ where: inArray(settings.key, Object.values(FOOTER_KEYS)) });
   const map = new Map(rows.map((r) => [r.key, r.value]));
   return {
     tagline: map.get(FOOTER_KEYS.tagline) ?? FOOTER_DEFAULTS.tagline,
@@ -123,7 +130,7 @@ export const PAGES_DEFAULTS = {
 export type PagesContent = typeof PAGES_DEFAULTS;
 
 export async function getPagesContent(): Promise<PagesContent> {
-  const rows = await getDb().query.settings.findMany();
+  const rows = await getDb().query.settings.findMany({ where: inArray(settings.key, Object.values(PAGE_KEYS)) });
   const map = new Map(rows.map((r) => [r.key, r.value]));
   const result = {} as PagesContent;
   const entries = Object.entries(PAGE_KEYS) as [keyof PagesContent, string][];
@@ -163,7 +170,9 @@ const PACK_IMAGE_PREFIX = "pack_image_";
 export type PackImages = Record<string, string>;
 
 export async function getPackImages(): Promise<PackImages> {
-  const rows = await getDb().query.settings.findMany();
+  // Dans LIKE, « _ » vaut « n'importe quel caractère » : le filtre ramène un
+  // peu large, et le startsWith d'en dessous reste le tri exact.
+  const rows = await getDb().query.settings.findMany({ where: like(settings.key, `${PACK_IMAGE_PREFIX}%`) });
   const images: PackImages = {};
   for (const r of rows) {
     if (r.key.startsWith(PACK_IMAGE_PREFIX) && r.value) {

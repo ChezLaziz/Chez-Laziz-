@@ -13,6 +13,7 @@ import { ANALYTICS_PAGES, NAV_GROUPS, type NavId } from './admin/shell/nav'
 import OverviewPage from './admin/pages/OverviewPage'
 import OrdersPage from './admin/pages/OrdersPage'
 import SuiviPage from './admin/pages/SuiviPage'
+import OffresPage from './admin/pages/OffresPage'
 import { useOverview } from './admin/useOverview'
 
 const TOKEN_KEY = 'laziz_admin_token'
@@ -1764,6 +1765,7 @@ export default function AdminPage() {
         <OrdersPage token={token} statusFilter={orderFilter} onClearFilter={() => setOrderFilter(null)} />
       )}
       {tab === 'suivi' && <SuiviPage token={token} />}
+      {tab === 'offres' && <OffresPage token={token} />}
       {tab === 'catalogue' && <ProductsTab token={token} />}
       {tab === 'messages' && <MessagesTab token={token} />}
       {tab === 'contenu' && <ContenuTab token={token} />}

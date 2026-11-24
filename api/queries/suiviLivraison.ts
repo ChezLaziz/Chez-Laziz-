@@ -21,7 +21,7 @@ import {
  * Pas de table, donc pas de migration. Le registre grossit d'une trentaine
  * d'octets par cliente contactée : à mille clientes il pèse trente
  * kilo-octets. Le jour où il en compte dix mille, ce sera une table. */
-const CLE = "suivi_contactees";
+export const CLE = "suivi_contactees";
 
 const registre: RegistreStore = {
   read: () => readSetting(CLE),

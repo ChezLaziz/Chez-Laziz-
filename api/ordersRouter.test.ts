@@ -16,6 +16,9 @@ const setCancelReason = vi.fn(async () => undefined);
 // ferait démarquer toutes les commandes des tests, en silence.
 const sendMetaPurchaseEvent = vi.fn(async () => true);
 const sendMetaLeadEvent = vi.fn(async () => true);
+const noterAccordOffres = vi.fn<(phone: string, orderId: number, lang: "fr" | "ar") => Promise<boolean>>(
+  async () => true,
+);
 
 vi.mock("./queries/products", () => ({ listAvailableProducts }));
 vi.mock("./queries/orders", () => ({
@@ -30,6 +33,7 @@ vi.mock("./queries/orders", () => ({
   setCancelReason,
 }));
 vi.mock("./queries/admin", () => ({ assertAdmin }));
+vi.mock("./queries/offres", () => ({ noterAccordOffres }));
 vi.mock("./lib/email", () => ({ notifyAdminNewOrder: vi.fn(async () => undefined) }));
 // La logique de décision (shouldReportMetaPurchase) reste réelle — seul
 // l'appel réseau sortant est remplacé, pour tester le câblage bout en bout.
@@ -623,3 +627,41 @@ describe("orders.setStatus — Meta « Achat » (cash on delivery)", () => {
   });
 });
 
+describe("orders.create — l'accord pour les offres sur WhatsApp", () => {
+  it("ne note RIEN quand la case n'est pas cochée : le numéro ne sert qu'à la commande", async () => {
+    await caller.create(baseInput);
+    await caller.create({ ...baseInput, offresWhatsApp: false, lang: "ar" });
+    expect(noterAccordOffres).not.toHaveBeenCalled();
+  });
+
+  it("note l'accord avec le numéro, la commande et la langue du texte lu", async () => {
+    await caller.create({ ...baseInput, offresWhatsApp: true, lang: "ar" });
+    expect(noterAccordOffres).toHaveBeenCalledTimes(1);
+    expect(noterAccordOffres).toHaveBeenCalledWith("23691039", 42, "ar");
+  });
+
+  it("prend le français quand la langue n'est pas précisée", async () => {
+    await caller.create({ ...baseInput, offresWhatsApp: true });
+    expect(noterAccordOffres).toHaveBeenCalledWith("23691039", 42, "fr");
+  });
+
+  it("ne fait JAMAIS échouer la commande : registre occupé ou en panne, elle passe quand même", async () => {
+    const erreurs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    noterAccordOffres.mockResolvedValueOnce(false);
+    await expect(caller.create({ ...baseInput, offresWhatsApp: true, lang: "fr" })).resolves.toMatchObject({ id: 42 });
+    noterAccordOffres.mockRejectedValueOnce(new Error("base injoignable"));
+    await expect(caller.create({ ...baseInput, offresWhatsApp: true, lang: "fr" })).resolves.toMatchObject({ id: 42 });
+    // Laisse les promesses détachées se terminer avant de compter.
+    await new Promise((r) => setTimeout(r, 0));
+    // Les deux pannes sont journalisées : un accord perdu doit se voir.
+    expect(erreurs).toHaveBeenCalledTimes(2);
+    erreurs.mockRestore();
+  });
+
+  it("refuse une langue inconnue plutôt que de noter un accord sur un texte qui n'existe pas", async () => {
+    await expect(
+      caller.create({ ...baseInput, offresWhatsApp: true, lang: "en" as unknown as "fr" }),
+    ).rejects.toThrow();
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+});

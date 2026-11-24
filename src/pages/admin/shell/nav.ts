@@ -28,6 +28,7 @@ export type NavId =
   | 'apercu'
   | 'commandes'
   | 'suivi'
+  | 'offres'
   | 'catalogue'
   | 'messages'
   | 'contenu'
@@ -48,6 +49,9 @@ export const NAV_GROUPS: { group: string; items: { id: NavId; label: string }[] 
       // dire « aucune donnée » mais « tout le monde a eu son message » —
       // voir contracts/suiviLivraison.ts.
       { id: 'suivi', label: 'Suivi des colis' },
+      // Les clientes qui ont demandé, en commandant, à recevoir les offres
+      // sur WhatsApp — et elles seules. Voir contracts/offres.ts.
+      { id: 'offres', label: 'Offres WhatsApp' },
       { id: 'catalogue', label: 'Produits' },
       { id: 'messages', label: 'Messages' },
       { id: 'contenu', label: 'Contenu du site' },

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { delegationsForGovernorate, governorateKey } from "@contracts/delegations";
 import { allDelegations, findDelegation } from "./queries/delegations";
+import { noterAccordOffres } from "./queries/offres";
 import { createRouter, publicQuery } from "./middleware";
 import {
   listOrders,
@@ -144,6 +145,12 @@ export const ordersRouter = createRouter({
         acquisitionCampaign: z.string().max(120).optional(),
         acquisitionContent: z.string().max(120).optional(),
         deviceType: z.enum(["mobile", "tablet", "desktop"]).optional(),
+        // La case « je veux recevoir les offres sur WhatsApp », et la langue
+        // de la page où elle a été cochée (le texte que la personne a lu).
+        // Absente ou fausse : rien n'est noté, le numéro ne sert qu'à la
+        // commande. Voir contracts/offres.ts.
+        offresWhatsApp: z.boolean().optional(),
+        lang: z.enum(["fr", "ar"]).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -278,6 +285,17 @@ export const ordersRouter = createRouter({
         // perdait tous en silence. Voir contracts/metaSignals.ts.
         ...metaSignalsForOrder(signals),
       });
+      // L'accord pour les offres, s'il a été donné. Noté même sur une
+      // commande rejouée (l'opération ne change rien la seconde fois), sans
+      // attendre, et sans jamais faire échouer la commande : une cliente ne
+      // doit pas voir « erreur » parce qu'un registre était occupé.
+      if (order && input.offresWhatsApp === true) {
+        void noterAccordOffres(order.phone, order.id, input.lang ?? "fr")
+          .then((ok) => {
+            if (!ok) console.error(`[offres] accord de la commande #${order.id} non enregistré`);
+          })
+          .catch((err) => console.error(`[offres] accord de la commande #${order.id} non enregistré :`, err));
+      }
       // Notifications : sans attendre, et sans jamais faire échouer la
       // commande si un envoi échoue (voir api/lib/email.ts et
       // api/lib/telegram.ts). Telegram sonne sur le téléphone dans la

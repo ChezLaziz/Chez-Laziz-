@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ORDER_PREVIEW_AR, ORDER_PREVIEW_FR } from '@contracts/socialPreview'
 import { trpc } from '@/providers/trpc'
+import { OFFRES_ACCORD_TEXTE } from '@contracts/offresAccord'
 import { detectDevice, getAttribution } from '@/lib/attribution'
 import { useCart, type CustomLine } from '@/providers/cart'
 import { useSEO } from '@/hooks/useSEO'
@@ -526,6 +527,10 @@ export default function OrderPage() {
    * ne la demande pas. Dépliée, elle ne se replie plus — on ne reprend pas
    * un champ dans lequel quelqu'un est peut-être en train d'écrire. */
   const [noteOuverte, setNoteOuverte] = useState(false)
+  /** La case « offres sur WhatsApp ». Toujours décochée à l'ouverture, même
+   * pour une cliente dont on a retenu l'adresse : un accord ne se présume
+   * pas, il se donne. Voir contracts/offresAccord.ts. */
+  const [offres, setOffres] = useState(false)
   /** Le formulaire écrit du bas reste replié : la plupart des clients qui
    * arrivent jusque-là veulent joindre quelqu'un, pas remplir quatre champs
    * de plus. Il s'ouvre pour ceux qui le demandent. */
@@ -1067,6 +1072,9 @@ export default function OrderPage() {
             }
           : {}),
         deviceType: detectDevice(),
+        // Envoyé seulement si la case est cochée ; la langue est celle du
+        // texte que la personne a sous les yeux.
+        ...(offres ? { offresWhatsApp: true, lang } : {}),
       },
       {
         onSuccess: (order) => {
@@ -1277,6 +1285,15 @@ export default function OrderPage() {
               'Nous vous appelons très vite pour confirmer votre commande. Paiement en espèces à la livraison.'
             )}
           </p>
+          {/* Elle a coché la case : on lui redit, tout de suite, ce à quoi
+              elle vient de dire oui et comment en sortir. */}
+          {offres && (
+            <p className="mx-auto mt-3 max-w-md text-[13px] leading-relaxed text-ink/60">
+              {isAr
+                ? 'تمّ التسجيل: سيصلكم جديدنا وعروضنا على واتساب. للإيقاف يكفي الردّ بكلمة STOP.'
+                : "C'est noté : vous recevrez nos nouveautés et nos offres sur WhatsApp. Pour arrêter, répondez STOP."}
+            </p>
+          )}
 
           {/* LA CONFIRMATION, SANS ATTENDRE L'APPEL. La phrase du dessus
               promet un appel ; presque une annulation sur deux est cet appel
@@ -2203,6 +2220,20 @@ export default function OrderPage() {
                         {isAr ? '+ زيد ملاحظة (تاريخ، مناسبة…)' : '+ Ajouter une précision (date, occasion…)'}
                       </button>
                     )}
+                    {/* L'accord pour les offres. Une vraie case, jamais cochée
+                        d'avance, avec le texte exact auquel on dit oui : sans
+                        elle, le numéro ne sert qu'à la commande. Elle vient en
+                        dernier et reste discrète — personne ne doit croire
+                        qu'il faut la cocher pour commander. */}
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#faf6f3]/15 px-3.5 py-3 text-[13px] leading-snug text-[#faf6f3]/70 transition-colors hover:border-[#faf6f3]/30">
+                      <input
+                        type="checkbox"
+                        checked={offres}
+                        onChange={(e) => setOffres(e.target.checked)}
+                        className="mt-px h-5 w-5 shrink-0 cursor-pointer accent-[rgb(var(--c-gold))]"
+                      />
+                      <span>{OFFRES_ACCORD_TEXTE[lang]}</span>
+                    </label>
                   </div>
 
                   <div className="mt-6 flex items-baseline border-t border-[#faf6f3]/15 pt-5">
