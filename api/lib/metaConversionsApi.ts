@@ -65,31 +65,36 @@ export function shouldReportMetaPurchase(order: ReportableOrder): boolean {
   return order.status === "terminee";
 }
 
-/** Meta refuse un event_time de plus de sept jours — et il refuse la
- * REQUÊTE ENTIÈRE, pas seulement l'événement fautif. On garde une marge
- * d'une heure : la commande peut attendre dans une file, l'horloge du
- * serveur peut dériver, et un envoi rejeté ne se rattrape jamais. */
-const EVENT_TIME_MAX_AGE_S = 7 * 24 * 3600 - 3600;
-
-/** Quand l'achat a EU LIEU, du point de vue de la publicité.
+/** L'heure que porte un événement : celle où il PART.
  *
- * Le colis part le lendemain, mais la décision d'acheter date de la
- * commande : c'est elle qui suit le clic publicitaire, et c'est cette
- * date-là que Meta doit rapprocher de l'annonce. Envoyer l'heure de la
- * livraison ferait manquer l'attribution d'une vente pourtant causée par
- * la publicité.
+ * ON A FAIT L'INVERSE PENDANT DEUX MOIS, ET C'ÉTAIT UNE ERREUR DE LECTURE.
+ * L'achat partait à la livraison (voir shouldReportMetaPurchase) mais daté
+ * de la COMMANDE, un ou deux jours plus tôt — pour que Meta le rapproche
+ * du clic publicitaire. Or Meta mesure le retard d'un événement entre
+ * l'heure qu'il porte et l'heure où il le reçoit, et l'écrit sans détour :
+ * envoyé dans l'heure, un événement sert à l'attribution et à la
+ * diffusion ; au-delà de deux heures, les publicités optimisées sur lui
+ * perdent en performance ; à vingt-quatre heures et plus, attribution et
+ * diffusion peuvent en souffrir nettement. Avec l'heure de la commande,
+ * CHAQUE achat de la boutique arrivait chez Meta avec un à trois jours de
+ * retard — sur l'événement même que les campagnes optimisent.
  *
- * Au-delà de sept jours — la cliente qui demande à être livrée « dans dix
- * jours » — on renvoie l'heure réelle de l'envoi. C'est la vérité, et la
- * fenêtre d'attribution est de toute façon dépassée : mieux vaut un achat
- * compté sans être attribué qu'une requête rejetée en bloc. On ne fabrique
- * PAS une date de complaisance à six jours et vingt-trois heures. */
-export function eventTimeSeconds(orderedAt: Date | null | undefined, now: number): number {
-  const maintenant = Math.floor(now / 1000);
-  if (!orderedAt) return maintenant;
-  const commande = Math.floor(orderedAt.getTime() / 1000);
-  if (!Number.isFinite(commande) || commande > maintenant) return maintenant;
-  return maintenant - commande > EVENT_TIME_MAX_AGE_S ? maintenant : commande;
+ * Pour une conversion qui se conclut longtemps après le clic, la consigne
+ * de Meta est de l'envoyer dès qu'elle est COMPLÈTE. Ici, un achat est une
+ * commande livrée : il est complet à la livraison, et c'est à cet
+ * instant-là qu'il part. Il est donc daté de cet instant.
+ *
+ * CE QU'ON Y PERD, dit tel quel. Le clic reste dans la fenêtre de sept
+ * jours tant que la livraison suit la commande de moins de sept jours —
+ * c'était déjà la limite avant. Ce qui sort, ce sont les achats que Meta
+ * créditait à une simple VUE de la publicité la veille : livrés plus d'un
+ * jour après, ils ne sont plus rattachés à cette vue. C'est une part
+ * mineure, et la moins sûre, de ce qu'il attribuait.
+ *
+ * « Lead » n'a jamais eu ce problème : il part à la commande, daté de la
+ * commande. */
+export function eventTimeSeconds(now: number): number {
+  return Math.floor(now / 1000);
 }
 
 export function sha256(value: string): string {
@@ -173,9 +178,6 @@ export type MetaPurchaseEvent = {
   city?: string;
   governorate?: string;
   sourceUrl?: string;
-  /** L'heure de la COMMANDE, pas celle de l'envoi à Meta — voir
-   * eventTimeSeconds. Absente, on retombe sur l'instant présent. */
-  orderedAt?: Date | null;
   /** Signaux captés à la création de la commande — voir
    * contracts/metaSignals.ts. Tous absents si le client a refusé les
    * cookies : on n'envoie alors que le téléphone haché, comme avant. */
@@ -266,7 +268,7 @@ async function envoyer(
     data: [
       {
         event_name: eventName,
-        event_time: eventTimeSeconds(ev.orderedAt, Date.now()),
+        event_time: eventTimeSeconds(Date.now()),
         event_id: eventId,
         event_source_url: ev.sourceUrl ?? "https://chezlaziz.com/commande",
         action_source: "website",
