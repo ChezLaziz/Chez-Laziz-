@@ -8,6 +8,7 @@ import { dashboardRouter } from "./dashboardRouter";
 import { galleryRouter } from "./galleryRouter";
 import { contentRouter } from "./contentRouter";
 import { suiviRouter } from "./suiviRouter";
+import { offresRouter } from "./offresRouter";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -21,6 +22,7 @@ export const appRouter = createRouter({
   gallery: galleryRouter,
   content: contentRouter,
   suivi: suiviRouter,
+  offres: offresRouter,
 });
 
 export type AppRouter = typeof appRouter;

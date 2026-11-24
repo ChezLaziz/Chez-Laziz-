@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { OFFRES_ACCORD_TEXTE, OFFRES_ECART_JOURS } from '@contracts/offresAccord'
 import Header from '../sections/Header'
 import Footer from '../sections/Footer'
 import { useSEO } from '../hooks/useSEO'
@@ -70,6 +71,21 @@ export default function PrivacyPage() {
                 معاكم بعد التوصيل اللي كل شيء وصل مريقل، أو للرد على رسالتكم. ولهذا
                 نجمو نتصلو بيكم بالهاتف أو واتساب أو ماسنجر. تُحفظ في قاعدة بياناتنا
                 لمتابعة الطلبيات، وما تُباعش ولا تُشارك مع أي طرف ثالث لأغراض تجارية.
+                وما نبعثولكمش إشهار، إلا إذا طلبتوه بأنفسكم (شوفو الفقرة الجاية).
+              </p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 font-display text-xl text-ink">العروض على واتساب: فقط إذا طلبتوها</h2>
+              <p>
+                في استمارة الطلب فما خانة اختيارية، عمرها ما تكون معلّمة من قبل، مكتوب عليها:{' '}
+                <span className="font-normal text-ink">{OFFRES_ACCORD_TEXTE.ar}</span> إذا علّمتوها، نجمو نكتبولكم على واتساب باش
+                نعلموكم بمنتوج جديد أو عرض، موش أكثر من مرة كل {OFFRES_ECART_JOURS / 7} أسابيع.
+                وإذا ما علّمتوهاش، رقمكم يُستعمل لطلبيتكم برك.
+              </p>
+              <p className="mt-2">
+                توقّفوها وقت ما تحبّو: جاوبو على الرسالة بكلمة STOP، أو قولولنا بالهاتف،
+                وننحّيو رقمكم من القائمة.
               </p>
             </section>
 
@@ -192,7 +208,23 @@ export default function PrivacyPage() {
               vous joindre par téléphone, WhatsApp ou Messenger. Elles sont
               conservées dans notre base de données pour le suivi des commandes et
               ne sont ni vendues, ni partagées avec des tiers à des fins
-              commerciales.
+              commerciales. Nous ne vous envoyons pas de publicité, sauf si vous
+              l'avez demandé vous-même (voir le paragraphe suivant).
+            </p>
+          </section>
+
+          <section>
+            <h2 className="mb-2 font-display text-xl text-ink">Les offres sur WhatsApp : seulement si vous les demandez</h2>
+            <p>
+              Le formulaire de commande contient une case facultative, jamais cochée
+              d'avance, qui dit : « {OFFRES_ACCORD_TEXTE.fr} » Si vous la cochez, nous
+              pouvons vous écrire sur WhatsApp pour vous annoncer une nouveauté ou une
+              offre, au plus une fois toutes les {OFFRES_ECART_JOURS / 7} semaines. Si vous
+              ne la cochez pas, votre numéro ne sert qu'à votre commande.
+            </p>
+            <p className="mt-2">
+              Vous arrêtez quand vous voulez : répondez STOP au message, ou dites-le-nous
+              par téléphone, et nous retirons votre numéro de la liste.
             </p>
           </section>
 

@@ -39,6 +39,14 @@ function paths(id: NavId) {
           <path d="M8.8 10.8l2.2 2.2 4.2-4.4" strokeLinecap="round" strokeLinejoin="round" />
         </>
       )
+    case 'offres':
+      // Une étiquette : l'offre du moment.
+      return (
+        <>
+          <path d="M4 5h7.2l8.3 8.3a1.6 1.6 0 0 1 0 2.2l-4.9 4.9a1.6 1.6 0 0 1-2.2 0L4 12.2z" strokeLinejoin="round" />
+          <circle cx="8.3" cy="9.3" r="1.2" />
+        </>
+      )
     case 'catalogue':
       // Cabas : le catalogue et ses prix, côté vente.
       return (
