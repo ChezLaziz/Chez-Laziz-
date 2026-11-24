@@ -56,14 +56,37 @@ export function metaSignalsForOrder(signals: MetaUserSignals | null | undefined)
 } {
   if (!signals) return {};
   return {
-    ...(signals.fbc ? { metaFbc: signals.fbc } : {}),
+    // Trop long pour la colonne : on ne l'écrit PAS. Voir MAX_FBC_STOCKE.
+    ...(signals.fbc && signals.fbc.length <= MAX_FBC_STOCKE ? { metaFbc: signals.fbc } : {}),
     ...(signals.fbp ? { metaFbp: signals.fbp } : {}),
     ...(signals.clientIp ? { metaClientIp: signals.clientIp } : {}),
     ...(signals.clientUserAgent ? { metaClientUserAgent: signals.clientUserAgent } : {}),
   };
 }
 
-const MAX_FBC = 255;
+/** UN IDENTIFIANT DE CLIC NE SE COUPE PAS.
+ *
+ * `_fbc` vaut « fb.1.<horodatage>.<fbclid> », et le fbclid est une valeur
+ * opaque que Meta relit telle quelle. Les fbclid récents dépassent souvent
+ * deux cents caractères ; on tronquait le cookie à 255 pour qu'il tienne
+ * dans la colonne `meta_fbc`. Un fbclid amputé de sa fin n'est pas « presque
+ * juste » : c'est un autre identifiant, que Meta ne reconnaît pas et qu'il
+ * signale dans ses diagnostics (« modified fbclid value »). La vente partait
+ * alors avec un clic faux à la place du clic qui l'avait causée.
+ *
+ * Deux bornes au lieu d'une :
+ *   MAX_FBC        — ce qu'on accepte de LIRE et d'envoyer tout de suite
+ *                    (l'événement Lead part pendant la requête, voir
+ *                    api/ordersRouter.ts). Au-delà, ce n'est plus un
+ *                    identifiant de clic : on jette tout, on ne coupe rien.
+ *   MAX_FBC_STOCKE — la largeur réelle de la colonne. Une valeur plus longue
+ *                    n'est PAS enregistrée : l'achat signalé à la livraison
+ *                    partira sans fbc (il garde fbp, l'IP et le téléphone)
+ *                    plutôt qu'avec un clic falsifié. Élargir la colonne
+ *                    (`ALTER TABLE orders ALTER COLUMN meta_fbc TYPE
+ *                    varchar(1000)`) puis cette constante lève la limite. */
+const MAX_FBC = 1000;
+export const MAX_FBC_STOCKE = 255;
 const MAX_FBP = 100;
 const MAX_UA = 400;
 const MAX_IP = 45; // une IPv6 en toutes lettres
@@ -108,7 +131,9 @@ export function metaUserSignals(headers: {
   xRealIp?: string | null;
   userAgent?: string | null;
 }): MetaUserSignals | null {
-  const fbc = readCookie(headers.cookie, "_fbc")?.slice(0, MAX_FBC);
+  // Entier ou rien — jamais tronqué. Voir MAX_FBC.
+  const fbcBrut = readCookie(headers.cookie, "_fbc");
+  const fbc = fbcBrut && fbcBrut.length <= MAX_FBC ? fbcBrut : undefined;
   const fbp = readCookie(headers.cookie, "_fbp")?.slice(0, MAX_FBP);
   if (!fbc && !fbp) return null;
   const signals: MetaUserSignals = {};

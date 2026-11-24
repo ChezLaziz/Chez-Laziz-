@@ -317,7 +317,12 @@ export const ordersRouter = createRouter({
           city: order.city,
           governorate: order.governorate,
           signals: {
-            fbc: order.metaFbc,
+            // LE CLIC ENTIER, tel que la requête l'a apporté. La colonne
+            // n'en garde que 255 caractères au plus, et un fbclid coupé est
+            // un fbclid faux (voir MAX_FBC dans contracts/metaSignals.ts).
+            // Lead part pendant la requête : il n'a aucune raison de passer
+            // par la colonne.
+            fbc: signals?.fbc ?? order.metaFbc,
             fbp: order.metaFbp,
             clientIp: order.metaClientIp,
             clientUserAgent: order.metaClientUserAgent,

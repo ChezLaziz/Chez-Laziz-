@@ -20,6 +20,7 @@
 // Meta — jamais transmis en clair.
 
 import { createHash } from "node:crypto";
+import { tunisianLocalPhone } from "@contracts/phone";
 
 const GRAPH_API_VERSION = "v21.0";
 
@@ -95,13 +96,35 @@ export function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-/** Numéros tunisiens saisis dans des formats variés (avec ou sans +216,
- * avec ou sans 0 initial, espaces...) → même forme E.164 avant hachage,
- * pour que Meta puisse effectivement faire correspondre l'événement. */
+/** Le numéro tel que META l'attend avant hachage : des CHIFFRES SEULS,
+ * indicatif compris — « 21623691039 ». Pas de « + ».
+ *
+ * LE « + » A COÛTÉ TOUTES LES VENTES SANS COOKIE. Cette fonction rendait la
+ * forme E.164, « +21623691039 ». Or Meta hache de son côté le numéro SANS
+ * symbole (sa documentation : « Remove symbols, letters, and any leading
+ * zeros », exemple « 16505551212 »). Une empreinte SHA-256 ne se rattrape
+ * pas : un seul caractère de plus et elle ne ressemble à aucune autre. Le
+ * téléphone haché que nous envoyions n'a donc JAMAIS correspondu à un
+ * compte — pas une fois.
+ *
+ * C'est exactement ce que le compte montrait avant l'enregistrement de
+ * fbc/fbp : soixante-deux achats reçus, zéro attribué. Et depuis, toute
+ * commande passée sans avoir touché « Accepter » ne part qu'avec ce
+ * téléphone : Meta la recevait sans pouvoir la rattacher à personne, donc
+ * à aucune publicité, donc sans rien en apprendre.
+ *
+ * Deuxième défaut, corrigé au passage : « 21 612 345 » est un numéro local
+ * valide qui COMMENCE par 216. L'ancien test `startsWith("216")` le prenait
+ * pour un numéro déjà international et lui refusait son indicatif.
+ * tunisianLocalPhone (contracts/phone.ts) est la règle déjà partagée avec le
+ * formulaire : on ne retire l'indicatif que s'il reste huit chiffres. */
 export function normalizeTunisianPhone(phone: string): string {
+  const local = tunisianLocalPhone(phone);
+  if (local) return `216${local}`;
+  // Hors gabarit (très ancienne commande, saisie manuelle) : au mieux, mais
+  // toujours en chiffres seuls et toujours avec l'indicatif.
   const digits = phone.replace(/\D/g, "").replace(/^0+/, "");
-  const withCountryCode = digits.startsWith("216") ? digits : `216${digits}`;
-  return `+${withCountryCode}`;
+  return digits.length > 8 && digits.startsWith("216") ? digits : `216${digits}`;
 }
 
 /** Les champs de correspondance que Meta accepte, normalisés comme il
