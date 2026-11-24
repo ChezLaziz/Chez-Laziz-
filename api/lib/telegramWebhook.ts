@@ -97,7 +97,7 @@ async function askCancelReason(q: CallbackQuery, orderId: number): Promise<strin
     await editMessage(
       q.message.message_id,
       cancelReasonPrompt(buildNewOrderTelegramMessage(order)),
-      cancelReasonKeyboard(orderId),
+      cancelReasonKeyboard(orderId, order),
     );
   }
   return "";
@@ -113,7 +113,7 @@ async function backToDecision(q: CallbackQuery, orderId: number): Promise<string
     await editMessage(
       q.message.message_id,
       buildNewOrderTelegramMessage(order),
-      newOrderKeyboard(orderId),
+      newOrderKeyboard(orderId, order),
     );
   }
   return "";

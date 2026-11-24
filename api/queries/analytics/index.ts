@@ -18,7 +18,7 @@ import {
 import { dayKey, daysInPeriod, type Period, type PeriodPair } from "./period";
 import { buildCustomerHistories, computeCustomerMetrics } from "./customers";
 import { computeMargins, type CostsByProductId } from "./margin";
-import { computeAcquisition } from "./acquisition";
+import { computeAcquisition, computeAdPerformance } from "./acquisition";
 import {
   attachGrowth,
   computeGovernorateDelivery,
@@ -63,6 +63,9 @@ const ANALYTICS_COLUMNS = {
   acquisitionCampaign: orders.acquisitionCampaign,
   acquisitionContent: orders.acquisitionContent,
   deviceType: orders.deviceType,
+  // Un booléen calculé par la base : le cookie lui-même n'a rien à faire
+  // dans l'analytique.
+  pixelSeen: sql<boolean>`${orders.metaFbp} IS NOT NULL`,
   createdAt: orders.createdAt,
 } as const;
 
@@ -71,7 +74,7 @@ async function fetchOrdersInPeriod(period: Period): Promise<AnalyticsOrder[]> {
     .select(ANALYTICS_COLUMNS)
     .from(orders)
     .where(and(gte(orders.createdAt, period.start), lt(orders.createdAt, period.end)));
-  return rows.map((r) => ({ ...r, items: parseItems(r.items) }));
+  return rows.map((r) => ({ ...r, pixelSeen: r.pixelSeen === true, items: parseItems(r.items) }));
 }
 
 /** Historique client complet, toutes périodes confondues.
@@ -266,6 +269,9 @@ export type OverviewData = {
   margins: ReturnType<typeof computeMargins>;
   previousMargins: ReturnType<typeof computeMargins>;
   acquisition: ReturnType<typeof computeAcquisition>;
+  /** Publicité par publicité, sur TOUTES les commandes de la période,
+   * annulées comprises — voir computeAdPerformance. */
+  ads: ReturnType<typeof computeAdPerformance>;
 };
 
 /** Toutes les données de la Vue d'ensemble en UNE passe.
@@ -349,5 +355,6 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     margins,
     previousMargins: computeMargins(previous, costs),
     acquisition,
+    ads: computeAdPerformance(currentAll),
   };
 }

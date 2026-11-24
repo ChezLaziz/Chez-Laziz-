@@ -507,6 +507,11 @@ export default function OverviewPage({
         </Card>
       </div>
 
+      {/* Publicité par publicité, lue sur les commandes elles-mêmes : la
+          seule mesure complète, disponible le jour même. Voir
+          computeAdPerformance (api/queries/analytics/acquisition.ts). */}
+      <AdsCard ads={data.ads} />
+
       <div className="grid gap-3 lg:grid-cols-2">
         {/* Impact business de la livraison — pas sa gestion. Chez Laziz
             sous-traite le transport : ce bloc mesure ce que l'entreprise
@@ -563,7 +568,11 @@ export default function OverviewPage({
         </Card>
       </div>
 
-      <DataQualityNote quality={data.dataQuality} pageViews={data.pageViews.value} />
+      <DataQualityNote
+        quality={data.dataQuality}
+        pageViews={data.pageViews.value}
+        pixel={{ seen: data.ads.pixelSeen, placed: data.ads.placed }}
+      />
 
       <p className="pt-0.5 text-center text-[11px] text-ink/35">
         Fait avec passion en Tunisie
@@ -622,6 +631,112 @@ function PromoCard({ className = '' }: { className?: string }) {
   )
 }
 
+/** Ce qu'une publicité a vendu, d'après les commandes — pas d'après Meta.
+ *
+ * Même tableau que « Gouvernorats », volontairement : une seule façon de
+ * dessiner un tableau dans ce tableau de bord. L'identifiant est affiché en
+ * entier et en chasse fixe : c'est celui de la colonne « ID de la
+ * publicité » du Gestionnaire de publicités, et on doit pouvoir les
+ * comparer chiffre à chiffre. */
+export function AdsCard({
+  ads,
+}: {
+  ads: {
+    rows: {
+      label: string | null
+      sources: string[]
+      placed: number
+      orders: number
+      cancelled: number
+      aovMillimes: number
+      pixelSeen: number
+      firstOrderAt: string
+      lastOrderAt: string
+    }[]
+    placed: number
+  }
+}) {
+  const jour = (iso: string) =>
+    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  const part = (n: number, d: number) => (d === 0 ? '—' : `${Math.round((n / d) * 100)}%`)
+  // Neuf publicités au plus, et la ligne « sans étiquette » TOUJOURS : c'est
+  // elle qui ferme le total, la couper ferait croire que tout est étiqueté.
+  const publicites = ads.rows.filter((r) => r.label !== null)
+  const sansEtiquette = ads.rows.find((r) => r.label === null)
+  const rows = [...publicites.slice(0, 9), ...(sansEtiquette ? [sansEtiquette] : [])]
+  const masquees = Math.max(publicites.length - 9, 0)
+
+  return (
+    <Card title="Publicités" icon="orders">
+      {ads.placed === 0 ? (
+        <EmptyState label="Aucune commande sur cette période." />
+      ) : (
+        <>
+          <div className="-mx-1 overflow-x-auto">
+            <table className="w-full min-w-[620px] text-[13px]">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-ink/40">
+                  <th className="pb-1.5 pl-1 font-medium">Publicité</th>
+                  <th className="pb-1.5 pr-4 text-right font-medium">Passées</th>
+                  <th className="pb-1.5 pr-4 text-right font-medium">Valides</th>
+                  <th className="pb-1.5 pr-4 text-right font-medium">Annulées</th>
+                  <th className="pb-1.5 pr-4 text-right font-medium">Panier (DT)</th>
+                  <th className="pb-1.5 pr-1 text-right font-medium">Vues par le Pixel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const taux = r.placed === 0 ? 0 : r.cancelled / r.placed
+                  return (
+                    <tr key={r.label ?? '__sans'} className="border-t border-sand/50">
+                      <td className="py-1.5 pl-1 pr-4">
+                        {r.label === null ? (
+                          <span className="text-ink/60">Sans étiquette de publicité</span>
+                        ) : (
+                          <span className="break-all font-mono text-[12px] text-ink">{r.label}</span>
+                        )}
+                        <span className="block text-[11px] text-ink/40">
+                          {r.sources.length > 0 ? `${r.sources.map(sourceLabel).join(' + ')} · ` : ''}
+                          {jour(r.firstOrderAt)}
+                          {jour(r.firstOrderAt) === jour(r.lastOrderAt) ? '' : ` → ${jour(r.lastOrderAt)}`}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pr-4 text-right font-medium text-ink">{r.placed}</td>
+                      <td className="py-1.5 pr-4 text-right text-ink/60">{r.orders}</td>
+                      <td
+                        className={`whitespace-nowrap py-1.5 pr-4 text-right ${
+                          r.placed >= 8 && taux >= 0.25 ? 'text-red-600' : 'text-ink/60'
+                        }`}
+                      >
+                        {r.cancelled}
+                        <span className="ml-1 text-[11px] opacity-70">{part(r.cancelled, r.placed)}</span>
+                      </td>
+                      <td className="py-1.5 pr-4 text-right text-ink/60">
+                        {r.orders === 0 ? '—' : moneyDT(r.aovMillimes)}
+                      </td>
+                      <td className="whitespace-nowrap py-1.5 pr-1 text-right text-ink/60">
+                        {r.pixelSeen}
+                        <span className="ml-1 text-[11px] opacity-70">{part(r.pixelSeen, r.placed)}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[11px] leading-snug text-ink/40">
+            Compté sur les commandes elles-mêmes, d'après l'étiquette du lien publicitaire
+            (utm_content = identifiant de la publicité) : indépendant de ce que Meta attribue, et
+            disponible le jour même. « Passées » inclut les annulées. « Vues par le Pixel » : commandes
+            arrivées après « Accepter ».
+            {masquees > 0 ? ` ${masquees} autre${masquees > 1 ? 's' : ''} ligne${masquees > 1 ? 's' : ''} non affichée${masquees > 1 ? 's' : ''}.` : ''}
+          </p>
+        </>
+      )}
+    </Card>
+  )
+}
+
 function MiniStat({
   label,
   value,
@@ -649,9 +764,11 @@ function MiniStat({
 function DataQualityNote({
   quality,
   pageViews,
+  pixel,
 }: {
   quality: { customerIdCoverage: number; governorateCoverage: number; ordersTotal: number }
   pageViews: number
+  pixel: { seen: number; placed: number }
 }) {
   const pct = (n: number) => `${Math.round(n * 100)}%`
   return (
@@ -662,6 +779,13 @@ function DataQualityNote({
       <ul className="mt-2 space-y-1 text-xs text-ink/55">
         <li>Identité client (téléphone exploitable) : {pct(quality.customerIdCoverage)}</li>
         <li>Gouvernorat renseigné : {pct(quality.governorateCoverage)}</li>
+        {pixel.placed > 0 && (
+          <li>
+            Commandes arrivées avec les cookies du Pixel Meta : {pct(pixel.seen / pixel.placed)} (
+            {pixel.seen} sur {pixel.placed}). Les autres ne partent chez Meta qu'avec le téléphone
+            haché : c'est la part des ventes que le Gestionnaire de publicités voit le moins bien.
+          </li>
+        )}
         <li className="pt-1 text-ink/45">
           {pageViews.toLocaleString('fr-FR')} pages vues sur la période. Comptées une fois par page
           et par session : ce n'est ni un nombre de visiteurs ni un total de pages vues, et aucun
