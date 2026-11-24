@@ -92,7 +92,8 @@ export default function PrivacyPage() {
             <section>
               <h2 className="mb-2 font-display text-xl text-ink">الكوكيز وقياس الزيارات</h2>
               <p>
-                نقيسو عدد الزيارات بعداد مجهول على سيرفرنا الخاص، شغال باستمرار وبلا كوكيز.
+                نقيسو عدد الزيارات، وقداش من زيارة يجيبها كل إعلان من إعلاناتنا، بعداد مجهول
+                على سيرفرنا الخاص، شغال باستمرار وبلا كوكيز. العداد يحسب الزيارات، موش الأشخاص.
               </p>
               {(analyticsEnabled || metaPixelEnabled) && (
                 <>
@@ -231,8 +232,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="mb-2 font-display text-xl text-ink">Cookies et mesure d'audience</h2>
             <p>
-              Nous mesurons le nombre de pages vues avec un compteur anonyme sur notre
-              propre serveur, actif en permanence et sans cookie.
+              Nous mesurons le nombre de pages vues, et combien de visites chacune de nos
+              publicités amène, avec un compteur anonyme sur notre propre serveur, actif en
+              permanence et sans cookie. Il compte des visites, jamais des personnes.
             </p>
             {(analyticsEnabled || metaPixelEnabled) && (
               <>

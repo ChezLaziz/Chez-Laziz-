@@ -14,6 +14,7 @@
  * enregistrée nulle part. Un ROAS sans dépense réelle serait une invention. */
 
 import { isValidOrder, orderRevenueMillimes, type AnalyticsOrder } from "./metrics";
+import { pourCentVisites } from "@contracts/arrivees";
 
 export type SourceStats = {
   source: string;
@@ -195,8 +196,41 @@ export type AdRow = {
   /** Commandes passées avec les cookies du Pixel — les seules que Meta peut
    * rattacher à la publicité autrement que par le téléphone haché. */
   pixelSeen: number;
+  /** Vides quand la ligne n'a que des visites : aucune commande à dater. */
   firstOrderAt: string;
   lastOrderAt: string;
+  /** Arrivées sur le site par le lien de cette publicité (pour la ligne
+   * sans étiquette : toutes les arrivées sans étiquette). `null` = les
+   * visites ne sont pas comptées sur cette période — jamais « zéro ». */
+  visits: number | null;
+  /** Commandes passées DEPUIS que les visites sont comptées. C'est elle, et
+   * pas `placed`, qui se divise par les visites : sur une période qui
+   * commence avant le comptage, `placed` contient des commandes dont les
+   * visites n'ont jamais été vues, et le taux serait gonflé d'autant. */
+  placedSinceVisits: number;
+  /** Commandes passées pour cent visites. `null` sous cent visites (du
+   * hasard) et quand les visites ne sont pas comptées. */
+  per100Visits: number | null;
+};
+
+/** Les visites de la période, telles que le compteur les rend — voir
+ * api/queries/arrivees.ts et contracts/arrivees.ts. */
+export type AdArrivals = {
+  /** Première arrivée jamais comptée. */
+  since: Date;
+  /** La période commence avant `since`. */
+  partial: boolean;
+  byLabel: ReadonlyMap<string, number>;
+  /** Arrivées étiquetées, toutes publicités confondues. */
+  tagged: number;
+  /** Arrivées sans étiquette de publicité… */
+  untagged: number;
+  /** … dont celles venues de Facebook ou d'Instagram. */
+  untaggedMeta: number;
+  /** Les deux mêmes mesures sur hier et aujourd'hui seulement, quelle que
+   * soit la période affichée — ce que le signal « sans étiquette » regarde. */
+  recentTagged: number;
+  recentUntaggedMeta: number;
 };
 
 export type AdPerformance = {
@@ -206,40 +240,65 @@ export type AdPerformance = {
   pixelSeen: number;
   /** Part des commandes passées que le Pixel a vues. */
   pixelCoverage: number;
+  /** Depuis quand les visites sont comptées ; `null` = pas sur cette période. */
+  visitsSince: string | null;
+  /** Les visites ne couvrent qu'une partie de la période. */
+  visitsPartial: boolean;
+  taggedVisits: number;
+  untaggedVisits: number;
+  /** Visites venues de Meta sans étiquette de publicité : une publicité ou
+   * une publication boostée qui tourne sans ses paramètres d'URL se voit
+   * ici dès sa première heure, bien avant sa première commande. */
+  untaggedMetaVisits: number;
+  /** Hier et aujourd'hui seulement — voir AdArrivals. */
+  recentTaggedVisits: number;
+  recentUntaggedMetaVisits: number;
 };
 
 /** Prend TOUTES les commandes de la période, annulées comprises : une
- * publicité qui déclenche des commandes annulées doit se voir. */
-export function computeAdPerformance(allOrders: AnalyticsOrder[]): AdPerformance {
+ * publicité qui déclenche des commandes annulées doit se voir.
+ *
+ * `arrivals` absent ou `null` : les visites ne sont pas connues sur cette
+ * période, et le tableau le dit au lieu d'afficher des zéros. */
+export function computeAdPerformance(
+  allOrders: AnalyticsOrder[],
+  arrivals: AdArrivals | null = null,
+): AdPerformance {
   type Acc = AdRow & { _sources: Set<string>; _campaigns: Map<string, number>; _first: number; _last: number };
   const map = new Map<string, Acc>();
   let pixelSeenTotal = 0;
+  const SANS = "\u0000sans-etiquette";
+  const depuis = arrivals ? arrivals.since.getTime() : null;
+
+  const nouvelle = (label: string | null, t: number): Acc => ({
+    label,
+    sources: [],
+    campaign: null,
+    placed: 0,
+    orders: 0,
+    cancelled: 0,
+    revenueMillimes: 0,
+    aovMillimes: 0,
+    pixelSeen: 0,
+    firstOrderAt: "",
+    lastOrderAt: "",
+    visits: null,
+    placedSinceVisits: 0,
+    per100Visits: null,
+    _sources: new Set<string>(),
+    _campaigns: new Map<string, number>(),
+    _first: t,
+    _last: t,
+  });
 
   for (const o of allOrders) {
     const label = o.acquisitionContent?.trim() || null;
-    const key = label ?? "\u0000sans-etiquette";
+    const key = label ?? SANS;
     const t = new Date(o.createdAt).getTime();
-    const row =
-      map.get(key) ??
-      ({
-        label,
-        sources: [],
-        campaign: null,
-        placed: 0,
-        orders: 0,
-        cancelled: 0,
-        revenueMillimes: 0,
-        aovMillimes: 0,
-        pixelSeen: 0,
-        firstOrderAt: "",
-        lastOrderAt: "",
-        _sources: new Set<string>(),
-        _campaigns: new Map<string, number>(),
-        _first: t,
-        _last: t,
-      } satisfies Acc);
+    const row = map.get(key) ?? nouvelle(label, t);
 
     row.placed++;
+    if (depuis !== null && t >= depuis) row.placedSinceVisits++;
     if (isValidOrder(o)) {
       row.orders++;
       row.revenueMillimes += orderRevenueMillimes(o);
@@ -259,6 +318,29 @@ export function computeAdPerformance(allOrders: AnalyticsOrder[]): AdPerformance
     map.set(key, row);
   }
 
+  // Les visites. Une publicité qui a amené du monde et pas une commande a
+  // sa ligne quand même : c'est justement elle qu'il faut voir, et elle
+  // n'existait nulle part tant que le tableau ne lisait que les commandes.
+  if (arrivals) {
+    for (const [label, visits] of arrivals.byLabel) {
+      if (visits <= 0) continue;
+      const row = map.get(label) ?? nouvelle(label, 0);
+      row.visits = visits;
+      map.set(label, row);
+    }
+    if (arrivals.untagged > 0 || map.has(SANS)) {
+      const row = map.get(SANS) ?? nouvelle(null, 0);
+      row.visits = arrivals.untagged;
+      map.set(SANS, row);
+    }
+    for (const row of map.values()) {
+      // Des commandes et aucune visite comptée : zéro, pas « inconnu » —
+      // le comptage tourne, il n'a simplement rien vu pour cette étiquette.
+      if (row.visits === null) row.visits = 0;
+      row.per100Visits = pourCentVisites(row.placedSinceVisits, row.visits);
+    }
+  }
+
   const rows: AdRow[] = Array.from(map.values())
     .map(({ _sources, _campaigns, _first, _last, ...row }) => ({
       ...row,
@@ -267,8 +349,8 @@ export function computeAdPerformance(allOrders: AnalyticsOrder[]): AdPerformance
         Array.from(_campaigns.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ??
         null,
       aovMillimes: row.orders === 0 ? 0 : Math.round(row.revenueMillimes / row.orders),
-      firstOrderAt: new Date(_first).toISOString(),
-      lastOrderAt: new Date(_last).toISOString(),
+      firstOrderAt: row.placed === 0 ? "" : new Date(_first).toISOString(),
+      lastOrderAt: row.placed === 0 ? "" : new Date(_last).toISOString(),
     }))
     // La ligne sans étiquette ferme le tableau, quel que soit son volume :
     // ce n'est pas une publicité, et la mettre en tête la ferait prendre
@@ -277,6 +359,7 @@ export function computeAdPerformance(allOrders: AnalyticsOrder[]): AdPerformance
       (a, b) =>
         Number(a.label === null) - Number(b.label === null) ||
         b.placed - a.placed ||
+        (b.visits ?? 0) - (a.visits ?? 0) ||
         b.revenueMillimes - a.revenueMillimes,
     );
 
@@ -285,5 +368,12 @@ export function computeAdPerformance(allOrders: AnalyticsOrder[]): AdPerformance
     placed: allOrders.length,
     pixelSeen: pixelSeenTotal,
     pixelCoverage: allOrders.length === 0 ? 0 : pixelSeenTotal / allOrders.length,
+    visitsSince: arrivals ? arrivals.since.toISOString() : null,
+    visitsPartial: arrivals?.partial ?? false,
+    taggedVisits: arrivals?.tagged ?? 0,
+    untaggedVisits: arrivals?.untagged ?? 0,
+    untaggedMetaVisits: arrivals?.untaggedMeta ?? 0,
+    recentTaggedVisits: arrivals?.recentTagged ?? 0,
+    recentUntaggedMetaVisits: arrivals?.recentUntaggedMeta ?? 0,
   };
 }

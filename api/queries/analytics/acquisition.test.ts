@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeAcquisition, computeAdPerformance } from "./acquisition";
+import { computeAcquisition, computeAdPerformance, type AdArrivals } from "./acquisition";
 import type { AnalyticsOrder } from "./metrics";
 
 let nextId = 1;
@@ -205,6 +205,177 @@ describe("computeAdPerformance — ce qu'une publicité a vraiment vendu", () =>
   });
 
   it("période vide : aucun taux inventé", () => {
-    expect(computeAdPerformance([])).toEqual({ rows: [], placed: 0, pixelSeen: 0, pixelCoverage: 0 });
+    expect(computeAdPerformance([])).toEqual({
+      rows: [],
+      placed: 0,
+      pixelSeen: 0,
+      pixelCoverage: 0,
+      visitsSince: null,
+      visitsPartial: false,
+      taggedVisits: 0,
+      untaggedVisits: 0,
+      untaggedMetaVisits: 0,
+      recentTaggedVisits: 0,
+      recentUntaggedMetaVisits: 0,
+    });
+  });
+});
+
+describe("computeAdPerformance — les visites que chaque publicité amène", () => {
+  const AD_A = "120249779868510674";
+  const AD_B = "120250115103040674";
+  const AD_NEUVE = "120251000000000001";
+  const DEBUT = new Date("2026-11-25T09:00:00");
+
+  function arrivals(over: Partial<AdArrivals> = {}): AdArrivals {
+    return {
+      since: DEBUT,
+      partial: false,
+      byLabel: new Map(),
+      tagged: 0,
+      untagged: 0,
+      untaggedMeta: 0,
+      recentTagged: 0,
+      recentUntaggedMeta: 0,
+      ...over,
+    };
+  }
+  const apres = (h: number) => new Date(DEBUT.getTime() + h * 3600_000);
+  const avant = (h: number) => new Date(DEBUT.getTime() - h * 3600_000);
+
+  it("dit « inconnu », pas « zéro », quand les visites ne sont pas comptées", () => {
+    const p = computeAdPerformance([order({ acquisitionContent: AD_A })]);
+    expect(p.rows[0]!.visits).toBeNull();
+    expect(p.rows[0]!.per100Visits).toBeNull();
+    expect(p.visitsSince).toBeNull();
+  });
+
+  it("rattache les visites à la ligne de leur publicité", () => {
+    const p = computeAdPerformance(
+      [
+        order({ acquisitionContent: AD_A, createdAt: apres(1) }),
+        order({ acquisitionContent: AD_A, createdAt: apres(2) }),
+        order({ acquisitionContent: AD_B, createdAt: apres(3) }),
+      ],
+      arrivals({ byLabel: new Map([[AD_A, 400], [AD_B, 250]]), tagged: 650 }),
+    );
+    const a = p.rows.find((r) => r.label === AD_A)!;
+    const b = p.rows.find((r) => r.label === AD_B)!;
+    expect(a.visits).toBe(400);
+    expect(a.per100Visits).toBeCloseTo(0.5);
+    expect(b.visits).toBe(250);
+    expect(b.per100Visits).toBeCloseTo(0.4);
+    expect(p.taggedVisits).toBe(650);
+    expect(p.visitsSince).toBe(DEBUT.toISOString());
+  });
+
+  it("montre une publicité qui amène du monde et ne vend rien", () => {
+    // Elle n'existait nulle part tant que le tableau ne lisait que les
+    // commandes — et c'est la première à arrêter.
+    const p = computeAdPerformance(
+      [order({ acquisitionContent: AD_A, createdAt: apres(1) })],
+      arrivals({ byLabel: new Map([[AD_A, 120], [AD_NEUVE, 300]]), tagged: 420 }),
+    );
+    const neuve = p.rows.find((r) => r.label === AD_NEUVE)!;
+    expect(neuve.placed).toBe(0);
+    expect(neuve.visits).toBe(300);
+    expect(neuve.per100Visits).toBe(0);
+    expect(neuve.firstOrderAt).toBe("");
+    expect(neuve.lastOrderAt).toBe("");
+    // Classée après celle qui a vendu, avant rien d'autre.
+    expect(p.rows.map((r) => r.label)).toEqual([AD_A, AD_NEUVE]);
+  });
+
+  it("ne divise que les commandes passées depuis le début du comptage", () => {
+    // Trente jours affichés, cinq jours de visites : diviser les commandes
+    // des trente jours par les visites des cinq gonflerait le taux par six.
+    const p = computeAdPerformance(
+      [
+        ...Array.from({ length: 20 }, (_, i) => order({ acquisitionContent: AD_A, createdAt: avant(24 + i) })),
+        ...Array.from({ length: 4 }, (_, i) => order({ acquisitionContent: AD_A, createdAt: apres(1 + i) })),
+      ],
+      arrivals({ partial: true, byLabel: new Map([[AD_A, 200]]), tagged: 200 }),
+    );
+    const a = p.rows[0]!;
+    expect(a.placed).toBe(24);
+    expect(a.placedSinceVisits).toBe(4);
+    expect(a.per100Visits).toBeCloseTo(2);
+    expect(p.visitsPartial).toBe(true);
+  });
+
+  it("compte une commande passée à l'instant même du début", () => {
+    const p = computeAdPerformance(
+      [order({ acquisitionContent: AD_A, createdAt: DEBUT })],
+      arrivals({ byLabel: new Map([[AD_A, 100]]), tagged: 100 }),
+    );
+    expect(p.rows[0]!.placedSinceVisits).toBe(1);
+  });
+
+  it("ne donne pas de taux sous cent visites", () => {
+    const p = computeAdPerformance(
+      [order({ acquisitionContent: AD_A, createdAt: apres(1) })],
+      arrivals({ byLabel: new Map([[AD_A, 99]]), tagged: 99 }),
+    );
+    expect(p.rows[0]!.visits).toBe(99);
+    expect(p.rows[0]!.per100Visits).toBeNull();
+  });
+
+  it("met zéro visite — et pas « inconnu » — à une publicité qui a vendu sans être vue arriver", () => {
+    const p = computeAdPerformance(
+      [order({ acquisitionContent: AD_A, createdAt: apres(1) })],
+      arrivals({ byLabel: new Map([[AD_B, 150]]), tagged: 150 }),
+    );
+    expect(p.rows.find((r) => r.label === AD_A)!.visits).toBe(0);
+  });
+
+  it("donne ses visites à la ligne sans étiquette, et isole celles venues de Meta", () => {
+    const p = computeAdPerformance(
+      [order({ createdAt: apres(1) }), order({ acquisitionContent: AD_A, createdAt: apres(1) })],
+      arrivals({ byLabel: new Map([[AD_A, 100]]), tagged: 100, untagged: 340, untaggedMeta: 212 }),
+    );
+    const sans = p.rows.at(-1)!;
+    expect(sans.label).toBeNull();
+    expect(sans.visits).toBe(340);
+    expect(sans.per100Visits).toBeCloseTo(100 / 340);
+    expect(p.untaggedVisits).toBe(340);
+    expect(p.untaggedMetaVisits).toBe(212);
+  });
+
+  it("crée la ligne sans étiquette pour des visites seules, toujours en dernier", () => {
+    const p = computeAdPerformance(
+      [order({ acquisitionContent: AD_A, createdAt: apres(1) })],
+      arrivals({ byLabel: new Map([[AD_A, 10]]), tagged: 10, untagged: 500, untaggedMeta: 480 }),
+    );
+    expect(p.rows.map((r) => r.label)).toEqual([AD_A, null]);
+    expect(p.rows[1]!.placed).toBe(0);
+    expect(p.rows[1]!.visits).toBe(500);
+  });
+
+  it("n'invente pas de ligne sans étiquette quand il n'y a ni commande ni visite sans étiquette", () => {
+    const p = computeAdPerformance(
+      [order({ acquisitionContent: AD_A, createdAt: apres(1) })],
+      arrivals({ byLabel: new Map([[AD_A, 10]]), tagged: 10 }),
+    );
+    expect(p.rows.map((r) => r.label)).toEqual([AD_A]);
+  });
+
+  it("transmet tel quel ce qui s'est passé depuis hier, sans le mêler à la période", () => {
+    const p = computeAdPerformance(
+      [],
+      arrivals({ tagged: 45000, untaggedMeta: 600, untagged: 900, recentTagged: 2900, recentUntaggedMeta: 410 }),
+    );
+    expect(p.recentTaggedVisits).toBe(2900);
+    expect(p.recentUntaggedMetaVisits).toBe(410);
+    expect(p.taggedVisits).toBe(45000);
+    expect(p.untaggedMetaVisits).toBe(600);
+  });
+
+  it("à commandes égales, classe d'abord celle qui a amené le plus de monde", () => {
+    const p = computeAdPerformance(
+      [],
+      arrivals({ byLabel: new Map([[AD_A, 50], [AD_B, 900], [AD_NEUVE, 300]]), tagged: 1250 }),
+    );
+    expect(p.rows.map((r) => r.label)).toEqual([AD_B, AD_NEUVE, AD_A]);
+    expect(p.placed).toBe(0);
   });
 });

@@ -27,8 +27,9 @@ export function useTrackVisit() {
     const path = location.pathname
     if (estCheminInterne(path)) return
     // Avant tout le reste : c'est la PREMIÈRE vue de la session qui porte
-    // l'origine. La fonction ne réécrit rien si elle a déjà enregistré.
-    captureAttribution()
+    // l'origine. La fonction ne réécrit rien si elle a déjà enregistré — et
+    // ne rend l'arrivée à compter que cette fois-là.
+    const arrivee = captureAttribution()
     if (consented) {
       trackPageView(path)
       trackMetaPageView()
@@ -49,8 +50,11 @@ export function useTrackVisit() {
     } catch {
       // stockage indisponible — pas de dédoublonnage possible
     }
-    if (dejaComptee) return
-    mutate({ path })
+    // Une arrivée part même si la page a déjà été comptée : les deux
+    // dédoublonnages sont indépendants, et c'est l'arrivée qu'on ne revoit
+    // jamais si on la laisse passer.
+    if (dejaComptee && !arrivee) return
+    mutate(arrivee ? { path, arrivee } : { path })
     // `mutate` de React Query est stable entre les rendus.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, consented])

@@ -18,7 +18,8 @@ import {
 import { dayKey, daysInPeriod, type Period, type PeriodPair } from "./period";
 import { buildCustomerHistories, computeCustomerMetrics } from "./customers";
 import { computeMargins, type CostsByProductId } from "./margin";
-import { computeAcquisition, computeAdPerformance } from "./acquisition";
+import { computeAcquisition, computeAdPerformance, type AdArrivals } from "./acquisition";
+import { lireArriveesPeriode } from "../arrivees";
 import { computeCancellations } from "./cancellations";
 import {
   attachGrowth,
@@ -132,6 +133,29 @@ async function countPageViews(period: Period): Promise<number> {
     .from(pageViews)
     .where(and(gte(pageViews.createdAt, period.start), lt(pageViews.createdAt, period.end)));
   return Number(row?.count ?? 0);
+}
+
+/** Les visites par publicité de la période, ou `null` quand on n'en sait
+ * rien. Une panne de CE compteur ne doit jamais emporter le tableau de
+ * bord : les visites sont un supplément, les commandes sont l'essentiel. */
+async function fetchAdArrivals(period: Period): Promise<AdArrivals | null> {
+  try {
+    const a = await lireArriveesPeriode(period);
+    if (!a) return null;
+    return {
+      since: a.debut,
+      partial: a.partielle,
+      byLabel: a.parPub,
+      tagged: a.etiquetees,
+      untagged: a.sans,
+      untaggedMeta: a.metaSans,
+      recentTagged: a.recentes.etiquetees,
+      recentUntaggedMeta: a.recentes.metaSans,
+    };
+  } catch (err) {
+    console.error("[arrivées] lecture impossible, le tableau s'affiche sans les visites :", err);
+    return null;
+  }
 }
 
 export type MetricWithTrend = {
@@ -287,13 +311,14 @@ export type OverviewData = {
  * top produits) qui chargeaient la table entière en mémoire, chacun de son
  * côté, toutes les 30 secondes. */
 export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
-  const [currentAll, previousAll, history, catalog, viewsNow, viewsBefore] = await Promise.all([
+  const [currentAll, previousAll, history, catalog, viewsNow, viewsBefore, arrivals] = await Promise.all([
     fetchOrdersInPeriod(periods.current),
     fetchOrdersInPeriod(periods.previous),
     fetchCustomerOrderHistory(),
     fetchProductCatalog(),
     countPageViews(periods.current),
     countPageViews(periods.previous),
+    fetchAdArrivals(periods.current),
   ]);
   const costs = catalog.costs;
 
@@ -362,7 +387,7 @@ export async function getOverview(periods: PeriodPair): Promise<OverviewData> {
     margins,
     previousMargins: computeMargins(previous, costs),
     acquisition,
-    ads: computeAdPerformance(currentAll),
+    ads: computeAdPerformance(currentAll, arrivals),
     cancellations: computeCancellations(currentAll, previousAll),
   };
 }

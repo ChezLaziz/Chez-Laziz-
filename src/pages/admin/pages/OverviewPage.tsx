@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, Skeleton } from '../ui/State'
 import { useOverview } from '../useOverview'
 import type { DashboardPeriod } from '../shell/period'
 import { MIN_ORDERS_FOR_SIGNALS, buildSignals } from '@contracts/signals'
+import { VISITES_MIN_POUR_UN_TAUX } from '@contracts/arrivees'
 import { cancelReasonFr } from '@contracts/cancelReasons'
 
 const dayLabel = (iso: string) =>
@@ -641,13 +642,17 @@ function StatusBreakdown({
   )
 }
 
-/** Ce qu'une publicité a vendu, d'après les commandes — pas d'après Meta.
+/** Ce qu'une publicité a amené et vendu, d'après le site — pas d'après Meta.
  *
  * Même tableau que « Gouvernorats », volontairement : une seule façon de
  * dessiner un tableau dans ce tableau de bord. L'identifiant est affiché en
  * entier et en chasse fixe : c'est celui de la colonne « ID de la
  * publicité » du Gestionnaire de publicités, et on doit pouvoir les
- * comparer chiffre à chiffre. */
+ * comparer chiffre à chiffre.
+ *
+ * LES VISITES (voir contracts/arrivees.ts). Deux colonnes de plus quand
+ * elles sont comptées sur la période, aucune sinon : une colonne de tirets
+ * sur trois mois d'historique n'apprendrait rien à personne. */
 function AdsCard({
   ads,
   className = '',
@@ -663,37 +668,103 @@ function AdsCard({
       pixelSeen: number
       firstOrderAt: string
       lastOrderAt: string
+      visits: number | null
+      per100Visits: number | null
     }[]
     placed: number
+    visitsSince: string | null
+    visitsPartial: boolean
+    untaggedMetaVisits: number
   }
   className?: string
 }) {
   const jour = (iso: string) =>
     new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   const part = (n: number, d: number) => (d === 0 ? '—' : `${Math.round((n / d) * 100)} %`)
+  const avecVisites = ads.visitsSince !== null
+  // « Rien à afficher ici » : plus pâle qu'un chiffre, pour qu'une ligne de
+  // visites sans commande ne ressemble pas à une ligne de zéros.
+  const tiret = (
+    <span className="font-normal text-ink/35" aria-hidden="true">
+      —
+    </span>
+  )
   // Neuf publicités au plus, et la ligne « sans étiquette » TOUJOURS : c'est
   // elle qui ferme le total, la couper ferait croire que tout est étiqueté.
+  // Une publicité qui a amené cent visites reste affichée même au-delà de
+  // neuf : beaucoup de monde et peu de commandes, c'est une ligne à lire.
   const publicites = ads.rows.filter((r) => r.label !== null)
   const sansEtiquette = ads.rows.find((r) => r.label === null)
-  const rows = [...publicites.slice(0, 9), ...(sansEtiquette ? [sansEtiquette] : [])]
-  const masquees = Math.max(publicites.length - 9, 0)
+  const visibles = publicites.filter((r, i) => i < 9 || (r.visits ?? 0) >= VISITES_MIN_POUR_UN_TAUX)
+  const rows = [...visibles, ...(sansEtiquette ? [sansEtiquette] : [])]
+  const masquees = publicites.length - visibles.length
+  const depuis = ads.visitsSince
+    ? new Date(ads.visitsSince).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+    : ''
 
   return (
-    <Card title="Publicités" hint="Ce que chaque publicité a vendu, compté sur les commandes." className={className}>
-      {ads.placed === 0 ? (
-        <EmptyState label="Aucune commande sur cette période." />
+    <Card
+      title="Publicités"
+      hint={
+        avecVisites
+          ? 'Ce que chaque publicité a amené et vendu, compté sur le site.'
+          : 'Ce que chaque publicité a vendu, compté sur les commandes.'
+      }
+      className={className}
+    >
+      {rows.length === 0 ? (
+        <EmptyState
+          label={avecVisites ? 'Aucune commande ni visite sur cette période.' : 'Aucune commande sur cette période.'}
+        />
       ) : (
         <>
+          {/* Dit AVANT le tableau, pas dans la note du bas : tant que la
+              période commence avant le comptage, « 90 passées » et « 521
+              visites » ne se divisent pas l'une par l'autre, et un lecteur
+              qui fait le calcul de tête doit l'avoir lu d'abord. Cette ligne
+              disparaît d'elle-même une fois la période entièrement couverte. */}
+          {avecVisites && ads.visitsPartial && (
+            <p className="mb-3 rounded-lg bg-[#f3f0eb] px-3 py-2 text-[12px] leading-snug text-ink/60">
+              Les visites sont comptées depuis le {depuis}. Sur cette période, « Pour 100 visites » ne
+              retient que les commandes passées depuis cette date.
+            </p>
+          )}
           <div className="-mx-1 overflow-x-auto">
-            <table className="w-full min-w-[620px] text-[13px]">
+            {/* Sur téléphone, la largeur NATURELLE du tableau (w-max) et pas
+                700 px répartis : les colonnes restent serrées, et « Visites »,
+                « Passées » et « Pour 100 visites » se lisent sans faire
+                défiler. Le reste est à un glissement de doigt, comme avant. */}
+            <table
+              className={`text-[13px] ${
+                avecVisites ? 'w-max min-w-full sm:w-full sm:min-w-[700px]' : 'w-full min-w-[620px]'
+              }`}
+            >
               <thead>
-                <tr className="text-left text-[11.5px] text-ink/45">
+                <tr className="text-left align-bottom text-[11.5px] leading-tight text-ink/45">
                   <th className="pb-2 pl-1 font-medium">Publicité</th>
-                  <th className="pb-2 pr-4 text-right font-medium">Passées</th>
+                  {avecVisites && <th className="pb-2 pr-2.5 text-right font-medium sm:pr-4">Visites</th>}
+                  <th className={`pb-2 text-right font-medium ${avecVisites ? 'pr-2.5 sm:pr-4' : 'pr-4'}`}>Passées</th>
+                  {avecVisites && (
+                    <th className="pb-2 pr-2 text-right font-medium sm:pr-4">
+                      Pour 100
+                      <br />
+                      visites
+                    </th>
+                  )}
                   <th className="pb-2 pr-4 text-right font-medium">Valides</th>
                   <th className="pb-2 pr-4 text-right font-medium">Annulées</th>
                   <th className="pb-2 pr-4 text-right font-medium">Panier (DT)</th>
-                  <th className="pb-2 pr-1 text-right font-medium">Vues par le Pixel</th>
+                  <th className="pb-2 pr-1 text-right font-medium">
+                    {avecVisites ? (
+                      <>
+                        Vues par
+                        <br />
+                        le Pixel
+                      </>
+                    ) : (
+                      'Vues par le Pixel'
+                    )}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -701,34 +772,106 @@ function AdsCard({
                   const taux = r.placed === 0 ? 0 : r.cancelled / r.placed
                   return (
                     <tr key={r.label ?? '__sans'} className="border-t border-[#efebe6]">
-                      <td className="py-2 pl-1 pr-4">
-                        {r.label === null ? (
-                          <span className="text-ink/60">Sans étiquette de publicité</span>
-                        ) : (
-                          <span className="break-all font-mono text-[12px] text-ink">{r.label}</span>
-                        )}
-                        <span className="block text-[11.5px] text-ink/40">
-                          {r.sources.length > 0 ? `${r.sources.map(sourceLabel).join(' + ')}, ` : ''}
-                          {jour(r.firstOrderAt)}
-                          {jour(r.firstOrderAt) === jour(r.lastOrderAt) ? '' : ` au ${jour(r.lastOrderAt)}`}
-                        </span>
+                      {/* Largeur fixée sur téléphone (une cellule de tableau
+                          n'obéit pas à max-width) : sans cela la phrase « dont
+                          N visites venues de… » élargit la colonne, et les
+                          trois chiffres qui comptent sortent de l'écran.
+                          Dix-huit chiffres en chasse fixe y tiennent sur une
+                          ligne, et les quatre premières colonnes tiennent
+                          dans un téléphone de 360 px. */}
+                      <td className={`py-2 pl-1 ${avecVisites ? 'pr-2 sm:pr-4' : 'pr-4'}`}>
+                        <div className={avecVisites ? 'w-[8rem] sm:w-auto' : undefined}>
+                          {r.label === null ? (
+                            <span className="text-ink/60">Sans étiquette de publicité</span>
+                          ) : (
+                            <span
+                              className={`break-all font-mono text-ink ${
+                                avecVisites ? 'text-[11.5px] sm:text-[12px]' : 'text-[12px]'
+                              }`}
+                            >
+                              {r.label}
+                            </span>
+                          )}
+                          <span className="block text-[11.5px] text-ink/40">
+                            {r.placed === 0 ? (
+                              'aucune commande'
+                            ) : (
+                              <>
+                                {r.sources.length > 0 ? `${r.sources.map(sourceLabel).join(' + ')}, ` : ''}
+                                {jour(r.firstOrderAt)}
+                                {jour(r.firstOrderAt) === jour(r.lastOrderAt) ? '' : ` au ${jour(r.lastOrderAt)}`}
+                              </>
+                            )}
+                          </span>
+                          {r.label === null && avecVisites && ads.untaggedMetaVisits > 0 && (
+                            <span className="block text-[11.5px] text-ink/40">
+                              dont {ads.untaggedMetaVisits.toLocaleString('fr-FR')} visite
+                              {ads.untaggedMetaVisits > 1 ? 's' : ''} venue{ads.untaggedMetaVisits > 1 ? 's' : ''} de
+                              Facebook ou d'Instagram
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="py-2 pr-4 text-right font-medium tabular-nums text-ink">{r.placed}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums text-ink/60">{r.orders}</td>
+                      {avecVisites && (
+                        <td className="py-2 pr-2.5 text-right tabular-nums text-ink/60 sm:pr-4">
+                          {(r.visits ?? 0).toLocaleString('fr-FR')}
+                        </td>
+                      )}
+                      <td
+                        className={`py-2 text-right font-medium tabular-nums text-ink ${
+                          avecVisites ? 'pr-2.5 sm:pr-4' : 'pr-4'
+                        }`}
+                      >
+                        {r.placed}
+                      </td>
+                      {avecVisites && (
+                        <td
+                          className="py-2 pr-2 text-right font-medium tabular-nums text-ink sm:pr-4"
+                          title={
+                            r.per100Visits === null
+                              ? `Moins de ${VISITES_MIN_POUR_UN_TAUX} visites : trop tôt pour le dire`
+                              : undefined
+                          }
+                        >
+                          {r.per100Visits === null ? (
+                            tiret
+                          ) : (
+                            r.per100Visits.toLocaleString('fr-FR', {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 1,
+                            })
+                          )}
+                        </td>
+                      )}
+                      <td className="py-2 pr-4 text-right tabular-nums text-ink/60">
+                        {r.placed === 0 ? tiret : r.orders}
+                      </td>
                       <td
                         className={`whitespace-nowrap py-2 pr-4 text-right tabular-nums ${
                           r.placed >= 8 && taux >= 0.25 ? 'text-[#b3303f]' : 'text-ink/60'
                         }`}
                       >
-                        {r.cancelled}
-                        <span className="ml-1.5 text-[11.5px] opacity-70">{part(r.cancelled, r.placed)}</span>
+                        {r.placed === 0 ? (
+                          tiret
+                        ) : (
+                          <>
+                            {r.cancelled}
+                            <span className="ml-1.5 text-[11.5px] opacity-70">{part(r.cancelled, r.placed)}</span>
+                          </>
+                        )}
                       </td>
                       <td className="py-2 pr-4 text-right tabular-nums text-ink/60">
-                        {r.orders === 0 ? '—' : moneyAvgDT(r.aovMillimes)}
+                        {r.orders === 0 ? tiret : moneyAvgDT(r.aovMillimes)}
                       </td>
                       <td className="whitespace-nowrap py-2 pr-1 text-right tabular-nums text-ink/60">
-                        {r.pixelSeen}
-                        <span className="ml-1.5 text-[11.5px] opacity-70">{part(r.pixelSeen, r.placed)}</span>
+                        {r.placed === 0 ? (
+                          tiret
+                        ) : (
+                          <>
+                            {r.pixelSeen}
+                            <span className="ml-1.5 text-[11.5px] opacity-70">{part(r.pixelSeen, r.placed)}</span>
+                          </>
+                        )}
                       </td>
                     </tr>
                   )
@@ -740,6 +883,8 @@ function AdsCard({
             D'après l'étiquette du lien publicitaire (utm_content = identifiant de la publicité) :
             indépendant de ce que Meta attribue, et disponible le jour même. « Passées » inclut les
             annulées. « Vues par le Pixel » : commandes arrivées après « Accepter ».
+            {avecVisites &&
+              ` « Visites » : arrivées par le lien de la publicité, une par session. « Pour 100 visites » : commandes passées pour cent visites, à partir de ${VISITES_MIN_POUR_UN_TAUX} visites.`}
             {masquees > 0 ? ` ${masquees} autre${masquees > 1 ? 's' : ''} ligne${masquees > 1 ? 's' : ''} non affichée${masquees > 1 ? 's' : ''}.` : ''}
           </p>
         </>
