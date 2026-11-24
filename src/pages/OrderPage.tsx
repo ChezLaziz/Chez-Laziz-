@@ -1451,7 +1451,7 @@ export default function OrderPage() {
               paiement tout seul en dessous, où il se lisait comme une note
               de bas de page. Or « on paie à la livraison » est l'argument
               qui décide une cliente qui ne connaît pas la boutique. */}
-          <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11.5px] text-ink/70 md:mt-4 md:gap-x-4 md:text-[13px]">
+          <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-ink/70 min-[390px]:gap-x-2.5 min-[390px]:text-[11.5px] md:mt-4 md:gap-x-4 md:text-[13px]">
             {(isAr
               ? [
                   'صناعة يدوية',
@@ -1464,8 +1464,8 @@ export default function OrderPage() {
                   'Paiement à la livraison',
                 ]
             ).map((label) => (
-              <li key={label} className="flex items-center gap-1.5 whitespace-nowrap">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true" className="shrink-0 text-accent">
+              <li key={label} className="flex items-center gap-1 whitespace-nowrap">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true" className="shrink-0 text-accent">
                   <path d="M4 12.5 9.5 18 20 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 {label}
