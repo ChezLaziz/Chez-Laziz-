@@ -665,3 +665,44 @@ describe("orders.create — l'accord pour les offres sur WhatsApp", () => {
     expect(createOrder).not.toHaveBeenCalled();
   });
 });
+
+describe("orders.create — les étiquettes du lien d'arrivée", () => {
+  const ecrit = () => (createOrder.mock.calls as unknown as [Record<string, unknown>][]).at(-1)![0];
+
+  it("garde telle quelle une étiquette de publicité ordinaire", async () => {
+    await caller.create({
+      ...baseInput,
+      acquisitionSource: "facebook",
+      acquisitionCampaign: "120249779868500000",
+      acquisitionContent: "120249779868510674",
+    });
+    expect(ecrit().acquisitionCampaign).toBe("120249779868500000");
+    expect(ecrit().acquisitionContent).toBe("120249779868510674");
+  });
+
+  it("retire un caractère nul au lieu de laisser la base refuser la commande", async () => {
+    // « ?utm_content=%00 » dans un lien partagé : Postgres refuse ce
+    // caractère dans un texte, et c'est la commande ENTIÈRE qui tombait.
+    await expect(
+      caller.create({
+        ...baseInput,
+        acquisitionCampaign: "camp\u0000agne",
+        acquisitionContent: "\u0000120249779868510674\u0000",
+      }),
+    ).resolves.toMatchObject({ id: 42 });
+    expect(ecrit().acquisitionCampaign).toBe("campagne");
+    expect(ecrit().acquisitionContent).toBe("120249779868510674");
+  });
+
+  it("enregistre « pas d'étiquette » quand il ne reste rien après nettoyage", async () => {
+    await caller.create({ ...baseInput, acquisitionCampaign: " \u0000 ", acquisitionContent: "\u0000\t\n" });
+    expect(ecrit().acquisitionCampaign).toBeUndefined();
+    expect(ecrit().acquisitionContent).toBeUndefined();
+  });
+
+  it("ne laisse pas une moitié d'emoji en bout d'étiquette", async () => {
+    // Un seul demi-caractère suffit à faire refuser l'écriture.
+    await caller.create({ ...baseInput, acquisitionContent: "promo\ud83d" });
+    expect(ecrit().acquisitionContent).toBe("promo");
+  });
+});

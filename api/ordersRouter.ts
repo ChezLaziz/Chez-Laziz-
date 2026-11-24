@@ -26,6 +26,7 @@ import { currentKitchenBoard } from "./queries/kitchen";
 import { getLastOrderId, listOrdersAwaitingCall } from "./queries/reminders";
 import { TRPCError } from "@trpc/server";
 import { ORDER_ERROR } from "@contracts/orderErrors";
+import { etiquettePropre } from "@contracts/etiquette";
 import { metaSignalsForOrder, metaUserSignals } from "@contracts/metaSignals";
 import {
   ALLOWED_WEIGHTS_KG,
@@ -264,8 +265,13 @@ export const ordersRouter = createRouter({
         delegationExternalId,
         note: input.note,
         acquisitionSource: input.acquisitionSource,
-        acquisitionCampaign: input.acquisitionCampaign,
-        acquisitionContent: input.acquisitionContent,
+        // Nettoyées ICI aussi, pas seulement dans le navigateur : ces deux
+        // étiquettes viennent du lien d'arrivée, et un caractère nul dedans
+        // faisait refuser la commande entière par la base (voir
+        // etiquettePropre). Un onglet resté ouvert sur l'ancienne version du
+        // site enverrait encore l'étiquette brute.
+        acquisitionCampaign: etiquettePropre(input.acquisitionCampaign) || undefined,
+        acquisitionContent: etiquettePropre(input.acquisitionContent) || undefined,
         deviceType: input.deviceType,
         items,
         subtotalMillimes,

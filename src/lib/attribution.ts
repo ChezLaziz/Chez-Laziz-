@@ -15,6 +15,8 @@
  * l'onglet, jamais transmis à un tiers. Ne sert qu'à rattacher une commande
  * à son origine. */
 
+import { etiquettePropre } from '@contracts/etiquette'
+
 const KEY = 'laziz_attribution'
 
 /** Sources connues. Tout le reste devient `autre` : la valeur vient d'une
@@ -53,10 +55,11 @@ function normalizeSource(raw: string | null): AcquisitionSource | null {
 }
 
 /** Coupe et nettoie une étiquette libre (campagne, créative).
- * Bornée en longueur : elle vient de l'URL, donc de l'extérieur. */
+ * Elle vient de l'URL, donc de l'extérieur : bornée en longueur et
+ * débarrassée de ce qui ferait refuser la commande par la base — voir
+ * etiquettePropre, que le serveur applique lui aussi. */
 function cleanLabel(raw: string | null): string | undefined {
-  if (!raw) return undefined
-  const v = raw.trim().slice(0, 120)
+  const v = etiquettePropre(raw)
   return v === '' ? undefined : v
 }
 
