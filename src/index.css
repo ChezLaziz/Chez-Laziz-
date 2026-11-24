@@ -2,15 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------- Chez Laziz design tokens ---------- */
+/* ---------- Chez Laziz : les couleurs ---------- */
+/* Deux thèmes, une seule liste de noms.
+   La BOUTIQUE est sombre : le brun presque noir d'une datte, l'or du sceau de
+   la maison, et les photos — plateaux dorés, sirop, pistache — qui ressortent
+   comme sous la lampe de la vitrine. L'ADMINISTRATION (data-theme="clair",
+   posé sur <html> par index.html puis par ThemeSync) garde le papier clair
+   d'un outil de travail.
+   Chaque valeur est un triplet « R V B » : Tailwind y ajoute l'opacité
+   (text-ink/50 → rgb(var(--c-ink) / 0.5)). */
 :root {
-  --ink: #3c3835;          /* charcoal brown — primary text */
-  --bg: #faf6f3;           /* warm off-white */
-  --accent: #b8912e;       /* golden antique — accent principal */
-  --cream: #f5ece5;        /* peach-tinted cream surfaces */
-  --sand: #dec9b8;         /* pale sand — decorative lines */
-  --muted: #aeaaa7;        /* warm gray */
-  --ink-deep: #2e2a27;     /* dark section ground, same family as ink */
+  --c-paper: 21 17 14;        /* #15110e — fond de page */
+  --c-surface: 32 26 21;      /* #201a15 — cartes, champs */
+  --c-cream: 43 35 28;        /* #2b231c — surfaces relevées, attente des photos */
+  --c-sand: 96 79 63;         /* #604f3f — traits et filets */
+  --c-ink: 244 235 224;       /* #f4ebe0 — texte */
+  --c-ink-deep: 12 9 7;       /* #0c0907 — bandes profondes (pied de page) */
+  --c-muted-warm: 152 142 132;
+  --c-gold: 217 173 78;       /* #d9ad4e — l'or, lisible sur le sombre */
+  --c-gold-deep: 178 138 46;  /* #b28a2e */
+  --c-on-gold: 28 20 10;      /* texte posé sur l'or */
+  --c-on-ink: 21 17 14;       /* texte posé sur un aplat clair */
+  --c-sticker: 196 30 44;     /* #c41e2c — rouge chéchia des étiquettes de prix */
+  --c-wa-text: 74 222 128;    /* vert WhatsApp en texte */
+  color-scheme: dark;
+}
+
+[data-theme='clair'] {
+  --c-paper: 250 246 243;     /* #faf6f3 */
+  --c-surface: 255 255 255;
+  --c-cream: 245 236 229;     /* #f5ece5 */
+  --c-sand: 222 201 184;      /* #dec9b8 */
+  --c-ink: 60 56 53;          /* #3c3835 */
+  --c-ink-deep: 46 42 39;     /* #2e2a27 */
+  --c-muted-warm: 174 170 167;
+  --c-gold: 184 145 46;       /* #b8912e */
+  --c-gold-deep: 143 111 34;  /* #8f6f22 */
+  --c-on-gold: 255 255 255;
+  --c-on-ink: 250 246 243;
+  --c-sticker: 190 30 45;
+  --c-wa-text: 18 140 74;     /* #128C4A */
+  color-scheme: light;
+}
+
+/* Anciens noms, encore lus par quelques règles ci-dessous. */
+:root,
+[data-theme='clair'] {
+  --ink: rgb(var(--c-ink));
+  --bg: rgb(var(--c-paper));
+  --accent: rgb(var(--c-gold));
 }
 
 @layer base {
@@ -27,14 +67,19 @@
     --secondary-foreground: 30 6% 22%;
     --muted: 25 38% 93%;
     --muted-foreground: 30 4% 67%;
-    --accent: 25 38% 93%;
-    --accent-foreground: 43 60% 45%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 28 30% 86%;
-    --input: 28 30% 86%;
+    --border: 28 21% 26%;
+    --input: 28 21% 26%;
     --ring: 43 60% 45%;
     --radius: 0.25rem;
+  }
+
+  /* Le trait par défaut de toute bordure sans couleur écrite. Clair, il
+     dessinait des cadres blancs sur le fond sombre de la boutique. */
+  [data-theme='clair'] {
+    --border: 28 30% 86%;
+    --input: 28 30% 86%;
   }
 
   * {
@@ -64,8 +109,8 @@
   }
 
   ::selection {
-    background: var(--accent);
-    color: #fff;
+    background: rgb(var(--c-gold));
+    color: rgb(var(--c-on-gold));
   }
 }
 
@@ -77,14 +122,42 @@
     font-family: 'Marcellus', 'Amiri', 'Times New Roman', serif;
     font-weight: 400;
   }
-  .text-ink { color: var(--ink); }
-  .text-accent { color: var(--accent); }
-  .text-muted-warm { color: var(--muted); }
-  .bg-cream { background-color: var(--cream); }
-  .bg-ink { background-color: var(--ink); }
-  .bg-ink-deep { background-color: var(--ink-deep); }
-  .bg-sand { background-color: var(--sand); }
-  .border-sand { border-color: var(--sand); }
+  /* Tout ce qui est un NOMBRE : prix, quantités, totaux, numéros d'étape.
+     Marcellus dessine ses chiffres comme des capitales romaines — « 10 DT »
+     s'y lisait « IO DT » et « 30 DT » « 3O DT », sur la page où l'on
+     demande au client de payer. Les nombres passent donc dans la police du
+     texte, en chiffres alignés. Les titres, eux, gardent Marcellus. */
+  .chiffres {
+    font-family: 'Jost', 'Tajawal', -apple-system, 'Segoe UI', sans-serif;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: 0;
+  }
+}
+
+/* ---------- Étiquette de prix ---------- */
+/* L'autocollant qu'on colle sur une boîte de pâtisserie : rouge chéchia,
+   liseré crème, posé un peu de travers. C'est le seul élément rouge de la
+   boutique, et le seul qui penche — le prix se trouve sans le chercher.
+   En arabe la page se lit de droite à gauche : l'étiquette change de coin
+   et penche de l'autre côté. */
+.prix-etiquette {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px 10px 6px;
+  border: 2px solid #fff4e3;
+  border-radius: 12px;
+  background: rgb(var(--c-sticker));
+  color: #fff;
+  font-family: 'Jost', 'Tajawal', -apple-system, 'Segoe UI', sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.75);
+  transform: rotate(-4deg);
+}
+[dir='rtl'] .prix-etiquette {
+  transform: rotate(4deg);
 }
 
 /* ---------- Scroll reveal (data-reveal) ---------- */
@@ -256,9 +329,17 @@
 
 /* ---------- Gold shimmer (boutons premium) ---------- */
 .gold-cta {
-  /* Dégradé qui reste toujours assez sombre pour un texte blanc lisible
-     (évite la zone claire qui posait un problème de contraste) */
-  background: linear-gradient(120deg, #8f6f22 0%, #b8912e 50%, #8f6f22 100%);
+  /* L'or du thème, et le texte qui va dessus : sombre sur l'or clair de la
+     boutique (contraste 6 à 9), blanc sur l'or soutenu de l'administration.
+     Le blanc sur l'or clair tombait sous 3 de contraste — le bouton le plus
+     important de la page était le moins lisible. */
+  background: linear-gradient(
+    120deg,
+    rgb(var(--c-gold-deep)) 0%,
+    rgb(var(--c-gold)) 50%,
+    rgb(var(--c-gold-deep)) 100%
+  );
+  color: rgb(var(--c-on-gold));
   background-size: 220% 100%;
   background-position: 0% 0%;
   transition: background-position 0.6s ease, transform 0.3s ease;

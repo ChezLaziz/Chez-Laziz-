@@ -43,7 +43,7 @@ export default function MakroudhKairouanPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <section className="mx-auto max-w-3xl px-5 py-24 md:px-10 md:py-32">
@@ -105,7 +105,7 @@ export default function MakroudhKairouanPage() {
               <p className="font-display text-2xl md:text-3xl">زورو محلنا في القيروان</p>
               <Link
                 to="/ar/contact"
-                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
               >
                 شوفو العنوان والطريق
               </Link>
@@ -127,7 +127,7 @@ export default function MakroudhKairouanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <section className="mx-auto max-w-3xl px-5 py-24 md:px-10 md:py-32">
@@ -162,7 +162,7 @@ export default function MakroudhKairouanPage() {
             data-reveal
             dir="rtl"
             lang="ar"
-            className="mt-10 rounded-2xl border border-sand/70 bg-white p-6 text-right text-[15px] font-light leading-relaxed text-ink/75 md:p-8"
+            className="mt-10 rounded-2xl border border-sand/70 bg-surface p-6 text-right text-[15px] font-light leading-relaxed text-ink/75 md:p-8"
           >
             <p>
               مقروض القيروان من أعرق الحلويات التونسية — مدينة القيروان معروفة في كامل تونس بحرفة صناعة حلويات
@@ -205,7 +205,7 @@ export default function MakroudhKairouanPage() {
             <p className="font-display text-2xl md:text-3xl">Visitez notre boutique à Kairouan</p>
             <Link
               to="/contact"
-              className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+              className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
             >
               Voir l'adresse et l'itinéraire
             </Link>

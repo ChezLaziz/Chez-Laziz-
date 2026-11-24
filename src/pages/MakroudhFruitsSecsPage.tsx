@@ -99,7 +99,7 @@ export default function MakroudhFruitsSecsPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <section className="mx-auto max-w-5xl px-5 pt-14 md:px-10 md:pt-20">
@@ -134,13 +134,13 @@ export default function MakroudhFruitsSecsPage() {
                 <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Link
                     to={orderHref}
-                    className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+                    className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
                   >
                     اطلب توّا
                   </Link>
                   <Link
                     to={collectionHref}
-                    className="inline-flex items-center justify-center rounded-full border border-ink/15 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent"
+                    className="inline-flex items-center justify-center rounded-full border border-ink/15 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink/70 transition-colors hover:border-gold hover:text-accent"
                   >
                     شوفو كامل التشكيلة
                   </Link>
@@ -210,7 +210,7 @@ export default function MakroudhFruitsSecsPage() {
               </p>
               <Link
                 to={orderHref}
-                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+                className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
               >
                 اطلب توّا
               </Link>
@@ -232,7 +232,7 @@ export default function MakroudhFruitsSecsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <section className="mx-auto max-w-5xl px-5 pt-14 md:px-10 md:pt-20">
@@ -268,13 +268,13 @@ export default function MakroudhFruitsSecsPage() {
               <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   to={orderHref}
-                  className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+                  className="gold-cta inline-flex items-center justify-center rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
                 >
                   Commander maintenant
                 </Link>
                 <Link
                   to={collectionHref}
-                  className="inline-flex items-center justify-center rounded-full border border-ink/15 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink/70 transition-colors hover:border-[#b8912e] hover:text-accent"
+                  className="inline-flex items-center justify-center rounded-full border border-ink/15 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink/70 transition-colors hover:border-gold hover:text-accent"
                 >
                   Voir toute la collection
                 </Link>
@@ -344,7 +344,7 @@ export default function MakroudhFruitsSecsPage() {
             data-reveal
             dir="rtl"
             lang="ar"
-            className="mt-14 rounded-2xl border border-sand/70 bg-white p-6 text-right text-[15px] font-light leading-relaxed text-ink/75 md:p-8"
+            className="mt-14 rounded-2xl border border-sand/70 bg-surface p-6 text-right text-[15px] font-light leading-relaxed text-ink/75 md:p-8"
           >
             <p>
               مقروض لعزيز بالفواكه الجافة — حشوة سخية من اللوز والجوز والبندق داخل عجينة سميد ذهبية، مقلية
@@ -359,7 +359,7 @@ export default function MakroudhFruitsSecsPage() {
             </p>
             <Link
               to={orderHref}
-              className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+              className="gold-cta mt-6 inline-flex rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
             >
               Commander maintenant
             </Link>

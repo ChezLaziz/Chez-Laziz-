@@ -27,7 +27,7 @@ export default function Marquee() {
   const row = [...items, ...items]
   return (
     <div
-      className="overflow-hidden border-y border-[#8f6f22]/30 bg-gradient-to-r from-[#8f6f22] via-[#b8912e] to-[#8f6f22] py-4"
+      className="overflow-hidden border-y border-gold-deep/30 bg-gradient-to-r from-gold-deep via-gold to-gold-deep py-4"
       aria-hidden="true"
     >
       <div className="marquee-track">

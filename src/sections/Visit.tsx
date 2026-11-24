@@ -25,7 +25,7 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="grid gap-12 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
-            <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
+            <p data-reveal className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-gold">
               {eyebrow}
             </p>
             <Heading data-reveal className="font-display max-w-3xl text-4xl leading-[1.08] md:text-6xl">
@@ -44,7 +44,7 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
 
         <div className="mt-16 grid gap-12 border-t border-[#faf6f3]/15 pt-12 md:grid-cols-3">
           <div data-reveal>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
               {isAr ? 'العنوان' : 'Adresse'}
             </h3>
             <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
@@ -61,7 +61,7 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
           </div>
 
           <div data-reveal style={{ transitionDelay: '0.12s' }}>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
               {isAr ? 'أوقات العمل' : 'Horaires'}
             </h3>
             <ul className="space-y-2 text-lg font-light text-[#faf6f3]/85">
@@ -78,16 +78,16 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
           </div>
 
           <div data-reveal style={{ transitionDelay: '0.24s' }}>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#b8912e]">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
               {isAr ? 'للتواصل' : 'Contact'}
             </h3>
             <p className="text-lg font-light leading-relaxed text-[#faf6f3]/85">
-              <a href="tel:+21623691039" className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
+              <a href="tel:+21623691039" className="tap transition-colors hover:text-gold" dir="ltr">
                 +216 23 691 039
               </a>
             </p>
             <p className="mt-2 text-sm font-light text-[#faf6f3]/70">
-              <a href="mailto:contact@chezlaziz.com" className="tap transition-colors hover:text-[#b8912e]" dir="ltr">
+              <a href="mailto:contact@chezlaziz.com" className="tap transition-colors hover:text-gold" dir="ltr">
                 contact@chezlaziz.com
               </a>
             </p>
@@ -96,7 +96,7 @@ export default function Visit({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
                 href="https://www.instagram.com/chezlaziz"
                 target="_blank"
                 rel="noreferrer"
-                className="tap inline-flex items-center gap-2 text-[#faf6f3]/80 transition-colors hover:text-[#b8912e]"
+                className="tap inline-flex items-center gap-2 text-[#faf6f3]/80 transition-colors hover:text-gold"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                   <rect x="2.5" y="2.5" width="19" height="19" rx="5" />

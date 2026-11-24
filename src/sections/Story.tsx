@@ -36,9 +36,9 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
             <div className="relative w-full lg:w-[92%]">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 translate-x-3 translate-y-3 border border-[#b8912e]/60 md:translate-x-5 md:translate-y-5"
+                className="pointer-events-none absolute inset-0 translate-x-3 translate-y-3 border border-gold/60 md:translate-x-5 md:translate-y-5"
               />
-              <div className="mask-reveal relative aspect-[2/3] max-h-[760px] w-full bg-[#e9dccf]">
+              <div className="mask-reveal relative aspect-[2/3] max-h-[760px] w-full bg-cream">
                 <img
                   src="/images/maison.webp"
                   width={774}
@@ -48,13 +48,13 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
                   loading="lazy"
                   decoding="async"
                 />
-                <p className="absolute left-4 top-4 rounded-full bg-[#faf6f3]/90 px-3.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.28em] text-[#2e2a27] backdrop-blur-sm md:left-5 md:top-5">
+                <p className="absolute left-4 top-4 rounded-full bg-paper/90 px-3.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.28em] text-ink backdrop-blur-sm md:left-5 md:top-5">
                   {isAr ? 'القيروان · صناعة يدوية' : 'Kairouan · fait main'}
                 </p>
               </div>
 
               <figure
-                className="absolute -bottom-8 -left-3 w-[38%] max-w-[230px] border-[5px] border-[#faf6f3] bg-[#faf6f3] shadow-[0_28px_60px_-22px_rgba(0,0,0,0.5)] md:-bottom-10 md:-left-8"
+                className="absolute -bottom-8 -left-3 w-[38%] max-w-[230px] border-[5px] border-paper bg-paper shadow-[0_28px_60px_-22px_rgba(0,0,0,0.5)] md:-bottom-10 md:-left-8"
                 data-reveal
               >
                 <img
@@ -73,7 +73,7 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
           {/* Panneau éditorial sombre chevauchant la photographie */}
           <div className="relative z-10 lg:col-span-5 lg:-ml-24 lg:mt-32">
             <div className="bg-ink-deep p-8 text-[#faf6f3] md:p-12" data-reveal>
-              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-[#b8912e]">
+              <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-gold">
                 {eyebrow}
               </p>
               <Heading className="font-display text-3xl leading-tight md:text-[2.6rem]">
@@ -86,7 +86,7 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
 
               <Link
                 to={isAr ? '/ar/makroudh-kairouan' : '/makroudh-kairouan'}
-                className="arrow-link mt-6 inline-flex text-sm text-[#faf6f3]/85 hover:text-[#b8912e]"
+                className="arrow-link mt-6 inline-flex text-sm text-[#faf6f3]/85 hover:text-gold"
               >
                 {isAr ? 'لماذا القيروان هي مرجع المقروض' : 'Pourquoi Kairouan est la référence du makroudh'}
                 <svg width="18" height="10" viewBox="0 0 18 10" fill="none" aria-hidden="true" className={isAr ? 'rotate-180' : ''}>
@@ -95,7 +95,7 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
               </Link>
 
               <p
-                className="mt-7 text-left font-display text-2xl leading-none text-[#b8912e]/90"
+                className="mt-7 text-left font-display text-2xl leading-none text-gold/90"
                 lang="ar"
                 dir="rtl"
               >
@@ -116,7 +116,7 @@ export default function Story({ headingLevel = 'h2' }: { headingLevel?: 'h1' | '
                     ]
                 ).map(([n, label]) => (
                   <div key={label}>
-                    <div className="font-display text-3xl text-[#b8912e] md:text-4xl">{n}</div>
+                    <div className="chiffres font-medium text-3xl text-gold md:text-4xl">{n}</div>
                     <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#faf6f3]/60">
                       {label}
                     </div>

@@ -22,7 +22,7 @@ export default function Reviews() {
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 px-5 text-center md:px-10">
         <div data-reveal className="flex flex-col items-center gap-3">
           <Stars isAr={isAr} />
-          <p className="font-display text-4xl md:text-5xl">5,0</p>
+          <p className="chiffres text-4xl font-medium md:text-5xl">5,0</p>
           <p className="text-xs uppercase tracking-[0.25em] text-muted-warm">
             {isAr ? 'المعدل — آراء جوجل' : 'Note moyenne — Avis Google'}
           </p>

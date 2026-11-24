@@ -1,3 +1,4 @@
+import PriceSticker from '@/components/PriceSticker'
 import ProductImage from '@/components/ProductImage'
 import { kgLabel } from '@/lib/orderLines'
 import { formatWeight } from '@contracts/shop'
@@ -5,7 +6,7 @@ import { PACK_ITEM_WEIGHT_KG, formatPriceDT, packWeightKg, type FixedPack } from
 import { useLang } from '@/lib/i18n'
 
 const stepperBtnCls =
-  'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-white text-xl transition-colors hover:border-[#b8912e] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/50 disabled:opacity-30'
+  'flex h-11 w-11 items-center justify-center rounded-full border border-sand bg-surface text-xl transition-colors hover:border-gold hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:opacity-30'
 
 function CrownIcon() {
   return (
@@ -59,9 +60,9 @@ export default function PackCard({
 
   return (
     <article
-      className={`relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
-        highlight ? 'border-[#b8912e] ring-1 ring-[#b8912e]/40' : 'border-sand/80'
-      } ${qty > 0 ? 'ring-2 ring-[#b8912e]/50' : ''}`}
+      className={`relative flex flex-col overflow-hidden rounded-2xl border bg-surface ${
+        highlight ? 'border-gold ring-1 ring-gold/40' : 'border-sand/60'
+      } ${qty > 0 ? 'ring-2 ring-gold/50' : ''}`}
       aria-label={`${packName} — ${formatPriceDT(pack.priceMillimes, lang)}`}
     >
       {packBadge && (
@@ -85,27 +86,39 @@ export default function PackCard({
           se retrouve alors zoomée/coupée). min-h-0/min-w-0 neutralise ce
           minimum automatique pour que les cases restent bien à leur taille
           prévue, quel que soit le cadrage d'origine des photos. */}
-      {photo ? (
-        // La photo du coffret l'emporte : c'est l'objet qu'on offre, et c'est
-        // lui qu'on achète. La mosaïque ne montrait que le contenu en vrac.
-        <div className="aspect-[5/4] min-h-0 overflow-hidden bg-sand/40">
-          <ProductImage src={photo} alt={packName} />
-        </div>
-      ) : (
-        <div className="grid aspect-[5/4] min-h-0 grid-cols-2 grid-rows-2 gap-0.5 bg-sand/40">
-          {photos.map((ph, i) => (
-            <div key={i} className={`min-h-0 min-w-0 overflow-hidden ${n === 3 && i === 0 ? 'row-span-2' : ''}`}>
-              <ProductImage src={ph.src} alt={ph.alt} compact />
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="relative">
+        {photo ? (
+          // La photo du coffret l'emporte : c'est l'objet qu'on offre, et
+          // c'est lui qu'on achète. La mosaïque ne montrait que le contenu
+          // en vrac.
+          <div className="aspect-[5/4] min-h-0 overflow-hidden bg-cream">
+            <ProductImage src={photo} alt={packName} />
+          </div>
+        ) : (
+          <div className="grid aspect-[5/4] min-h-0 grid-cols-2 grid-rows-2 gap-0.5 bg-cream">
+            {photos.map((ph, i) => (
+              <div key={i} className={`min-h-0 min-w-0 overflow-hidden ${n === 3 && i === 0 ? 'row-span-2' : ''}`}>
+                <ProductImage src={ph.src} alt={ph.alt} compact />
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Même étiquette que sur les produits, en plus grand : le prix du
+            coffret est un prix fini, pas un prix au kilo, et c'est écrit. */}
+        <PriceSticker
+          millimes={pack.priceMillimes}
+          lang={lang}
+          per={isAr ? 'الحزمة كاملة' : 'le pack complet'}
+          size="lg"
+          className="absolute -bottom-5 end-4 z-10"
+        />
+      </div>
 
-      <div className="flex flex-1 flex-col p-5 md:p-6">
+      <div className="flex flex-1 flex-col p-5 pt-8 md:p-6 md:pt-9">
         <h3 className="font-display text-2xl leading-tight">{packName}</h3>
         <p className="mt-1.5 text-sm font-light leading-relaxed text-ink/60">{isAr ? pack.taglineAr : pack.tagline}</p>
 
-        <ul className="mt-4 space-y-2 text-[15px]">
+        <ul className="mb-5 mt-4 space-y-2 text-[15px]">
           {pack.contents.map((name, i) => (
             <li key={name} className="flex items-start gap-2.5">
               <span className="mt-[3px] text-accent" aria-hidden="true">
@@ -119,31 +132,30 @@ export default function PackCard({
           ))}
         </ul>
 
-        <div className="mt-5 flex items-end justify-between gap-3 border-t border-sand/70 pt-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-ink/50">
-              {n} × {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
-            </p>
-            <p className="mt-0.5 font-display text-xl">{kgLabel(weight, lang)}</p>
-          </div>
-          <p className="font-display text-2xl text-accent md:text-[1.7rem]">{formatPriceDT(pack.priceMillimes, lang)}</p>
-        </div>
+        {/* Le poids total, en une ligne. Le prix n'est plus répété ici : il
+            est sur l'étiquette, et deux prix dans une carte font chercher la
+            différence. */}
+        <p className="chiffres mt-auto border-t border-sand/60 pt-4 text-[13px] text-ink/60">
+          {n} × {formatWeight(PACK_ITEM_WEIGHT_KG, lang)}
+          <span aria-hidden="true" className="mx-2 text-ink/30">=</span>
+          <span className="font-semibold text-ink">{kgLabel(weight, lang)}</span>
+        </p>
 
         {qty === 0 ? (
           <button
             type="button"
             onClick={onAdd}
-            className="gold-cta mt-5 h-12 w-full rounded-full text-sm font-semibold uppercase tracking-[0.14em] text-white transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8912e]/60"
+            className="gold-cta mt-4 h-12 w-full rounded-full text-sm font-semibold uppercase tracking-[0.14em] text-on-gold transition-transform duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
           >
             {isAr ? 'اطلب' : 'Commander'}
           </button>
         ) : (
-          <div className="mt-5 flex items-center justify-between gap-3">
+          <div className="mt-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2" role="group" aria-label={`${isAr ? 'الكمية' : 'Quantité'} — ${packName}`}>
               <button type="button" aria-label={isAr ? `إنقاص ${packName}` : `Retirer un ${packName}`} onClick={() => onSetQty(qty - 1)} className={stepperBtnCls}>
                 −
               </button>
-              <span className="w-7 text-center font-display text-lg" aria-live="polite">
+              <span className="chiffres w-7 text-center text-lg font-semibold" aria-live="polite">
                 {qty}
               </span>
               <button type="button" aria-label={isAr ? `زيادة ${packName}` : `Ajouter un ${packName}`} onClick={() => onSetQty(qty + 1)} className={stepperBtnCls}>

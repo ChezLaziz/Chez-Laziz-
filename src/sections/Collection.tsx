@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useCart } from '@/providers/cart'
-import { formatTND, PHONE_TEL } from '@/lib/shop'
+import { PHONE_TEL } from '@/lib/shop'
+import PriceSticker from '@/components/PriceSticker'
 import { track } from '@/lib/analytics'
 import { trackMeta } from '@/lib/metaPixel'
 import { setJsonLd } from '@/hooks/useSEO'
@@ -65,21 +66,31 @@ function ProductCard({
   const displayName = productName(product, lang)
   const displayDescription = productDescription(product, lang)
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-sand bg-white transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgba(46,42,39,0.25)]">
-      <div className="relative aspect-square overflow-hidden">
-        <ProductImage
-          src={product.imageUrl}
-          alt={displayName}
-          className="transition-transform duration-500 hover:scale-105"
-        />
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-sand/60 bg-surface">
+      <div className="relative">
+        <div className="aspect-square overflow-hidden bg-cream">
+          <ProductImage
+            src={product.imageUrl}
+            alt={displayName}
+            className="transition-transform duration-500 hover:scale-105"
+          />
+        </div>
         {productBadge(product, lang) && (
-          <span className={`absolute left-3 top-3 rounded-full bg-[#faf6f3] px-3 py-1 text-[10px] font-semibold text-accent shadow ${isAr ? 'tracking-normal' : 'uppercase tracking-[0.14em]'}`}>
+          <span className={`absolute start-2.5 top-2.5 rounded-full bg-paper/90 px-2.5 py-1 text-[9px] font-semibold text-accent backdrop-blur-sm ${isAr ? 'tracking-normal' : 'uppercase tracking-[0.14em]'}`}>
             {productBadge(product, lang)}
           </span>
         )}
+        {/* Prix pour 1 kg ; le poids (500 g à 2,5 kg) se choisit à l'étape
+            de la commande. */}
+        <PriceSticker
+          millimes={product.priceMillimes}
+          lang={lang}
+          per={isAr ? 'الكيلو' : 'le kilo'}
+          className="absolute -bottom-4 end-2.5 z-10"
+        />
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-5 pt-7">
         {/* Titre court */}
         <h4 className="font-display text-lg leading-snug">
           {displayName}
@@ -92,16 +103,10 @@ function ProductCard({
 
         {/* Description courte */}
         {displayDescription && (
-          <p className="mt-1.5 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
+          <p dir="auto" className="mt-1.5 line-clamp-2 text-sm font-light leading-relaxed text-ink/55">
             {displayDescription}
           </p>
         )}
-
-        {/* Prix — sous le titre/description. Prix pour 1 kg ; le poids
-            (500 g à 2,5 kg) se choisit à l'étape de la commande. */}
-        <p className="mt-3 font-display text-xl text-accent">
-          {formatTND(product.priceMillimes)} <span className="text-xs">{isAr ? 'د.ت / كغ' : 'DT / kg'}</span>
-        </p>
 
         {/* Action — ajoute 1 kg ; le poids se change ensuite sur la page Commander */}
         <div className="mt-auto pt-4">
@@ -112,17 +117,17 @@ function ProductCard({
               // min-h-11 : 44 px, la hauteur qu'un pouce ne rate pas — la même
               // que sur la page de commande. À 38 px, un client sur cinq
               // touchait le bord de la carte au lieu du bouton.
-              className="min-h-11 w-full rounded-full border border-[#b8912e]/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-[#b8912e] hover:text-white"
+              className="min-h-11 w-full rounded-full border border-gold/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent transition-colors duration-300 hover:bg-gold hover:text-on-gold"
             >
               {isAr ? '+ أضف' : '+ Ajouter'}
             </button>
           ) : (
-            <div className="flex items-center justify-between rounded-full border border-[#b8912e] bg-[#f5ece5] px-2 py-1">
+            <div className="flex items-center justify-between rounded-full border border-gold bg-cream px-2 py-1">
               <button
                 type="button"
                 aria-label={isAr ? `إنقاص ${displayName}` : `Retirer un ${displayName}`}
                 onClick={() => onSetQty(qty - 1)}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-[#b8912e]/15"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-gold/15"
               >
                 −
               </button>
@@ -133,7 +138,7 @@ function ProductCard({
                 type="button"
                 aria-label={isAr ? `زيادة ${displayName}` : `Ajouter un ${displayName}`}
                 onClick={onAdd}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-[#b8912e]/15"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-accent hover:bg-gold/15"
               >
                 +
               </button>
@@ -235,7 +240,7 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
         {isLoading && (
           <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-white">
+              <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-sand bg-surface">
                 <div className="aspect-square bg-sand/40" />
                 <div className="space-y-2 p-5">
                   <div className="h-4 w-3/4 rounded bg-sand/50" />
@@ -247,7 +252,7 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
         )}
 
         {!isLoading && groups.length === 0 && (
-          <p className="mt-16 rounded-xl border border-sand bg-white p-10 text-center text-sm text-ink/50">
+          <p className="mt-16 rounded-xl border border-sand bg-surface p-10 text-center text-sm text-ink/50">
             {isAr ? (
               <>الكاتالوج قيد التحديث — عودوا قريبًا، أو اتصلوا بنا مباشرة على <span dir="ltr">{PHONE_TEL.replace('tel:', '')}</span>.</>
             ) : (
@@ -260,7 +265,7 @@ export default function Collection({ headingLevel = 'h2' }: { headingLevel?: 'h1
           <div key={cat.title} data-reveal className="mt-16 first:mt-20">
             <div className="mb-8 flex items-baseline gap-5">
               <h3 className="font-display text-2xl md:text-3xl">{isAr ? CATEGORY_LABELS_AR[cat.title] || cat.title : cat.title}</h3>
-              <span className="h-px flex-1 bg-[#b8912e]/50" />
+              <span className="h-px flex-1 bg-gold/50" />
             </div>
             {(isAr ? cat.noteAr : cat.note) && (
               <p className="-mt-4 mb-6 text-xs uppercase tracking-[0.18em] text-muted-warm">

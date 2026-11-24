@@ -47,7 +47,7 @@ export default function HowToOrder() {
   const isAr = lang === 'ar'
   const STEPS = isAr ? STEPS_AR : STEPS_FR
   return (
-    <section className="border-y border-sand/70 bg-white py-20 md:py-28">
+    <section className="border-y border-sand/70 bg-surface py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="mx-auto max-w-2xl text-center">
           <p data-reveal className="mb-4 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
@@ -61,7 +61,7 @@ export default function HowToOrder() {
         <div className="mt-14 grid gap-8 md:grid-cols-3 md:gap-10">
           {STEPS.map((s) => (
             <div key={s.n} data-reveal className="relative border-t border-sand pt-6">
-              <span className="font-display text-3xl text-[#b8912e]/50">{s.n}</span>
+              <span className="chiffres font-medium text-3xl text-gold/50">{s.n}</span>
               <h3 className="mt-2 font-display text-xl">{s.title}</h3>
               <p className="mt-2 text-[15px] font-light leading-relaxed text-ink/65">{s.text}</p>
             </div>
@@ -71,7 +71,7 @@ export default function HowToOrder() {
         <div data-reveal className="mt-14 flex flex-col items-center gap-5 text-center">
           <Link
             to={isAr ? '/ar/commande' : '/commande'}
-            className="gold-cta rounded-full px-9 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-white transition-transform duration-300 hover:scale-[1.02]"
+            className="gold-cta rounded-full px-9 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-on-gold transition-transform duration-300 hover:scale-[1.02]"
           >
             {isAr ? 'اطلب أونلاين' : 'Commander en ligne'}
           </Link>

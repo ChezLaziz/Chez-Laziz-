@@ -35,7 +35,7 @@ export default function MakroudhEtrangerPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -79,7 +79,7 @@ export default function MakroudhEtrangerPage() {
 
             <RelatedArticles slugs={META.related} isAr={true} />
 
-            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
               <p className="font-display text-xl text-ink">اطلبوا مقروض طازج لعائلتكم في تونس</p>
               <Link to="/ar/commande" className="arrow-link mt-4 inline-flex justify-center">
                 اطلبوا الحين
@@ -103,7 +103,7 @@ export default function MakroudhEtrangerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -152,7 +152,7 @@ export default function MakroudhEtrangerPage() {
 
           <RelatedArticles slugs={META.related} isAr={false} />
 
-          <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+          <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
             <p className="font-display text-xl text-ink">Commandez du makroudh frais pour votre famille en Tunisie</p>
             <Link to="/commande" className="arrow-link mt-4 inline-flex justify-center">
               Commander maintenant

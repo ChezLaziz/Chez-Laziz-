@@ -88,7 +88,7 @@ export default function MakroudhHistory() {
               <div className="mask-reveal aspect-[4/5]">
                 <img src={s.img} alt={isAr ? s.titleAr : s.title} className="h-full w-full object-cover" loading="lazy" />
               </div>
-              <p className="mt-5 font-display text-3xl text-[#b8912e]/50">{s.n}</p>
+              <p className="mt-5 chiffres font-medium text-3xl text-gold/50">{s.n}</p>
               <h3 className="mt-1 font-display text-xl">{isAr ? s.titleAr : s.title}</h3>
               <p className="mt-2 text-sm font-light leading-relaxed text-ink/65">{isAr ? s.textAr : s.text}</p>
             </div>

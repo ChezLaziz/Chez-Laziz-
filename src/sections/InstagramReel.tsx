@@ -117,7 +117,7 @@ export default function InstagramReel() {
             href={REEL_URL}
             target="_blank"
             rel="noreferrer"
-            className="absolute -bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 min-h-10 whitespace-nowrap rounded-full bg-[#faf6f3] px-4 py-2 text-xs font-semibold text-ink shadow-lg"
+            className="absolute -bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 min-h-10 whitespace-nowrap rounded-full bg-paper px-4 py-2 text-xs font-semibold text-ink shadow-lg"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b8912e" strokeWidth="2">
               <rect x="2.5" y="2.5" width="19" height="19" rx="5" />

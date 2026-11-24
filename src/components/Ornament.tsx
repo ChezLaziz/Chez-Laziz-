@@ -1,19 +1,20 @@
-/** Decorative sand-colored flowing line, used as connective tissue between sections. */
+/** Decorative sand-colored flowing line, used as connective tissue between sections.
+ * Tracé dans la couleur du texte courant (text-sand) : il suit le thème. */
 export default function Ornament({ className = '' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 1200 60"
       fill="none"
       aria-hidden="true"
-      className={`h-10 w-full ${className}`}
+      className={`h-10 w-full text-sand ${className}`}
       preserveAspectRatio="none"
     >
       <path
         d="M0 30 C 200 6, 400 54, 600 30 C 800 6, 1000 54, 1200 30"
-        stroke="#DEC9B8"
+        stroke="currentColor"
         strokeWidth="1.5"
       />
-      <path d="M600 22 L608 30 L600 38 L592 30 Z" fill="#DEC9B8" />
+      <path d="M600 22 L608 30 L600 38 L592 30 Z" fill="currentColor" />
     </svg>
   )
 }

@@ -35,7 +35,7 @@ export default function CommentEstPreparePage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -84,7 +84,7 @@ export default function CommentEstPreparePage() {
               </p>
             </div>
 
-            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
               <p className="font-display text-xl text-ink">هذا بالضبط كيفاش نحضّروه، كل يوم</p>
               <Link to="/ar/makroudh-aux-dattes" className="arrow-link mt-4 inline-flex justify-center">
                 اكتشفو مقروضنا بالتمر
@@ -110,7 +110,7 @@ export default function CommentEstPreparePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -163,7 +163,7 @@ export default function CommentEstPreparePage() {
             </p>
           </div>
 
-          <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+          <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
             <p className="font-display text-xl text-ink">C'est exactement ainsi que nous le préparons, chaque jour</p>
             <Link to="/makroudh-aux-dattes" className="arrow-link mt-4 inline-flex justify-center">
               Découvrir notre makroudh aux dattes

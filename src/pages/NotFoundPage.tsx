@@ -18,7 +18,7 @@ export default function NotFoundPage() {
   })
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="mx-auto flex max-w-2xl flex-col items-center px-5 py-32 text-center md:py-44">
         <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
@@ -35,13 +35,13 @@ export default function NotFoundPage() {
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <Link
             to={isAr ? '/ar/collection' : '/collection'}
-            className="gold-cta rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+            className="gold-cta rounded-full px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-on-gold"
           >
             {isAr ? 'شاهدوا التشكيلة' : 'Voir la collection'}
           </Link>
           <Link
             to={isAr ? '/ar' : '/'}
-            className="rounded-full border border-ink/25 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink transition-colors hover:bg-ink hover:text-[#faf6f3]"
+            className="rounded-full border border-ink/25 px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink transition-colors hover:bg-ink hover:text-on-ink"
           >
             {isAr ? 'العودة إلى الرئيسية' : "Retour à l'accueil"}
           </Link>

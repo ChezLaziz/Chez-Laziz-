@@ -27,7 +27,7 @@ export default function BlogIndexPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <section className="mx-auto max-w-4xl px-5 py-24 md:px-10 md:py-32">
@@ -49,7 +49,7 @@ export default function BlogIndexPage() {
                 key={a.slug}
                 to={isAr ? `/ar/journal/${a.slug}` : `/journal/${a.slug}`}
                 data-reveal
-                className="block rounded-2xl border border-sand/70 bg-white p-6 transition-colors hover:border-[#b8912e] md:p-8"
+                className="block rounded-2xl border border-sand/70 bg-surface p-6 transition-colors hover:border-gold md:p-8"
               >
                 <h2 className="font-display text-2xl leading-snug text-ink md:text-3xl">
                   {isAr ? a.titleAr : a.title}

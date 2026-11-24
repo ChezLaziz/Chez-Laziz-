@@ -26,7 +26,7 @@ export default function PrivacyPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="mx-auto max-w-3xl px-5 py-28 md:px-10 md:py-36">
           <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">
@@ -144,7 +144,7 @@ export default function PrivacyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="mx-auto max-w-3xl px-5 py-28 md:px-10 md:py-36">
         <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.35em] text-accent">

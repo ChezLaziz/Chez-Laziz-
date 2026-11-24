@@ -35,7 +35,7 @@ export default function MakroudhIdeeCadeauPage() {
 
   if (isAr) {
     return (
-      <div className="min-h-screen bg-[#faf6f3]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <main className="pt-16 md:pt-20">
           <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -79,7 +79,7 @@ export default function MakroudhIdeeCadeauPage() {
 
             <RelatedArticles slugs={META.related} isAr={true} />
 
-            <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+            <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
               <p className="font-display text-xl text-ink">فرّحوا حد بهدية مقروض أصيلة من القيروان</p>
               <Link to="/ar/commande" className="arrow-link mt-4 inline-flex justify-center">
                 اطلبوا الحين
@@ -103,7 +103,7 @@ export default function MakroudhIdeeCadeauPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf6f3]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="pt-16 md:pt-20">
         <article className="mx-auto max-w-2xl px-5 py-24 md:px-10 md:py-32">
@@ -155,7 +155,7 @@ export default function MakroudhIdeeCadeauPage() {
 
           <RelatedArticles slugs={META.related} isAr={false} />
 
-          <div className="mt-14 rounded-2xl border border-sand/70 bg-white p-8 text-center">
+          <div className="mt-14 rounded-2xl border border-sand/70 bg-surface p-8 text-center">
             <p className="font-display text-xl text-ink">Faites plaisir avec un vrai makroudh de Kairouan</p>
             <Link to="/commande" className="arrow-link mt-4 inline-flex justify-center">
               Commander maintenant
