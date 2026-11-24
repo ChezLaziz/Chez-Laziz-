@@ -279,3 +279,15 @@
   html { scroll-behavior: auto; }
   .gold-cta { transition: none; }
 }
+
+/* ---------- Administration : une seule famille de caractères ---------- */
+/* Marcellus dessine ses chiffres comme des capitales romaines : dans un
+   outil de travail, « 104 » s'y lisait « IO4 » et « 10 DT » « IO DT ». À
+   l'intérieur de l'administration, les titres et les montants passent donc
+   dans la police du texte, chiffres alignés en colonnes. La boutique, elle,
+   garde Marcellus pour ses titres. */
+.admin-ui .font-display {
+  font-family: 'Jost', 'Tajawal', -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,23 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 
-/** Barre supérieure : titre de la page (ou accueil du tableau de bord),
- * badge messages non lus, menu compte.
+/** Barre supérieure : titre de la page, sélecteur de période sur le
+ * tableau de bord, messages non lus, menu du compte.
  *
- * Pas de champ de recherche global : la maquette n'en montre pas, et il n'y
- * a rien à chercher en dehors des commandes — la page Commandes a déjà sa
- * propre recherche. Un deuxième champ qui ne cherche que là-bas serait un
- * faux affordance.
+ * Pas de champ de recherche global : il n'y a rien à chercher en dehors des
+ * commandes, et la page Commandes a déjà sa propre recherche. Un deuxième
+ * champ qui ne cherche que là-bas serait un faux affordance.
  *
- * Deux allures :
- *   `page`  — barre blanche collante, pour les écrans de gestion ;
- *   `accueil` — en-tête posé sur le fond (et sur la photo), comme la
- *   maquette du tableau de bord. Volontairement NON collant : une barre
- *   transparente qui suit le défilement laisserait le contenu glisser
- *   dessous en toute lisibilité. */
+ * La même barre blanche sur toutes les pages. Elle avait une seconde allure
+ * pour l'accueil — transparente, posée sur une photo, avec un « Bonjour ! » —
+ * qui faisait du tableau de bord un écran à part du reste de l'outil. */
 export default function TopBar({
   title,
-  greeting,
-  variant = 'page',
   unreadCount,
   onOpenMessages,
   onOpenMenu,
@@ -25,9 +19,6 @@ export default function TopBar({
   right,
 }: {
   title: string
-  /** Remplace le titre sur le tableau de bord (« Bonjour ! »). */
-  greeting?: { hello: string; sub: string }
-  variant?: 'page' | 'accueil'
   unreadCount: number
   onOpenMessages: () => void
   onOpenMenu: () => void
@@ -47,25 +38,17 @@ export default function TopBar({
     return () => document.removeEventListener('mousedown', close)
   }, [menuOpen])
 
-  const accueil = variant === 'accueil'
-
   return (
+    // z-30 : les menus déroulants de l'en-tête (période, compte) s'ouvrent
+    // PAR-DESSUS les cartes. Avec le sélecteur de période, la barre fait
+    // deux lignes sur un téléphone : elle ne colle alors qu'à partir de
+    // `md`, pour ne pas manger un cinquième de l'écran en défilant.
     <header
-      className={
-        accueil
-          // z-30 : les menus déroulants de l'en-tête (période, compte)
-          // s'ouvrent PAR-DESSUS les cartes. Au même niveau que <main>,
-          // c'est le contenu qui gagnait — le menu s'ouvrait derrière les
-          // chiffres et devenait incliquable.
-          ? 'relative z-30'
-          : 'sticky top-0 z-20 border-b border-sand/60 bg-white/95 backdrop-blur-sm'
-      }
+      className={`z-30 border-b border-[#e9e4dd] bg-white/95 backdrop-blur-sm ${
+        right ? 'relative md:sticky md:top-0' : 'sticky top-0'
+      }`}
     >
-      <div
-        className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 md:flex-nowrap md:px-6 ${
-          accueil ? 'pb-1.5 pt-3' : 'min-h-[52px] py-2'
-        }`}
-      >
+      <div className="flex min-h-[56px] items-center gap-3 px-4 py-2 md:px-6">
         <button
           onClick={onOpenMenu}
           aria-label="Ouvrir le menu"
@@ -76,24 +59,13 @@ export default function TopBar({
           </svg>
         </button>
 
-        {accueil && greeting ? (
-          <div className="min-w-0">
-            <h1 className="font-display text-[22px] leading-tight text-ink sm:text-[26px]">
-              {greeting.hello} <span aria-hidden="true">☀️</span>
-            </h1>
-            <p className="mt-0.5 text-[12.5px] text-ink/55">{greeting.sub}</p>
-            <div className="mt-2 h-px w-32 bg-gradient-to-r from-sand to-transparent" />
-          </div>
-        ) : (
-          <h1 className="font-display text-lg text-ink">{title}</h1>
-        )}
+        <h1 className="min-w-0 truncate text-[17px] font-semibold tracking-[-0.005em] text-ink">{title}</h1>
 
-        <div
-          className={`flex items-center gap-2 ${
-            accueil ? 'order-last w-full justify-between md:order-none md:ml-auto md:w-auto' : 'ml-auto'
-          }`}
-        >
-          {right}
+        <div className="ml-auto flex items-center gap-2">
+          {/* Sur un téléphone, la période passe sur sa propre ligne, sous le
+              titre : à côté de la cloche et du compte, elle se repliait en
+              deux morceaux. */}
+          {right && <div className="hidden md:block">{right}</div>}
 
           <div className="flex items-center gap-1">
             <button
@@ -144,6 +116,7 @@ export default function TopBar({
           </div>
         </div>
       </div>
+      {right && <div className="border-t border-[#efebe6] px-4 py-2 md:hidden">{right}</div>}
     </header>
   )
 }

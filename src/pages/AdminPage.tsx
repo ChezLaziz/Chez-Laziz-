@@ -1443,7 +1443,7 @@ function FooterEditorForm({ token, initial }: { token: string; initial: FooterFo
       </div>
       {/* Barre collante : ce formulaire fait plusieurs écrans de haut sur un
           téléphone, le bouton d'enregistrement ne doit pas être au fond. */}
-      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#faf6f3]/95 px-1 py-3 backdrop-blur">
+      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#f8f6f2]/95 px-1 py-3 backdrop-blur">
         <button type="submit" disabled={update.isPending} className="min-h-11 rounded-full bg-ink px-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
           {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
         </button>
@@ -1628,7 +1628,7 @@ function PagesEditorForm({ token, initial }: { token: string; initial: PagesForm
         </div>
       </div>
 
-      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#faf6f3]/95 px-1 py-3 backdrop-blur">
+      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-sand/70 bg-[#f8f6f2]/95 px-1 py-3 backdrop-blur">
         <button type="submit" disabled={update.isPending} className="min-h-11 rounded-full bg-ink px-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#faf6f3] disabled:opacity-40">
           {update.isPending ? 'Enregistrement…' : 'Enregistrer les titres'}
         </button>
@@ -1801,9 +1801,14 @@ function AdminShell({
   const estAccueil = ANALYTICS_PAGES.has(tab)
 
   return (
-    <div className="min-h-screen bg-[#faf6f3] lg:flex">
+    // `admin-ui` : dans l'administration, les titres et les chiffres sont
+    // composés dans la police du texte (voir index.css). Les chiffres de
+    // Marcellus sont dessinés comme des capitales : « 10 DT » s'y lisait
+    // « IO DT », et un outil de travail ne peut pas laisser hésiter sur un
+    // montant.
+    <div className="admin-ui min-h-screen bg-[#f8f6f2] lg:flex">
       {/* Colonne fixe à partir de lg ; en dessous, tiroir superposé. */}
-      <aside className="hidden w-64 shrink-0 border-r border-[#e6ded3] lg:sticky lg:top-0 lg:block lg:h-screen">
+      <aside className="hidden w-60 shrink-0 border-r border-[#e6e0d8] lg:sticky lg:top-0 lg:block lg:h-screen">
         <Sidebar active={tab} onSelect={onSelectTab} unreadCount={unreadCount ?? 0} />
       </aside>
 
@@ -1825,75 +1830,22 @@ function AdminShell({
         </div>
       )}
 
-      <div className="relative min-w-0 flex-1">
-        {estAccueil && <BandeauAccueil />}
+      <div className="min-w-0 flex-1">
         <TopBar
           title={title}
-          variant={estAccueil ? 'accueil' : 'page'}
-          greeting={{ hello: 'Bonjour !', sub: 'Merci de faire partie de cette belle aventure.' }}
           unreadCount={unreadCount ?? 0}
           onOpenMessages={() => onSelectTab('messages')}
           onOpenMenu={() => onDrawerChange(true)}
           onLogout={onLogout}
           right={estAccueil ? <DateRange value={period} onChange={onPeriodChange} /> : undefined}
         />
-        {/* Sur très grand écran, le contenu laisse une marge à droite : la
-            photo du bandeau et sa signature restent visibles à côté des
-            cartes, exactement comme sur la maquette. En dessous, la place
-            va aux chiffres. */}
-        <main
-          className={`relative z-10 px-4 pb-6 pt-2 md:px-6 ${
-            estAccueil ? 'min-[1700px]:pr-[236px]' : ''
-          }`}
-        >
+        {/* Une largeur maximale sur le tableau de bord : sur un très grand
+            écran, des cartes étirées sur 2 000 px font des lignes qu'on ne
+            lit plus d'un regard. */}
+        <main className={`px-4 pb-10 pt-4 md:px-6 md:pt-5 ${estAccueil ? 'mx-auto max-w-[1320px]' : ''}`}>
           {children}
         </main>
       </div>
     </div>
   )
 }
-
-/** Bandeau photo du tableau de bord — la vue de Sidi Bou Saïd de la
- * maquette, posée en haut à droite et fondue dans le fond.
- *
- * Purement décoratif : masqué sous `lg`, où la même image passerait
- * derrière le texte de l'en-tête au lieu de rester à côté. `aria-hidden`
- * et sans texte alternatif — il n'y a rien à annoncer à un lecteur
- * d'écran. */
-function BandeauAccueil() {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute right-0 top-0 hidden h-[460px] w-[46%] max-w-[620px] select-none overflow-hidden lg:block"
-    >
-      <img
-        src="/images/admin/band.webp"
-        alt=""
-        className="h-full w-full object-cover opacity-[0.78]"
-        style={{
-          WebkitMaskImage:
-            'linear-gradient(to right, transparent, #000 38%), linear-gradient(to bottom, #000 55%, transparent 96%)',
-          WebkitMaskComposite: 'source-in',
-          maskImage:
-            'linear-gradient(to right, transparent, #000 38%), linear-gradient(to bottom, #000 55%, transparent 96%)',
-          maskComposite: 'intersect',
-        }}
-      />
-      {/* Voile clair : la photo doit rester un fond, pas un sujet — sans
-          lui, le texte de l'en-tête perd son contraste. */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#faf6f3]/45 via-transparent to-[#faf6f3]/70" />
-      <div className="absolute right-8 top-14 hidden text-right min-[1700px]:block">
-        <p className="font-display text-[26px] italic leading-snug text-[#2a4750] drop-shadow-sm">
-          Le goût authentique
-          <br />
-          de la Tunisie
-        </p>
-        <div className="ml-auto mt-3 h-px w-16 bg-[#2a4750]/35" />
-        <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.32em] text-[#2a4750]/70">
-          Tradition · Qualité · Partage
-        </p>
-      </div>
-    </div>
-  )
-}
-

@@ -16,3 +16,12 @@ export function moneyDT(millimes: number): string {
   const grouped = (intPart ?? '0').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
   return `${negative ? '-' : ''}${grouped}${decPart ? `,${decPart}` : ''}`
 }
+
+/** Une MOYENNE en dinars, au dixième : « 45,9 ».
+ *
+ * Un panier moyen n'est pas un montant encaissé : écrit au millime
+ * (« 45,875 »), il affiche une précision que la donnée n'a pas et trois
+ * chiffres de plus à lire. Les montants réels gardent `moneyDT`. */
+export function moneyAvgDT(millimes: number): string {
+  return moneyDT(Math.round(millimes / 100) * 100)
+}
