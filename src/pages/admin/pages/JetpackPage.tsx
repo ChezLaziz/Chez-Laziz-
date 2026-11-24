@@ -174,7 +174,45 @@ export default function JetpackPage({ token }: { token: string }) {
       )}
 
       {!isLoading && !isError && (
-        <div className="overflow-hidden rounded-2xl border border-sand bg-white">
+        <>
+          {/* Barre d'action EN HAUT : le bouton de téléchargement en premier,
+              sans avoir à faire défiler la liste. */}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b8912e]/40 bg-[#b8912e]/[0.06] px-4 py-3">
+            <p className="text-sm text-ink/70">
+              <span className="font-semibold text-ink">{chosen.length}</span> commande
+              {chosen.length > 1 ? 's' : ''}
+              {chosen.length > 0 && (
+                <>
+                  {' '}· <span className="font-semibold text-ink">{formatTND(totalCollect)} DT</span> à
+                  encaisser
+                </>
+              )}
+            </p>
+            <div className="flex items-center gap-3">
+              {chosen.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set())}
+                  className="text-xs text-ink/45 underline underline-offset-4 hover:text-ink"
+                >
+                  Tout désélectionner
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={download}
+                disabled={chosen.length === 0}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#b8912e] px-5 text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Télécharger .csv Jetpack
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-sand bg-white">
           {/* En-tête du tableau — la case de gauche coche tout ce qui est visible. */}
           <div className="grid grid-cols-[2.25rem_3rem_1fr_1fr_6rem_6rem] items-center gap-3 border-b border-sand bg-[#faf6f3] px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.04em] text-ink/45 max-sm:grid-cols-[2.25rem_1fr_5rem]">
             <input
@@ -244,43 +282,8 @@ export default function JetpackPage({ token }: { token: string }) {
             })
           )}
 
-          {/* Pied : ce qu'on a coché, et le seul bouton qui compte. */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand bg-[#faf6f3] px-4 py-3">
-            <p className="text-sm text-ink/70">
-              <span className="font-semibold text-ink">{chosen.length}</span> commande
-              {chosen.length > 1 ? 's' : ''}
-              {chosen.length > 0 && (
-                <>
-                  {' '}
-                  · <span className="font-semibold text-ink">{formatTND(totalCollect)} DT</span>{' '}
-                  à encaisser
-                </>
-              )}
-            </p>
-            <div className="flex items-center gap-3">
-              {chosen.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelected(new Set())}
-                  className="text-xs text-ink/45 underline underline-offset-4 hover:text-ink"
-                >
-                  Tout désélectionner
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={download}
-                disabled={chosen.length === 0}
-                className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#b8912e] px-5 text-xs font-semibold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Télécharger .csv Jetpack
-              </button>
-            </div>
-          </div>
         </div>
+        </>
       )}
 
       <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink/45">
