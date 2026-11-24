@@ -17,6 +17,9 @@ function fromInputValue(v: string): Date | null {
 
 const longDate = (d: Date) =>
   d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+/** Sur un téléphone : « 26 oct. », pour que les deux dates et le raccourci
+ * tiennent sur une seule ligne. L'année reste lisible dans le sélecteur. */
+const shortDate = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 
 const DAY_MS = 24 * 60 * 60 * 1000
 /** Au-delà d'un an, la requête ramènerait toute l'histoire de la boutique
@@ -61,17 +64,19 @@ export default function DateRange({
         onClick={() => setOpen((o) => (o === 'dates' ? null : 'dates'))}
         aria-haspopup="dialog"
         aria-expanded={open === 'dates'}
-        className="flex items-center gap-1.5 rounded-xl border border-[#e6e0d9] bg-white px-2.5 py-2 text-[12.5px] text-ink shadow-sm transition-colors hover:border-[#cdd8d3]"
+        className="flex items-center gap-1.5 rounded-lg border border-[#e2dcd4] bg-white px-2.5 py-2 text-[12.5px] text-ink transition-colors hover:border-[#c9c3bb]"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="shrink-0 text-ink/45">
           <rect x="3" y="5" width="18" height="16" rx="2.5" />
           <path d="M8 3v4M16 3v4M3 10h18" strokeLinecap="round" />
         </svg>
-        <span className="whitespace-nowrap">{longDate(value.start)}</span>
+        <span className="whitespace-nowrap sm:hidden">{shortDate(value.start)}</span>
+        <span className="hidden whitespace-nowrap sm:inline">{longDate(value.start)}</span>
         <span className="text-ink/35" aria-hidden="true">
           →
         </span>
-        <span className="whitespace-nowrap">{longDate(value.end)}</span>
+        <span className="whitespace-nowrap sm:hidden">{shortDate(value.end)}</span>
+        <span className="hidden whitespace-nowrap sm:inline">{longDate(value.end)}</span>
       </button>
 
       <button
@@ -79,7 +84,7 @@ export default function DateRange({
         onClick={() => setOpen((o) => (o === 'presets' ? null : 'presets'))}
         aria-haspopup="menu"
         aria-expanded={open === 'presets'}
-        className="flex items-center gap-1 rounded-xl border border-[#e6e0d9] bg-white px-2.5 py-2 text-[12.5px] text-ink shadow-sm transition-colors hover:border-[#cdd8d3]"
+        className="flex items-center gap-1 rounded-lg border border-[#e2dcd4] bg-white px-2.5 py-2 text-[12.5px] text-ink transition-colors hover:border-[#c9c3bb]"
       >
         {value.preset ? PRESET_LABELS[value.preset] : 'Personnalisé'}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink/40">

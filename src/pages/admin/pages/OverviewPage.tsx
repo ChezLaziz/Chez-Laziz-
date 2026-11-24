@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -9,11 +10,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import ProductImage from '@/components/ProductImage'
-import { moneyDT } from '../ui/format'
-import { Card, Kpi, type Trend } from '../ui/Card'
-import Donut, { type DonutSlice } from '../ui/Donut'
-import { DASH, SERIES_COLORS, STATUS_GROUPS, STATUS_VIEW, sourceLabel, statusLabel } from '../ui/palette'
+import { moneyAvgDT, moneyDT } from '../ui/format'
+import { Card, Kpi, KpiStrip } from '../ui/Card'
+import BarList, { type BarRow } from '../ui/BarList'
+import { DASH, STATUS_GROUPS, STATUS_VIEW, sourceLabel, statusLabel } from '../ui/palette'
 import { EmptyState, ErrorState, Skeleton } from '../ui/State'
 import { useOverview } from '../useOverview'
 import type { DashboardPeriod } from '../shell/period'
@@ -22,41 +22,37 @@ import { MIN_ORDERS_FOR_SIGNALS, buildSignals } from '@contracts/signals'
 const dayLabel = (iso: string) =>
   new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const pct = (ratio: number) => `${Math.round(ratio * 100)} %`
 
-/** Variation d'une métrique calculée ici plutôt que servie par l'API.
- *
- * Même règle que côté serveur (voir percentChange) : pas de base de
- * comparaison = null, jamais « +100 % ». */
-function trendOf(value: number, previous: number): Trend {
-  return {
-    value,
-    previous,
-    changePercent: previous === 0 ? null : ((value - previous) / previous) * 100,
-  }
-}
+/** Traits communs aux deux graphiques : une grille à peine visible, des
+ * axes sans trait, des libellés gris. La seule chose colorée est la donnée. */
+const AXIS_TICK = { fontSize: 11, fill: '#8f8883' }
+const GRID = '#efebe6'
+const TOOLTIP_STYLE = {
+  fontSize: 12,
+  borderRadius: 8,
+  border: '1px solid #e2dcd4',
+  boxShadow: '0 6px 20px -12px rgba(60,56,53,.35)',
+  padding: '6px 10px',
+} as const
 
 function LoadingBoard() {
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-[92px] rounded-2xl" />
-        ))}
+    <div className="space-y-4">
+      <Skeleton className="h-[236px] rounded-xl xl:h-[124px]" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Skeleton className="h-[330px] rounded-xl lg:col-span-2" />
+        <Skeleton className="h-[330px] rounded-xl" />
       </div>
-      <div className="grid gap-3 lg:grid-cols-12">
-        <Skeleton className="h-[238px] rounded-2xl lg:col-span-12 min-[1480px]:col-span-5" />
-        <Skeleton className="h-[200px] rounded-2xl lg:col-span-6 min-[1480px]:col-span-4" />
-        <Skeleton className="h-[190px] rounded-2xl lg:col-span-6 min-[1480px]:col-span-3" />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-[92px] rounded-2xl" />
-        ))}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Skeleton className="h-[280px] rounded-xl lg:col-span-2" />
+        <Skeleton className="h-[280px] rounded-xl" />
       </div>
     </div>
   )
 }
+
+type Mesure = 'ca' | 'commandes'
 
 export default function OverviewPage({
   token,
@@ -70,6 +66,10 @@ export default function OverviewPage({
   onGoToCatalogue: () => void
 }) {
   const { data, isLoading, isError } = useOverview(token, period)
+  // Un seul graphique, deux lectures : le chiffre d'affaires et le nombre
+  // de commandes ont la même forme neuf jours sur dix, et deux graphiques
+  // presque identiques l'un sous l'autre prenaient la moitié de l'écran.
+  const [mesure, setMesure] = useState<Mesure>('ca')
 
   if (isError) return <ErrorState label="Impossible de charger les données du tableau de bord." />
   if (isLoading || !data) return <LoadingBoard />
@@ -80,28 +80,25 @@ export default function OverviewPage({
   // seuil que les signaux : en dessous, on écrit qu'on ne compare pas.
   const comparable = data.orders.previous >= MIN_ORDERS_FOR_SIGNALS
 
-  // Étiquette de la carte, pas un second filtre : le tableau de bord n'a
-  // qu'un sélecteur de période, en haut de page. Deux contrôles pour la
-  // même chose donneraient deux périodes affichées côte à côte.
-  const days = Math.max(Math.round((period.end.getTime() - period.start.getTime()) / DAY_MS) + 1, 1)
-  const periodLabel = `${days} jour${days > 1 ? 's' : ''}`
-
   /* ---- Origines des commandes ---- */
   const acq = data.acquisition
-  const sourceSlices: DonutSlice[] = acq.bySource.map((s, i) => ({
+  const sourceRows: BarRow[] = acq.bySource.map((s) => ({
     key: s.source,
     label: sourceLabel(s.source),
-    value: s.orders,
-    color: SERIES_COLORS[i % SERIES_COLORS.length]!,
+    share: acq.totalOrders === 0 ? 0 : s.orders / acq.totalOrders,
+    display: pct(acq.totalOrders === 0 ? 0 : s.orders / acq.totalOrders),
+    note: `${s.orders.toLocaleString('fr-FR')} cmd`,
   }))
-  // L'origine manquante est une tranche à part entière, jamais fondue dans
+  // L'origine manquante est une ligne à part entière, jamais fondue dans
   // « direct » : une mesure absente n'est pas une visite directe.
   if (acq.unknownOrders > 0) {
-    sourceSlices.push({
+    sourceRows.push({
       key: '__inconnue',
       label: 'Origine inconnue',
-      value: acq.unknownOrders,
-      color: DASH.grey,
+      share: acq.unknownOrders / acq.totalOrders,
+      display: pct(acq.unknownOrders / acq.totalOrders),
+      note: `${acq.unknownOrders.toLocaleString('fr-FR')} cmd`,
+      muted: true,
     })
   }
 
@@ -109,296 +106,246 @@ export default function OverviewPage({
    * Quatre groupes à l'écran, cinq statuts en base : le clic transmet la
    * liste exacte des statuts du groupe au carnet de commandes, qui filtre
    * dessus. Rien n'est arrondi. */
-  const statusSlices: DonutSlice[] = STATUS_GROUPS.map((g) => ({
+  const statusRows = STATUS_GROUPS.map((g) => ({
     key: g.key,
     label: g.label,
-    value: g.statuses.reduce((sum, st) => sum + (data.statusCounts[st] ?? 0), 0),
     color: g.color,
+    value: g.statuses.reduce((sum, st) => sum + (data.statusCounts[st] ?? 0), 0),
     onSelect: () => onGoToOrders(g.statuses.join(',')),
   }))
-  const statusTotal = statusSlices.reduce((sum, s) => sum + s.value, 0)
+  const statusTotal = statusRows.reduce((sum, s) => sum + s.value, 0)
 
-  /* ---- Coût par commande ----
+  /* ---- Coût de revient ----
    * Coût de REVIENT des articles, pas la publicité : aucune dépense
    * publicitaire n'est enregistrée, et en inventer une fausserait tout ce
-   * qui en découle. Affiché seulement si l'essentiel du chiffre d'affaires
-   * a un coût saisi — sinon le nombre serait vrai sur un tiers des ventes
-   * et lu comme vrai sur toutes. */
+   * qui en découle. Écrit seulement si l'essentiel du chiffre d'affaires a
+   * un coût saisi — sinon le nombre serait vrai sur un tiers des ventes et
+   * lu comme vrai sur toutes. Tant que personne ne saisit ces coûts, la
+   * ligne n'existe pas : une carte « — » en permanence ne disait rien. */
   const costCoverage = data.margins.revenueCoverage
   const costKnown = costCoverage >= 0.5 && data.orders.value > 0
   const costPerOrder = data.orders.value === 0 ? 0 : data.margins.costMillimes / data.orders.value
-  const prevCostPerOrder =
-    data.orders.previous === 0 ? 0 : data.previousMargins.costMillimes / data.orders.previous
+
+  const returning = data.customerMetrics.returningCustomers
+  const units = data.unitsSold.value
+
+  const productRows: BarRow[] = data.topProducts.slice(0, 5).map((p) => ({
+    key: p.key,
+    label: p.name,
+    share: p.revenueShare,
+    display: pct(p.revenueShare),
+    note: `${p.unitsSold.toLocaleString('fr-FR')} vente${p.unitsSold > 1 ? 's' : ''}`,
+  }))
 
   return (
-    <div className="space-y-3">
-      {/* Quatre chiffres, pas vingt. Chacun répond à une question distincte :
-          combien j'ai gagné, combien de commandes, combien de personnes, en
-          quelle quantité. */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi icon="revenue" label="Chiffre d'affaires" trend={data.revenueMillimes} format="money" comparable={comparable} />
-        <Kpi icon="orders" label="Commandes" trend={data.orders} comparable={comparable} />
-        <Kpi icon="customers" label="Clients" trend={data.customers} comparable={comparable} />
-        <Kpi icon="units" label="Articles vendus" trend={data.unitsSold} comparable={comparable} />
+    <div className="space-y-4">
+      {/* Quatre chiffres, pas huit. Chacun répond à une question distincte :
+          combien j'ai vendu, en combien de commandes, de quelle taille, à
+          combien de personnes. */}
+      <div>
+        <KpiStrip>
+          <Kpi label="Chiffre d'affaires" trend={data.revenueMillimes} format="money" comparable={comparable} />
+          <Kpi
+            label="Commandes"
+            trend={data.orders}
+            comparable={comparable}
+            detail={`${units.toLocaleString('fr-FR')} article${units > 1 ? 's' : ''} vendu${units > 1 ? 's' : ''}`}
+          />
+          <Kpi
+            label="Panier moyen"
+            trend={data.aovMillimes}
+            value={moneyAvgDT(data.aovMillimes.value)}
+            unit="DT"
+            comparable={comparable}
+            detail={
+              costKnown
+                ? `coût de revient ${moneyAvgDT(costPerOrder)} DT par commande`
+                : undefined
+            }
+          />
+          <Kpi
+            label="Clients"
+            trend={data.customers}
+            comparable={comparable}
+            detail={`dont ${returning.toLocaleString('fr-FR')} déjà client${returning > 1 ? 's' : ''}`}
+          />
+        </KpiStrip>
+        {/* Le CA exclut les 8 DT de livraison : dit une fois, ici, plutôt
+            que répété sous chaque montant de la page. */}
+        <p className="mt-2 px-1 text-[12px] leading-snug text-ink/45">
+          Chiffre d'affaires hors frais de livraison, commandes annulées exclues. Variations par
+          rapport à la période précédente de même durée.
+        </p>
       </div>
 
-      {/* Le CA exclut les 8 DT de livraison : dit une fois, ici, plutôt que
-          répété sous chaque montant de la page. */}
-      <p className="!mt-1 px-1 text-[11px] leading-snug text-ink/40">
-        Chiffre d'affaires hors frais de livraison (encaissés pour le transporteur). Commandes
-        annulées exclues.
-      </p>
-
-      <div className="grid gap-3 lg:grid-cols-12">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card
-          title="Évolution du chiffre d'affaires"
-          icon="chart"
-          className="lg:col-span-12 min-[1480px]:col-span-5"
+          title="Ventes par jour"
+          className="lg:col-span-2"
           action={
-            <span className="shrink-0 rounded-lg border border-[#e6e0d9] px-2 py-0.5 text-[11px] text-ink/55">
-              {periodLabel}
-            </span>
+            <div role="group" aria-label="Mesure affichée" className="flex shrink-0 rounded-lg bg-[#f3f0eb] p-0.5">
+              {(
+                [
+                  ['ca', "Chiffre d'affaires"],
+                  ['commandes', 'Commandes'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={mesure === id}
+                  onClick={() => setMesure(id)}
+                  className={`rounded-md px-2.5 py-1.5 text-[12px] transition-colors ${
+                    mesure === id
+                      ? 'bg-white font-semibold text-ink shadow-[0_1px_2px_rgba(60,56,53,0.12)]'
+                      : 'text-ink/55 hover:text-ink'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           }
         >
           {!hasSales ? (
             <EmptyState label="Aucune vente sur cette période." />
           ) : (
-            <div className="h-[160px]">
+            <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.revenueTrend} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={DASH.sage} stopOpacity={0.45} />
-                      <stop offset="100%" stopColor={DASH.sage} stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} stroke="#eeeae5" />
-                  <XAxis
-                    dataKey="day"
-                    tickFormatter={dayLabel}
-                    tick={{ fontSize: 11, fill: '#9c9490' }}
-                    axisLine={false}
-                    tickLine={false}
-                    minTickGap={28}
-                  />
-                  <YAxis
-                    tickFormatter={(v) => String(Math.round(Number(v) / 1000))}
-                    tick={{ fontSize: 11, fill: '#9c9490' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={42}
-                  />
-                  <Tooltip
-                    formatter={(v) => [`${moneyDT(Number(v))} DT`, 'CA']}
-                    labelFormatter={(l) => dayLabel(String(l))}
-                    cursor={{ stroke: DASH.sageSoft, strokeWidth: 1 }}
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 10,
-                      border: '1px solid #e5ded6',
-                      boxShadow: '0 8px 24px -12px rgba(60,56,53,.4)',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenueMillimes"
-                    stroke={DASH.deep}
-                    strokeWidth={2}
-                    fill="url(#revGradient)"
-                    dot={false}
-                    activeDot={{ r: 4, fill: DASH.deep }}
-                  />
-                </AreaChart>
+                {mesure === 'ca' ? (
+                  <AreaChart data={data.revenueTrend} margin={{ top: 8, right: 8, left: -6, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke={GRID} />
+                    <XAxis
+                      dataKey="day"
+                      tickFormatter={dayLabel}
+                      tick={AXIS_TICK}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={32}
+                      tickMargin={8}
+                    />
+                    <YAxis
+                      tickFormatter={(v) => Math.round(Number(v) / 1000).toLocaleString('fr-FR')}
+                      tick={AXIS_TICK}
+                      axisLine={false}
+                      tickLine={false}
+                      width={44}
+                    />
+                    <Tooltip
+                      formatter={(v) => [`${moneyDT(Number(v))} DT`, "Chiffre d'affaires"]}
+                      labelFormatter={(l) => dayLabel(String(l))}
+                      cursor={{ stroke: '#c9c3bb', strokeWidth: 1 }}
+                      contentStyle={TOOLTIP_STYLE}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenueMillimes"
+                      stroke={DASH.deep}
+                      strokeWidth={2}
+                      fill={DASH.deep}
+                      fillOpacity={0.08}
+                      dot={false}
+                      activeDot={{ r: 4, fill: DASH.deep, stroke: '#fff', strokeWidth: 2 }}
+                      // Sans animation : la courbe est là quand la page
+                      // s'ouvre, elle ne se dessine pas sous les yeux à
+                      // chaque rafraîchissement d'une minute.
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                ) : (
+                  <BarChart data={data.revenueTrend} margin={{ top: 8, right: 8, left: -6, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke={GRID} />
+                    <XAxis
+                      dataKey="day"
+                      tickFormatter={dayLabel}
+                      tick={AXIS_TICK}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={32}
+                      tickMargin={8}
+                    />
+                    <YAxis allowDecimals={false} tick={AXIS_TICK} axisLine={false} tickLine={false} width={44} />
+                    <Tooltip
+                      formatter={(v) => [String(v), 'Commandes']}
+                      labelFormatter={(l) => dayLabel(String(l))}
+                      cursor={{ fill: 'rgba(42,71,80,0.06)' }}
+                      contentStyle={TOOLTIP_STYLE}
+                    />
+                    <Bar
+                      dataKey="orders"
+                      fill={DASH.deep}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={24}
+                      isAnimationActive={false}
+                    />
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             </div>
           )}
-        </Card>
-
-        <Card
-          title="Sources de commandes"
-          className="lg:col-span-6 min-[1480px]:col-span-4"
-          bodyClassName="flex flex-col justify-center"
-        >
-          {acq.totalOrders === 0 ? (
-            <EmptyState label="Aucune commande sur cette période." />
-          ) : (
-            <>
-              <Donut
-                slices={sourceSlices}
-                total={acq.totalOrders}
-                totalLabel="commandes"
-                valueFormat="percent"
-              />
-              {!acq.hasAnyAttribution && (
-                <p className="mt-2 text-[11px] leading-snug text-ink/40">
-                  Aucune commande ne porte encore d'origine : étiquetez les liens publicitaires
-                  (utm_source) pour que cette carte se remplisse.
-                </p>
-              )}
-            </>
+          {hasSales && (
+            <p className="mt-1 text-[11px] text-ink/40">
+              {mesure === 'ca' ? 'En dinars, par jour de commande.' : 'Nombre de commandes valides par jour.'}
+            </p>
           )}
         </Card>
 
-        <Card
-          title="Statut des commandes"
-          className="lg:col-span-6 min-[1480px]:col-span-3"
-          bodyClassName="flex flex-col justify-center"
-        >
+        <Card title="Statut des commandes">
           {statusTotal === 0 ? (
             <EmptyState label="Aucune commande sur cette période." />
           ) : (
-            <Donut slices={statusSlices} total={statusTotal} totalLabel="total" height={104} />
+            <StatusBreakdown
+              rows={statusRows}
+              total={statusTotal}
+              cancellationRate={data.delivery.cancellationRate}
+              lostRevenueMillimes={data.delivery.lostRevenueMillimes}
+            />
           )}
         </Card>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi
-          icon="basket"
-          label="Panier moyen"
-          trend={data.aovMillimes}
-          format="money"
-          comparable={comparable}
-          compact
-        />
-        <Kpi
-          icon="cost"
-          label="Coût par commande"
-          value={costKnown ? `${moneyDT(Math.round(costPerOrder))} DT` : '—'}
-          trend={costKnown ? trendOf(costPerOrder, prevCostPerOrder) : undefined}
-          // Un coût qui monte est une mauvaise nouvelle : sans ceci, la
-          // hausse s'afficherait en vert.
-          inverse
-          comparable={comparable}
-          note={
-            costKnown
-              ? `coût de revient · ${Math.round(costCoverage * 100)}% du CA couvert`
-              : 'coût de revient non saisi dans Produits'
-          }
-          compact
-        />
-        <Kpi
-          icon="rate"
-          label="Taux de conversion"
-          value="—"
-          // Les pages vues sont dédoublonnées par page ET par session : on
-          // ne sait pas combien de personnes sont venues, donc aucun taux
-          // de conversion ne peut en être tiré. Mieux vaut un tiret qu'un
-          // pourcentage qui se lirait comme une mesure.
-          note="visiteurs uniques non mesurés"
-          compact
-        />
-        <Kpi
-          icon="returning"
-          label="Clients récurrents"
-          value={data.customerMetrics.returningCustomers.toLocaleString('fr-FR')}
-          trend={trendOf(
-            data.customerMetrics.returningCustomers,
-            data.previousCustomerMetrics.returningCustomers,
-          )}
-          comparable={comparable}
-          compact
-        />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-12">
-        <Card
-          title="Produits les plus vendus"
-          className="lg:col-span-6 min-[1480px]:col-span-4"
-          action={
-            <button
-              onClick={onGoToCatalogue}
-              className="shrink-0 text-[12px] text-ink/45 transition-colors hover:text-[#2a4750]"
-            >
-              Voir tout
-            </button>
-          }
-        >
-          {data.topProducts.length === 0 ? (
-            <EmptyState label="Aucune vente sur cette période." />
-          ) : (
-            <ul className="space-y-2">
-              {data.topProducts.slice(0, 4).map((p) => (
-                <li key={p.key} className="flex items-center gap-3">
-                  <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#f5ece5]">
-                    <ProductImage src={p.imageUrl} alt="" compact />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{p.name}</span>
-                  <span className="w-[40%] max-w-[176px] shrink-0">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="text-[12px] text-ink/50">
-                        {p.unitsSold.toLocaleString('fr-FR')} vente{p.unitsSold > 1 ? 's' : ''}
-                      </span>
-                      <span
-                        className="text-[13px] font-semibold text-ink"
-                        title="part du chiffre d'affaires"
-                      >
-                        {(p.revenueShare * 100).toFixed(0)}%
-                      </span>
-                    </span>
-                    <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-ink/[0.07]">
-                      <span
-                        className="block h-full rounded-full"
-                        style={{
-                          width: `${Math.max(p.revenueShare * 100, 2)}%`,
-                          backgroundColor: '#5d7876',
-                        }}
-                      />
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card
           title="Commandes récentes"
-          className="lg:col-span-6 min-[1480px]:col-span-5"
-          action={
-            <button
-              onClick={() => onGoToOrders(null)}
-              className="shrink-0 text-[12px] text-ink/45 transition-colors hover:text-[#2a4750]"
-            >
-              Voir tout
-            </button>
-          }
+          className="lg:col-span-2"
+          action={<LinkButton onClick={() => onGoToOrders(null)}>Toutes les commandes</LinkButton>}
         >
           {data.recentOrders.length === 0 ? (
             <EmptyState label="Aucune commande sur cette période." />
           ) : (
             <div className="-mx-1 overflow-x-auto">
-              <table className="w-full min-w-[380px] text-[13px]">
+              <table className="w-full text-[13px] sm:min-w-[440px]">
                 <thead>
-                  <tr className="text-left text-[11px] text-ink/40">
-                    <th className="rounded-l-lg bg-ink/[0.025] py-1.5 pl-2.5 pr-2 font-medium">#</th>
-                    <th className="bg-ink/[0.025] py-1.5 pr-3 font-medium">Client</th>
-                    <th className="bg-ink/[0.025] py-1.5 pr-3 font-medium">Produits</th>
-                    <th className="bg-ink/[0.025] py-1.5 pr-3 text-right font-medium">Total</th>
-                    <th className="rounded-r-lg bg-ink/[0.025] py-1.5 pr-3 font-medium">Statut</th>
+                  <tr className="text-left text-[11.5px] text-ink/45">
+                    <th className="pb-2 pl-1 pr-3 font-medium">N°</th>
+                    <th className="pb-2 pr-3 font-medium">Client</th>
+                    <th className="hidden pb-2 pr-3 font-medium sm:table-cell">Produits</th>
+                    <th className="pb-2 pr-3 text-right font-medium">Total</th>
+                    <th className="pb-2 pr-1 font-medium">Statut</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.recentOrders.map((o) => (
-                    <tr key={o.id} className="border-b border-sand/40 last:border-0">
-                      <td className="py-1.5 pl-2.5 pr-2 text-ink/70">#{o.id}</td>
-                      <td className="py-1.5 pr-3 text-ink">
-                        <span className="block max-w-[92px] truncate">{o.customerName}</span>
+                    <tr key={o.id} className="border-t border-[#efebe6]">
+                      <td className="py-2.5 pl-1 pr-3 tabular-nums text-ink/60">{o.id}</td>
+                      <td className="py-2.5 pr-3 text-ink">
+                        <span className="block max-w-[118px] truncate sm:max-w-[150px]">{o.customerName}</span>
                       </td>
-                      <td className="py-1.5 pr-3 text-ink/70">
-                        <span className="block max-w-[116px] truncate">
+                      {/* Sous `sm`, la colonne des produits s'efface : sur un
+                          téléphone elle poussait le total et le statut hors
+                          de l'écran, les deux choses qu'on vient y lire. */}
+                      <td className="hidden py-2.5 pr-3 text-ink/65 sm:table-cell">
+                        <span className="block max-w-[220px] truncate">
                           {o.firstItemName}
-                          {o.extraItems > 0 && (
-                            <span className="text-ink/40"> +{o.extraItems}</span>
-                          )}
+                          {o.extraItems > 0 && <span className="text-ink/40"> +{o.extraItems}</span>}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap py-1.5 pr-3 text-right font-medium text-ink">
+                      <td className="whitespace-nowrap py-2.5 pr-3 text-right font-medium tabular-nums text-ink">
                         {moneyDT(o.totalMillimes)} DT
                       </td>
-                      <td className="py-1.5 pr-3">
+                      <td className="py-2.5 pr-1">
                         <span
-                          className={`inline-block whitespace-nowrap rounded-md border px-2 py-0 text-[11px] font-medium leading-[1.6] ${
+                          className={`inline-block whitespace-nowrap rounded-md border px-2 text-[11.5px] font-medium leading-[1.7] ${
                             STATUS_VIEW[o.status as keyof typeof STATUS_VIEW]?.pill ??
                             'border-ink/10 bg-ink/[0.05] text-ink/60'
                           }`}
@@ -414,90 +361,98 @@ export default function OverviewPage({
           )}
         </Card>
 
-        <PromoCard className="lg:col-span-12 min-[1480px]:col-span-3" />
-      </div>
-
-      {/* ------------------------------------------------------------------
-          Ce qui suit existait avant la maquette et continue de servir :
-          le détail des commandes dans le temps, la géographie, l'impact des
-          annulations, les signaux et la fiabilité des données. La maquette
-          dessine le haut de page ; elle ne dit pas de jeter ces chiffres.
-          ------------------------------------------------------------------ */}
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Commandes par jour" icon="orders">
-          {!hasSales ? (
-            <EmptyState label="Aucune vente sur cette période." />
+        {/* Signaux : uniquement calculés à partir des chiffres ci-dessus,
+            chacun accompagné de sa preuve. Voir signals.ts. */}
+        <Card title="À surveiller">
+          {signals.length === 0 ? (
+            <p className="text-[13px] leading-relaxed text-ink/50">
+              Pas encore assez de données pour dégager un signal fiable sur cette période.
+            </p>
           ) : (
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.revenueTrend} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#eeeae5" />
-                  <XAxis
-                    dataKey="day"
-                    tickFormatter={dayLabel}
-                    tick={{ fontSize: 11, fill: '#9c9490' }}
-                    axisLine={false}
-                    tickLine={false}
-                    minTickGap={28}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: '#9c9490' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={38}
-                  />
-                  <Tooltip
-                    formatter={(v) => [String(v), 'Commandes']}
-                    labelFormatter={(l) => dayLabel(String(l))}
-                    cursor={{ fill: 'rgba(42,71,80,0.06)' }}
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 10,
-                      border: '1px solid #e5ded6',
-                      boxShadow: '0 8px 24px -12px rgba(60,56,53,.4)',
+            <ul className="space-y-3">
+              {signals.map((s) => (
+                <li key={s.id} className="flex gap-2.5">
+                  <span
+                    className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor:
+                        s.tone === 'good' ? DASH.green : s.tone === 'bad' ? DASH.red : DASH.gold,
                     }}
                   />
-                  <Bar dataKey="orders" fill={DASH.sage} radius={[4, 4, 0, 0]} maxBarSize={26} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                  <p className="text-[13px] leading-relaxed text-ink/75">{s.text}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card title="Origine des commandes">
+          {acq.totalOrders === 0 ? (
+            <EmptyState label="Aucune commande sur cette période." />
+          ) : (
+            <>
+              <BarList rows={sourceRows} />
+              {!acq.hasAnyAttribution && (
+                <p className="mt-3 text-[12px] leading-snug text-ink/45">
+                  Aucune commande ne porte encore d'origine : étiquetez les liens publicitaires
+                  (utm_source) pour que cette carte se remplisse.
+                </p>
+              )}
+            </>
           )}
         </Card>
 
-        <Card title="Gouvernorats">
+        {/* Publicité par publicité, lue sur les commandes elles-mêmes : la
+            seule mesure complète, disponible le jour même. Voir
+            computeAdPerformance (api/queries/analytics/acquisition.ts). */}
+        <AdsCard ads={data.ads} className="lg:col-span-2" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card
+          title="Produits les plus vendus"
+          hint="Part du chiffre d'affaires de la période."
+          action={<LinkButton onClick={onGoToCatalogue}>Tous les produits</LinkButton>}
+        >
+          {productRows.length === 0 ? (
+            <EmptyState label="Aucune vente sur cette période." />
+          ) : (
+            <BarList rows={productRows} />
+          )}
+        </Card>
+
+        <Card title="Gouvernorats" hint="Les six premiers, par chiffre d'affaires.">
           {data.topGovernorates.length === 0 ? (
             <EmptyState label="Aucune vente sur cette période." />
           ) : (
             <div className="-mx-1 overflow-x-auto">
-              <table className="w-full min-w-[380px] text-[13px]">
+              <table className="w-full text-[13px] sm:min-w-[380px]">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-ink/40">
-                    <th className="pb-1.5 pl-1 font-medium">Gouvernorat</th>
-                    <th className="pb-1.5 text-right font-medium">CA (DT)</th>
-                    <th className="pb-1.5 text-right font-medium">Cmd</th>
-                    <th className="pb-1.5 pr-1 text-right font-medium">Panier (DT)</th>
+                  <tr className="text-left text-[11.5px] text-ink/45">
+                    <th className="pb-2 pl-1 font-medium">Gouvernorat</th>
+                    <th className="pb-2 text-right font-medium">CA (DT)</th>
+                    <th className="pb-2 pl-3 text-right font-medium">Cmd</th>
+                    <th className="pb-2 pl-3 pr-1 text-right font-medium">Panier (DT)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.topGovernorates.slice(0, 6).map((g) => (
-                    <tr key={g.governorate} className="border-t border-sand/50">
-                      <td className="py-1.5 pl-1">
+                    <tr key={g.governorate} className="border-t border-[#efebe6]">
+                      <td className="py-2 pl-1">
                         <span className="text-ink">{g.governorate}</span>
                         {g.topProductName && (
-                          <span className="ml-2 inline-block max-w-[150px] truncate align-bottom text-[11px] text-ink/40">
+                          <span className="ml-2 hidden max-w-[150px] truncate align-bottom text-[11.5px] text-ink/40 sm:inline-block">
                             {g.topProductName}
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5 text-right font-medium text-ink">
+                      <td className="py-2 text-right font-medium tabular-nums text-ink">
                         {moneyDT(g.revenueMillimes)}
                       </td>
-                      <td className="py-1.5 text-right text-ink/60">{g.orders}</td>
-                      <td className="py-1.5 pr-1 text-right text-ink/60">
-                        {moneyDT(g.aovMillimes)}
-                      </td>
+                      <td className="py-2 text-right tabular-nums text-ink/60">{g.orders}</td>
+                      <td className="py-2 pr-1 text-right tabular-nums text-ink/60">{moneyAvgDT(g.aovMillimes)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -507,127 +462,110 @@ export default function OverviewPage({
         </Card>
       </div>
 
-      {/* Publicité par publicité, lue sur les commandes elles-mêmes : la
-          seule mesure complète, disponible le jour même. Voir
-          computeAdPerformance (api/queries/analytics/acquisition.ts). */}
-      <AdsCard ads={data.ads} />
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        {/* Impact business de la livraison — pas sa gestion. Chez Laziz
-            sous-traite le transport : ce bloc mesure ce que l'entreprise
-            perd, il ne pilote ni tournées ni livreurs. */}
-        <Card title="Impact de la livraison">
-          {data.delivery.completed + data.delivery.cancelled + data.delivery.inProgress === 0 ? (
-            <EmptyState label="Aucune commande sur cette période." />
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              <MiniStat
-                label="Terminées"
-                value={`${(data.delivery.completionRate * 100).toFixed(0)}%`}
-                sub={`${data.delivery.completed} cmd`}
-              />
-              <MiniStat
-                label="Annulées"
-                value={`${(data.delivery.cancellationRate * 100).toFixed(0)}%`}
-                sub={`${data.delivery.cancelled} cmd`}
-                tone={data.delivery.cancellationRate > 0.15 ? 'bad' : 'neutral'}
-              />
-              <MiniStat
-                label="CA perdu"
-                value={`${moneyDT(data.delivery.lostRevenueMillimes)} DT`}
-                sub="commandes annulées"
-                tone={data.delivery.lostRevenueMillimes > 0 ? 'bad' : 'neutral'}
-              />
-            </div>
-          )}
-        </Card>
-
-        {/* Signaux : uniquement calculés à partir des chiffres ci-dessus,
-            chacun accompagné de sa preuve. Voir signals.ts. */}
-        <Card title="À surveiller">
-          {signals.length === 0 ? (
-            <p className="text-sm text-ink/45">
-              Pas encore assez de données pour dégager un signal fiable sur cette période.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {signals.map((s) => (
-                <li key={s.id} className="flex gap-2.5">
-                  <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{
-                      backgroundColor:
-                        s.tone === 'good' ? DASH.green : s.tone === 'bad' ? DASH.red : DASH.gold,
-                    }}
-                  />
-                  <p className="text-[13px] leading-snug text-ink/75">{s.text}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-
       <DataQualityNote
         quality={data.dataQuality}
         pageViews={data.pageViews.value}
         pixel={{ seen: data.ads.pixelSeen, placed: data.ads.placed }}
       />
-
-      <p className="pt-0.5 text-center text-[11px] text-ink/35">
-        Fait avec passion en Tunisie
-        <span className="mx-2 text-ink/20">|</span>
-        Chez Laziz
-        <span className="mx-2 text-ink/20">|</span>
-        {new Date().getFullYear()}
-      </p>
     </div>
   )
 }
 
-/** Carte de marque de la maquette — les photos de la maison, à l'endroit
- * exact où elle les place.
- *
- * Deux cadrages pour deux formes : en colonne étroite (grand écran), la
- * photo verticale du plat ; en bandeau large (tablette et téléphone), le
- * coffret. Un seul fichier redimensionné donnerait un plat coupé en deux
- * dans un bandeau, ou un coffret réduit à une tache dans une colonne. */
-function PromoCard({ className = '' }: { className?: string }) {
+function LinkButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
-    <article
-      className={`relative min-h-[168px] overflow-hidden rounded-2xl border border-[#ece7e1] shadow-[0_1px_2px_rgba(60,56,53,0.04),0_10px_30px_-18px_rgba(60,56,53,0.35)] ${className}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded-md text-[12.5px] font-medium text-[#2a4750] underline-offset-4 transition-colors hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2a4750]/40"
     >
-      <picture>
-        <source media="(min-width: 1480px)" srcSet="/images/admin/promo.webp" />
-        <img
-          src="/images/admin/promo-wide.webp"
-          alt="Makroudh Chez Laziz"
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      </picture>
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(120deg, rgba(38,44,42,.82) 0%, rgba(38,44,42,.55) 42%, rgba(38,44,42,.08) 78%)',
-        }}
-      />
-      <div className="relative flex h-full min-h-[168px] flex-col justify-between p-4">
-        <div>
-          <p className="font-display text-[19px] italic leading-snug text-white/95">
-            Plus qu'un dessert,
-            <br />
-            une histoire tunisienne
-          </p>
-          <div className="mt-3 h-px w-10 bg-white/50" />
-        </div>
-        <p className="self-end font-display text-[15px] tracking-[0.18em] text-white/90">
-          CHEZ&nbsp;LAZIZ
-        </p>
+      {children}
+    </button>
+  )
+}
+
+/** Où en sont les commandes de la période, et ce que les annulations ont
+ * coûté.
+ *
+ * Une barre découpée plutôt qu'un anneau : quatre longueurs sur une même
+ * ligne se comparent d'un coup d'œil. Les segments sont séparés par un
+ * blanc, pas par un trait, et chaque état garde son nom et son nombre
+ * écrits dessous — la couleur seule ne porte jamais l'information. Chaque
+ * ligne est un bouton : elle ouvre le carnet filtré sur ces commandes-là.
+ *
+ * L'impact des annulations vivait dans une carte à part (« Impact de la
+ * livraison ») ; il est ici, sous les statuts dont il découle. Chez Laziz
+ * sous-traite le transport : ces deux chiffres mesurent ce que la maison
+ * perd, ils ne pilotent ni tournées ni livreurs. */
+function StatusBreakdown({
+  rows,
+  total,
+  cancellationRate,
+  lostRevenueMillimes,
+}: {
+  rows: { key: string; label: string; color: string; value: number; onSelect: () => void }[]
+  total: number
+  cancellationRate: number
+  lostRevenueMillimes: number
+}) {
+  return (
+    <div>
+      <p className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-ink tabular-nums">
+        {total.toLocaleString('fr-FR')}
+        <span className="ml-2 text-[12.5px] font-normal tracking-normal text-ink/50">
+          commande{total > 1 ? 's' : ''} passée{total > 1 ? 's' : ''}
+        </span>
+      </p>
+
+      <div className="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+        {rows
+          .filter((r) => r.value > 0)
+          .map((r) => (
+            <span
+              key={r.key}
+              className="h-full min-w-[5px]"
+              style={{ flexGrow: r.value, flexBasis: 0, backgroundColor: r.color }}
+            />
+          ))}
       </div>
-    </article>
+
+      <ul className="mt-3">
+        {rows.map((r) => (
+          <li key={r.key}>
+            <button
+              type="button"
+              onClick={r.onSelect}
+              className="-mx-1.5 flex min-h-[36px] w-[calc(100%+0.75rem)] items-center gap-2.5 rounded-lg px-1.5 text-left transition-colors hover:bg-ink/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2a4750]/40"
+            >
+              <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: r.color }} aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate text-[13px] text-ink/80">{r.label}</span>
+              <span className="shrink-0 text-[12px] tabular-nums text-ink/45">{pct(total === 0 ? 0 : r.value / total)}</span>
+              <span className="w-9 shrink-0 text-right text-[13px] font-semibold tabular-nums text-ink">
+                {r.value.toLocaleString('fr-FR')}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-[#efebe6] pt-3.5">
+        <div>
+          <dt className="text-[12px] text-ink/50">Taux d'annulation</dt>
+          <dd
+            className={`mt-0.5 text-[16px] font-semibold tabular-nums ${
+              cancellationRate > 0.15 ? 'text-[#b3303f]' : 'text-ink'
+            }`}
+          >
+            {pct(cancellationRate)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[12px] text-ink/50">Montant annulé</dt>
+          <dd className="mt-0.5 whitespace-nowrap text-[16px] font-semibold tabular-nums text-ink">
+            {moneyDT(lostRevenueMillimes)} <span className="text-[12px] font-medium text-ink/45">DT</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
   )
 }
 
@@ -638,8 +576,9 @@ function PromoCard({ className = '' }: { className?: string }) {
  * entier et en chasse fixe : c'est celui de la colonne « ID de la
  * publicité » du Gestionnaire de publicités, et on doit pouvoir les
  * comparer chiffre à chiffre. */
-export function AdsCard({
+function AdsCard({
   ads,
+  className = '',
 }: {
   ads: {
     rows: {
@@ -655,10 +594,11 @@ export function AdsCard({
     }[]
     placed: number
   }
+  className?: string
 }) {
   const jour = (iso: string) =>
     new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-  const part = (n: number, d: number) => (d === 0 ? '—' : `${Math.round((n / d) * 100)}%`)
+  const part = (n: number, d: number) => (d === 0 ? '—' : `${Math.round((n / d) * 100)} %`)
   // Neuf publicités au plus, et la ligne « sans étiquette » TOUJOURS : c'est
   // elle qui ferme le total, la couper ferait croire que tout est étiqueté.
   const publicites = ads.rows.filter((r) => r.label !== null)
@@ -667,7 +607,7 @@ export function AdsCard({
   const masquees = Math.max(publicites.length - 9, 0)
 
   return (
-    <Card title="Publicités" icon="orders">
+    <Card title="Publicités" hint="Ce que chaque publicité a vendu, compté sur les commandes." className={className}>
       {ads.placed === 0 ? (
         <EmptyState label="Aucune commande sur cette période." />
       ) : (
@@ -675,48 +615,48 @@ export function AdsCard({
           <div className="-mx-1 overflow-x-auto">
             <table className="w-full min-w-[620px] text-[13px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-ink/40">
-                  <th className="pb-1.5 pl-1 font-medium">Publicité</th>
-                  <th className="pb-1.5 pr-4 text-right font-medium">Passées</th>
-                  <th className="pb-1.5 pr-4 text-right font-medium">Valides</th>
-                  <th className="pb-1.5 pr-4 text-right font-medium">Annulées</th>
-                  <th className="pb-1.5 pr-4 text-right font-medium">Panier (DT)</th>
-                  <th className="pb-1.5 pr-1 text-right font-medium">Vues par le Pixel</th>
+                <tr className="text-left text-[11.5px] text-ink/45">
+                  <th className="pb-2 pl-1 font-medium">Publicité</th>
+                  <th className="pb-2 pr-4 text-right font-medium">Passées</th>
+                  <th className="pb-2 pr-4 text-right font-medium">Valides</th>
+                  <th className="pb-2 pr-4 text-right font-medium">Annulées</th>
+                  <th className="pb-2 pr-4 text-right font-medium">Panier (DT)</th>
+                  <th className="pb-2 pr-1 text-right font-medium">Vues par le Pixel</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
                   const taux = r.placed === 0 ? 0 : r.cancelled / r.placed
                   return (
-                    <tr key={r.label ?? '__sans'} className="border-t border-sand/50">
-                      <td className="py-1.5 pl-1 pr-4">
+                    <tr key={r.label ?? '__sans'} className="border-t border-[#efebe6]">
+                      <td className="py-2 pl-1 pr-4">
                         {r.label === null ? (
                           <span className="text-ink/60">Sans étiquette de publicité</span>
                         ) : (
                           <span className="break-all font-mono text-[12px] text-ink">{r.label}</span>
                         )}
-                        <span className="block text-[11px] text-ink/40">
-                          {r.sources.length > 0 ? `${r.sources.map(sourceLabel).join(' + ')} · ` : ''}
+                        <span className="block text-[11.5px] text-ink/40">
+                          {r.sources.length > 0 ? `${r.sources.map(sourceLabel).join(' + ')}, ` : ''}
                           {jour(r.firstOrderAt)}
-                          {jour(r.firstOrderAt) === jour(r.lastOrderAt) ? '' : ` → ${jour(r.lastOrderAt)}`}
+                          {jour(r.firstOrderAt) === jour(r.lastOrderAt) ? '' : ` au ${jour(r.lastOrderAt)}`}
                         </span>
                       </td>
-                      <td className="py-1.5 pr-4 text-right font-medium text-ink">{r.placed}</td>
-                      <td className="py-1.5 pr-4 text-right text-ink/60">{r.orders}</td>
+                      <td className="py-2 pr-4 text-right font-medium tabular-nums text-ink">{r.placed}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums text-ink/60">{r.orders}</td>
                       <td
-                        className={`whitespace-nowrap py-1.5 pr-4 text-right ${
-                          r.placed >= 8 && taux >= 0.25 ? 'text-red-600' : 'text-ink/60'
+                        className={`whitespace-nowrap py-2 pr-4 text-right tabular-nums ${
+                          r.placed >= 8 && taux >= 0.25 ? 'text-[#b3303f]' : 'text-ink/60'
                         }`}
                       >
                         {r.cancelled}
-                        <span className="ml-1 text-[11px] opacity-70">{part(r.cancelled, r.placed)}</span>
+                        <span className="ml-1.5 text-[11.5px] opacity-70">{part(r.cancelled, r.placed)}</span>
                       </td>
-                      <td className="py-1.5 pr-4 text-right text-ink/60">
-                        {r.orders === 0 ? '—' : moneyDT(r.aovMillimes)}
+                      <td className="py-2 pr-4 text-right tabular-nums text-ink/60">
+                        {r.orders === 0 ? '—' : moneyAvgDT(r.aovMillimes)}
                       </td>
-                      <td className="whitespace-nowrap py-1.5 pr-1 text-right text-ink/60">
+                      <td className="whitespace-nowrap py-2 pr-1 text-right tabular-nums text-ink/60">
                         {r.pixelSeen}
-                        <span className="ml-1 text-[11px] opacity-70">{part(r.pixelSeen, r.placed)}</span>
+                        <span className="ml-1.5 text-[11.5px] opacity-70">{part(r.pixelSeen, r.placed)}</span>
                       </td>
                     </tr>
                   )
@@ -724,38 +664,15 @@ export function AdsCard({
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-ink/40">
-            Compté sur les commandes elles-mêmes, d'après l'étiquette du lien publicitaire
-            (utm_content = identifiant de la publicité) : indépendant de ce que Meta attribue, et
-            disponible le jour même. « Passées » inclut les annulées. « Vues par le Pixel » : commandes
-            arrivées après « Accepter ».
+          <p className="mt-3 text-[12px] leading-snug text-ink/45">
+            D'après l'étiquette du lien publicitaire (utm_content = identifiant de la publicité) :
+            indépendant de ce que Meta attribue, et disponible le jour même. « Passées » inclut les
+            annulées. « Vues par le Pixel » : commandes arrivées après « Accepter ».
             {masquees > 0 ? ` ${masquees} autre${masquees > 1 ? 's' : ''} ligne${masquees > 1 ? 's' : ''} non affichée${masquees > 1 ? 's' : ''}.` : ''}
           </p>
         </>
       )}
     </Card>
-  )
-}
-
-function MiniStat({
-  label,
-  value,
-  sub,
-  tone = 'neutral',
-}: {
-  label: string
-  value: string
-  sub: string
-  tone?: 'neutral' | 'bad'
-}) {
-  return (
-    <div>
-      <p className="text-[11px] uppercase tracking-wide text-ink/40">{label}</p>
-      <p className={`font-display text-[19px] leading-tight ${tone === 'bad' ? 'text-red-600' : 'text-ink'}`}>
-        {value}
-      </p>
-      <p className="text-[11px] text-ink/40">{sub}</p>
-    </div>
   )
 }
 
@@ -770,13 +687,10 @@ function DataQualityNote({
   pageViews: number
   pixel: { seen: number; placed: number }
 }) {
-  const pct = (n: number) => `${Math.round(n * 100)}%`
   return (
-    <details className="rounded-2xl border border-[#ece7e1] bg-white px-4 py-2.5">
-      <summary className="cursor-pointer text-xs font-medium text-ink/50">
-        Fiabilité des données
-      </summary>
-      <ul className="mt-2 space-y-1 text-xs text-ink/55">
+    <details className="rounded-xl border border-[#e9e4dd] bg-white px-4 py-3 sm:px-5">
+      <summary className="cursor-pointer text-[13px] font-medium text-ink/60">Fiabilité des données</summary>
+      <ul className="mt-2.5 space-y-1.5 text-[12.5px] leading-relaxed text-ink/60">
         <li>Identité client (téléphone exploitable) : {pct(quality.customerIdCoverage)}</li>
         <li>Gouvernorat renseigné : {pct(quality.governorateCoverage)}</li>
         {pixel.placed > 0 && (
@@ -786,7 +700,7 @@ function DataQualityNote({
             haché : c'est la part des ventes que le Gestionnaire de publicités voit le moins bien.
           </li>
         )}
-        <li className="pt-1 text-ink/45">
+        <li className="pt-1 text-ink/50">
           {pageViews.toLocaleString('fr-FR')} pages vues sur la période. Comptées une fois par page
           et par session : ce n'est ni un nombre de visiteurs ni un total de pages vues, et aucun
           taux de conversion fiable ne peut en être déduit.

@@ -2,34 +2,38 @@
  *
  * Une seule définition : deux graphiques qui parlent des mêmes statuts
  * doivent les peindre de la même couleur, sinon la légende de l'un
- * contredit l'anneau de l'autre.
+ * contredit la barre de l'autre.
  *
  * La couleur ne sert qu'à porter du sens (un statut, une origine, une
  * variation) — jamais à décorer. */
 
-/** Teintes de la charte du tableau de bord : vert profond « Tunisie » et
- * ses déclinaisons, plus l'or de la maison pour les compléments. */
+/** Teintes du tableau de bord.
+ *
+ * UNE couleur pour les mesures (le vert profond), quatre pour les états.
+ * Les quatre ont été passées au contrôle des couleurs de graphique : elles
+ * restent distinctes pour un œil daltonien (écart ≥ 15 entre voisines, là où
+ * l'ancien vert et l'ancien or tombaient à 6,5) et aucune n'est un gris, qui
+ * se lisait « pas de donnée » plutôt que « en attente ».
+ *
+ * Chaque état porte la même teinte que dans le carnet de commandes : or pour
+ * une commande nouvelle, bleu pour une commande en préparation, vert pour
+ * une commande terminée. Seule l'annulation diffère, et c'est voulu : dans
+ * le carnet c'est une ligne éteinte (gris), ici c'est une perte (rouge). */
 export const DASH = {
   deep: '#2a4750',
-  sage: '#86a09b',
-  sageSoft: '#b9cbc4',
-  sageFaint: '#dde7e2',
-  gold: '#d3a24a',
-  green: '#3aa163',
-  red: '#c63c51',
-  grey: '#d7d7d5',
-  /** Fond des pastilles d'icône. */
-  tile: '#eef1f2',
+  /** Barres secondaires et pistes de fond. */
+  track: '#eeebe6',
+  gold: '#d99a26',
+  green: '#237a52',
+  red: '#c4384d',
+  blue: '#4a80c8',
+  grey: '#b9b6b0',
 } as const
-
-/** Palette d'une série (origines des commandes) : du plus foncé au plus
- * clair, pour que l'ordre de la légende se lise aussi sur l'anneau. */
-export const SERIES_COLORS = [DASH.deep, DASH.sage, DASH.sageSoft, DASH.gold, DASH.sageFaint]
 
 /** Statuts de commande : libellé et couleur, dans l'ordre du cycle de vie.
  *
  * Ce sont les cinq statuts que la base connaît et que le carnet de
- * commandes sait filtrer. L'anneau du tableau de bord en montre quatre
+ * commandes sait filtrer. La barre du tableau de bord en montre quatre
  * groupes (voir STATUS_GROUPS) — mais un clic ouvre bien la liste des
  * statuts réels du groupe, jamais une liste approchante. */
 export const ORDER_STATUSES = [
@@ -42,7 +46,7 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number]
 
-/** `label` compte des commandes (légende d'un anneau) ; `one` en qualifie
+/** `label` compte des commandes (légende de la barre des statuts) ; `one` en qualifie
  * UNE (pastille d'une ligne de tableau). « Terminées » sur une seule
  * commande se lirait comme un total. */
 export const STATUS_VIEW: Record<
@@ -58,20 +62,20 @@ export const STATUS_VIEW: Record<
   prete: {
     label: 'Prêtes',
     one: 'Prête',
-    color: DASH.sage,
-    pill: 'bg-[#eef3f1] text-[#3f6158] border-[#cddbd6]',
+    color: DASH.blue,
+    pill: 'bg-violet-50 text-violet-800 border-violet-200',
   },
   en_preparation: {
     label: 'En préparation',
     one: 'En préparation',
-    color: DASH.gold,
-    pill: 'bg-[#fbf3e3] text-[#8a6a22] border-[#eddcb8]',
+    color: DASH.blue,
+    pill: 'bg-blue-50 text-blue-800 border-blue-200',
   },
   nouvelle: {
     label: 'Nouvelles',
     one: 'Nouvelle',
-    color: DASH.grey,
-    pill: 'bg-ink/[0.05] text-ink/60 border-ink/10',
+    color: DASH.gold,
+    pill: 'bg-[#b8912e]/10 text-[#8a5527] border-[#b8912e]/40',
   },
   annulee: {
     label: 'Annulées',
@@ -90,7 +94,7 @@ export function statusLabel(status: string, form: 'plural' | 'one' = 'plural'): 
   return form === 'one' ? view.one : view.label
 }
 
-/** Regroupement lisible pour l'anneau du tableau de bord.
+/** Regroupement lisible pour la barre des statuts du tableau de bord.
  *
  * « En cours » réunit la préparation et les commandes prêtes : de
  * l'extérieur c'est le même moment — la commande est acceptée et pas encore
@@ -103,8 +107,8 @@ export const STATUS_GROUPS: {
   color: string
 }[] = [
   { key: 'terminees', label: 'Terminées', statuses: ['terminee'], color: DASH.green },
-  { key: 'en_cours', label: 'En cours', statuses: ['en_preparation', 'prete'], color: DASH.gold },
-  { key: 'en_attente', label: 'En attente', statuses: ['nouvelle'], color: DASH.grey },
+  { key: 'en_cours', label: 'En cours', statuses: ['en_preparation', 'prete'], color: DASH.blue },
+  { key: 'en_attente', label: 'En attente', statuses: ['nouvelle'], color: DASH.gold },
   { key: 'annulees', label: 'Annulées', statuses: ['annulee'], color: DASH.red },
 ]
 
